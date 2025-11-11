@@ -1,0 +1,4 @@
+
+
+class NavigationPanelWindow:
+    pass
