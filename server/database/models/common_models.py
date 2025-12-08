@@ -3,14 +3,11 @@ from sqlalchemy import ForeignKey, engine, create_engine, Table, Column, Integer
 from sqlalchemy.types import String
 from sqlalchemy.orm.session import sessionmaker
 
-from server.data_const import DataStruct
-
 import datetime
 from abc import abstractmethod, ABC
 
-
-class Base(DeclarativeBase):
-    pass
+from server.database.models.base import Base
+from server.data_const import DataStruct
 
 
 class User(Base):
@@ -39,7 +36,12 @@ class User(Base):
                                                                 back_populates='responsible')  # Задачи, где пользователь назначен ответственным
 
     created_personal_tasks: Mapped[list['PersonalTask']] = relationship('PersonalTask',
-                                                                        back_populates='owner')  # Личные задачи
+                                                                      back_populates='owner')  # Личные задачи
+    # Роли
+    roles: Mapped[list['WFRole']] = relationship(secondary='user_wf_role', back_populates='users')
+
+    # Документы РП
+    created_wf_documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='creator')
 
     # Мероприятия
     created_wf_daily_events: Mapped[list['WFDailyEvent']] = relationship('WFDailyEvent', back_populates='creator')
@@ -53,6 +55,15 @@ class User(Base):
     work_directions: Mapped[list['PersonalWorkDirection']] = relationship('PersonalWorkDirection', back_populates='owner')
     personal_daily_events: Mapped[list['PersonalDailyEvent']] = relationship('PersonalDailyEvent', back_populates='owner')
     personal_many_days_events: Mapped[list['PersonalManyDaysEvent']] = relationship('PersonalManyDaysEvent', back_populates='owner')
+
+    fields = ['id', 'username', 'email']
+    links = []
+    many_links = [
+        'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
+        'assigned_to_user_tasks', 'assigned_by_user_tasks', 'responsibility_tasks', 'created_personal_tasks',
+        'created_wf_documents', 'created_wf_daily_events', 'created_wf_many_days_events', 'notified_daily_events',
+        'notified_many_days_events', 'work_directions', 'personal_daily_events', 'personal_many_days_events'
+                  ]
 
 
 class Workflow(Base):
@@ -70,6 +81,8 @@ class Workflow(Base):
     users: Mapped[list['User']] = relationship(secondary='workflow_user', back_populates='linked_workflows')
     creator: Mapped[User] = relationship(User, back_populates='created_workflows')
     work_directions: Mapped[list['WFWorkDirection']] = relationship('WFWorkDirection', back_populates='workflow')
+    documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='workflow')
+    base_categories: Mapped[list['WFBaseCategory']] = relationship('WFBaseCategory', back_populates='workflow')
 
 
 class Project(Base):
@@ -133,6 +146,14 @@ workflow_user = Table(
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('workflow_id', ForeignKey('workflow.id')),
     Column('user_id', ForeignKey('user.id'))
+)
+
+user_role = Table(
+    'user_wf_role',
+    Base.metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('user_id', ForeignKey('user.id')),
+    Column('role_id', ForeignKey('wf_role.id'))
 )
 
 
@@ -312,15 +333,38 @@ class WFManyDaysEvent(Base):
     notified: Mapped[list['User']] = relationship(secondary='wf_many_days_event_user', back_populates='notified_many_days_events')  # Оповещаемые пользователи
 
 
+class WFBaseCategory(Base):
+    """Раздел базы РП."""
+    __tablename__ = 'wf_base_category'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    parent_category_id: Mapped[int] = mapped_column(ForeignKey('wf_base_category.id'))
+    name: Mapped[str] = mapped_column(String[30])
+    description: Mapped[str] = mapped_column(String[250])
+
+    parent_category: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='child_categories', remote_side='WFBaseCategory.id')
+    child_categories: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='parent_category')
+    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='base_categories')
+    documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='base_category')
+
+
+class WFDocument(Base):
+    """
+    Документ базы РП.
+    В key-value базе /database/data/data под id документа хранится его контент.
+    """
+    __tablename__ = 'wf_document'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
+    base_category_id: Mapped[WFBaseCategory] = mapped_column(ForeignKey('wf_base_category.id'))
+
+    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='documents')
+    creator: Mapped[User] = relationship(User, back_populates='created_wf_documents')
+    base_category: Mapped[WFBaseCategory] = relationship(WFBaseCategory, back_populates='documents')
+
+
 if __name__ == '__main__':
-    engine = create_engine('sqlite:///')
-    Base.metadata.create_all(bind=engine)
-    session = sessionmaker(bind=engine)
-    with session() as s, s.begin():
-        s.add(User(username='username', email='str', hashed_password=''))
-        s.add(Workflow(creator_id=0, name='Workflow', description='description'))
-        workflow = Workflow(creator_id=0, name='Workflow', description='description')
-        for i in range(150):
-            user = User(username=f'username#{i}', email=f'str[{i}]', hashed_password='')
-            user.linked_workflows.append(workflow)
-            s.add(user)
+    pass
