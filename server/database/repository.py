@@ -1,4 +1,4 @@
-from sqlalchemy.orm.session import Session, sessionmaker
+from sqlalchemy.orm.session import Session, sessionmaker, Select, Query
 from sqlalchemy.sql import select, insert, update, delete
 
 import typing as tp
@@ -45,18 +45,184 @@ class DataRepository:
     def __init__(self, session_maker: sessionmaker):
         self._session_maker = session_maker
 
-    def get_users(self, workflow_id: int = None, project_id: int = None, user_id: int = None, limit: int = None, offset: int = None) -> dict:
-        query = select(cm.User).limit(limit).offset(offset)
-
+    def _get_permissions(self, query: Select) -> tuple[str]:
         with self._session_maker() as session, session.begin():
-            users = session.execute(query).tuples()
-            return tuple(users)
+            perm_ids = session.execute(query)
+            permissions = session.execute(
+                select(roles.Permission.type).where(roles.Permission.id.in_(perm_ids))).scalars().all()
+
+        return permissions
+
+    def _execute_select(self, query: Select, limit: int = None, offset: int = None):
+        with self._session_maker() as session, session.begin():
+            result = session.execute(query.limit(limit).offset(offset)).scalars().all()
+        return result
+
+    def _execute_delete(self, ids: tuple[int, ...], base_model: tp.Type[cm.Base]):
+        with self._session_maker() as session, session.begin():
+            session.execute(delete(base_model).where(base_model.id.in_(ids)))
+
+    def _execute_insert(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
+        with self._session_maker() as session, session.begin():
+            session.add([base_model(**model) for model in models])
+
+    def _execute_update(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
+        with self._session_maker() as session, session.begin():
+            session.execute(update(base_model).where(base_model.id.in_(model['id'] for model in models)), models)
+
+    def get_users(self,
+                  username: str = None,
+                  fully_compliance: bool = None,
+                  email: str = None,
+
+                  linked_workflow_ids: tuple[int] = None,
+                  linked_projects_ids: tuple[int] = None,
+                  assigned_by_user_tasks_ids: tuple[int] = None,
+                  assigned_to_user_tasks_ids: tuple[int] = None,
+                  responsibility_tasks_ids: tuple[int] = None,
+                  notified_daily_events_ids: tuple[int] = None,
+                  notified_many_days_events_ids: tuple[int] = None,
+
+                  user_ids: tuple[int] = None,
+                  limit: int = None,
+                  offset: int = None) -> tuple:
+        """
+
+        :param username:
+        :param fully_compliance: полное\неполное соответствие (вхождение) username в User.username
+        :param email:
+        :param linked_workflow_ids:
+        :param linked_projects_ids:
+        :param assigned_by_user_tasks_ids:
+        :param assigned_to_user_tasks_ids:
+        :param responsibility_tasks_ids:
+        :param notified_daily_events_ids:
+        :param notified_many_days_events_ids:
+        :param user_ids:
+        :param limit:
+        :param offset:
+        :return:
+        """
+
+        query = select(cm.User)
+        if user_ids:
+            query = query.where(cm.User.id.in_(user_ids))
+        if username:
+            query = query.where(cm.User.username == username)
+        if email:
+            query = query.where(cm.User.email == email)
+        if linked_workflow_ids:
+            query = query.where(cm.User.linked_workflows.all(cm.Workflow.id.in_(linked_workflow_ids)))
+        if linked_projects_ids:
+            query = query.where(cm.User.linked_projects.all(cm.Project.id.in_(linked_projects_ids)))
+        if assigned_by_user_tasks_ids:
+            query = query.where(cm.User.assigned_by_user_tasks.all(cm.WFTask.id.in_(assigned_by_user_tasks_ids)))
+        if assigned_to_user_tasks_ids:
+            query = query.where(cm.User.assigned_to_user_tasks.all(cm.WFTask.id.in_(assigned_to_user_tasks_ids)))
+        if responsibility_tasks_ids:
+            query = query.where(cm.User.responsibility_tasks.all(cm.WFTask.id.in_(responsibility_tasks_ids)))
+        if notified_daily_events_ids:
+            query = query.where(cm.User.notified_daily_events.all(cm.WFDailyEvent.id.in_(notified_daily_events_ids)))
+        if notified_many_days_events_ids:
+            query = query.where(cm.User.notified_many_days_events.all(cm.WFManyDaysEvent.id.in_(notified_many_days_events_ids)))
+        # ToDo: как возвращать число оставшихся записей?
+        query = query.limit(limit).offset(offset)
+
+        return self._execute_select(query, limit, offset)
+
+    def get_workflows(self,
+                      workflow_ids: tuple[int] = None,
+                      name: str = None,
+                      full_compliance: bool = False,
+                      users_ids: tuple[int] = None,
+                      limit: int = None,
+                      offset: int = None
+                      ):
+        """
+        Возвращает рабочие пространства (Workflows).
+        :param workflow_ids:
+        :param name:
+        :param full_compliance:
+        :param users_ids:
+        :param limit:
+        :param offset:
+        :return:
+        """
+
+        query = select(cm.Workflow)
+        if workflow_ids:
+            query = query.where(cm.Workflow.id.in_(workflow_ids))
+        if name:
+            if full_compliance:
+                query = query.where(cm.Workflow.name == name)
+            else:
+                query = query.where(cm.Workflow.name.contains(name))
+        if users_ids:
+            query = query.where(cm.Workflow.users.any(cm.User.id.in_(users_ids)))
+
+        return self._execute_select(query, limit, offset)
+
+    def delete_workflows(self, workflows_ids: tuple[int]):
+        self._execute_delete(workflows_ids, cm.Workflow)
+
+    def update_users(self, models: tuple[dict, ...]):
+        self._execute_update(models, cm.User)
+
+    def add_users(self, models: tuple[dict, ...]):
+        self._execute_insert(models, cm.User)
+
+    def delete_users(self, ids: tuple[int, ...]):
+        self._execute_delete(ids, cm.User)
+
+    def add_workflows(self, models: tuple[dict, ...]):
+        self._execute_insert(models, cm.Workflow)
+
+    def get_task_permissions(self, task_id: int, role_id: int) -> tuple[str]:
+        query = (select(roles.WFRoleTask.permissions).
+                 where(roles.WFRoleTask.task_id == task_id).
+                 where(roles.WFRoleTask.role_id == role_id)
+                 )
+        return self._get_permissions(query)
+
+    def get_project_permissions(self, project_id: int, role_id: int) -> tuple[str]:
+        query = (select(roles.WFRoleProject.permissions).
+                 where(roles.WFRoleProject.project_id == project_id).
+                 where(roles.WFRoleProject.role_id == role_id)
+                 )
+        return self._get_permissions(query)
+
+    def get_document_permissions(self, document_id: int, role_id: int) -> tuple[str]:
+        query = (select(roles.WFRoleDocument.permissions).
+                 where(roles.WFRoleDocument.document_id == document_id).
+                 where(roles.WFRoleDocument.role_id == role_id)
+                 )
+        return self._get_permissions(query)
+
+    def get_daily_event_permissions(self, daily_event_id: int, role_id: int) -> tuple[str]:
+        query = (select(roles.WFRoleDailyEvent.permissions).
+                 where(roles.WFRoleDailyEvent.daily_event_id == daily_event_id).
+                 where(roles.WFRoleDailyEvent.role_id == role_id)
+                 )
+        return self._get_permissions(query)
+
+    def get_many_days_event_permissions(self, many_days_event_id: int, role_id: int) -> tuple[str]:
+        query = (select(roles.WFRoleManyDaysEvent.permissions).
+                 where(roles.WFRoleManyDaysEvent.many_days_event_id == many_days_event_id).
+                 where(roles.WFRoleManyDaysEvent.role_id == role_id)
+                 )
+        return self._get_permissions(query)
 
 
 if __name__ == '__main__':
+
+    # server method example
+    def get_workflows(workflows_ids: tuple[int], repo: DataRepository) -> dict:
+        repo.get_users()
+
+
     from server.database.models.base import init_db, config_db
+
     engine = init_db()
     config_db(engine)
     repo = DataRepository(sessionmaker(bind=engine))
-    users = repo.get_users(offset=20)
-    assert len(users) == 131, len(users)
+    print(get_workflows([0, 1, 2, 3, 4, 55], repo))

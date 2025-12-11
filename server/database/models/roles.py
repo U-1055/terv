@@ -79,7 +79,7 @@ class WFRoleDocument(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     role_id: Mapped[int] = mapped_column(ForeignKey('wf_role.id'))
-    many_days_event_id: Mapped[int] = mapped_column(ForeignKey('wf_document.id'))
+    document_id: Mapped[int] = mapped_column(ForeignKey('wf_document.id'))
     permissions: Mapped[list[Permission]] = relationship(secondary='wf_role_document_permission',
                                                          back_populates='document_roles')
 

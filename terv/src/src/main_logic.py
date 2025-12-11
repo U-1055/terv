@@ -6,6 +6,9 @@ class Logic:
     def __init__(self):
         self._opened_now: BaseWindow
 
+    def _update_state(self):
+        pass
+
     def _open_some_win(self):
         pass
 
