@@ -12,7 +12,7 @@ from server.data_const import Permissions
 class Base(DeclarativeBase):
 
     fields = ['id', 'created_at', 'updated_at']  # Поля с данными об объекте
-    one_links = []  # Поля со ссылками на одиночные объекты
+    one_links = []  # FK объектов otm-отношений
     many_links = []  # Поля со ссылками на несколько объектов
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -20,11 +20,10 @@ class Base(DeclarativeBase):
     updated_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now())
 
     def serialize(self) -> dict:
-        result = {element: getattr(self, element) for element in dir(self) if element in self.fields}
-        result.update({f'{element}_id': getattr(self, element).id for element in dir(self) if element in self.one_links})
+        result = {element: getattr(self, element) for element in dir(self) if element in [*self.fields, *self.one_links]}
         result.update(
             {
-                f'{element}_id':
+                element:
                     [obj.id for obj in getattr(self, element)]
                 for element in dir(self) if element in self.many_links
             }
@@ -74,4 +73,4 @@ if __name__ == '__main__':
 
     repo = DataRepository(s)
 
-    print(repo.get_workflows())
+    print(repo.get_workflows()[0])

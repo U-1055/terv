@@ -1,5 +1,5 @@
 from sqlalchemy.orm.session import Session, sessionmaker, Select, Query
-from sqlalchemy.sql import select, insert, update, delete
+from sqlalchemy.sql import select, insert, update, delete, func
 
 import typing as tp
 
@@ -53,7 +53,7 @@ class DataRepository:
 
         return permissions
 
-    def _execute_select(self, query: Select, limit: int = None, offset: int = None):
+    def _execute_select(self, query: Select, limit: int = None, offset: int = None) -> dict:
         with self._session_maker() as session, session.begin():
             result = session.execute(query.limit(limit).offset(offset)).scalars().all()
         return result
@@ -217,7 +217,7 @@ if __name__ == '__main__':
 
     # server method example
     def get_workflows(workflows_ids: tuple[int], repo: DataRepository) -> dict:
-        repo.get_users()
+        repo.get_workflows()
 
 
     from server.database.models.base import init_db, config_db
@@ -225,4 +225,5 @@ if __name__ == '__main__':
     engine = init_db()
     config_db(engine)
     repo = DataRepository(sessionmaker(bind=engine))
-    print(get_workflows([0, 1, 2, 3, 4, 55], repo))
+    workflows = repo.get_workflows()
+    

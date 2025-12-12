@@ -57,7 +57,7 @@ class User(Base):
     personal_many_days_events: Mapped[list['PersonalManyDaysEvent']] = relationship('PersonalManyDaysEvent', back_populates='owner')
 
     fields = ['id', 'username', 'email']
-    links = []
+    one_links = []
     many_links = [
         'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
         'assigned_to_user_tasks', 'assigned_by_user_tasks', 'responsibility_tasks', 'created_personal_tasks',
@@ -102,58 +102,51 @@ class Project(Base):
 project_user = Table(
     'project_user',
     Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('user_id', ForeignKey('user.id')),
-    Column('project_id', ForeignKey('project.id'))
+    Column('user_id', ForeignKey('user.id'), primary_key=True),
+    Column('project_id', ForeignKey('project.id'), primary_key=True)
 )
 
 executor_task = Table(
     'executor_task',
     Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('executor_id', ForeignKey('user.id')),
-    Column('task_id', ForeignKey('wf_task.id'))
+    Column('executor_id', ForeignKey('user.id'), primary_key=True),
+    Column('task_id', ForeignKey('wf_task.id'), primary_key=True)
 
 )
 
 responsible_task = Table(
     'responsible_task',
     Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('user_id', ForeignKey('user.id')),
-    Column('task_id', ForeignKey('wf_task.id'))
+    Column('user_id', ForeignKey('user.id'), primary_key=True),
+    Column('task_id', ForeignKey('wf_task.id'), primary_key=True)
 )
 
 wf_daily_event_user = Table(
     'wf_daily_event_user',
     Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('user_id', ForeignKey('user.id')),
-    Column('event_id', ForeignKey('wf_daily_event.id'))
+    Column('user_id', ForeignKey('user.id'), primary_key=True),
+    Column('event_id', ForeignKey('wf_daily_event.id'), primary_key=True)
 )
 
 wf_many_days_event_user = Table(
     'wf_many_days_event_user',
     Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('user_id', ForeignKey('user.id')),
-    Column('event_id', ForeignKey('wf_many_days_event.id'))
+    Column('user_id', ForeignKey('user.id'), primary_key=True),
+    Column('event_id', ForeignKey('wf_many_days_event.id'), primary_key=True)
 )
 
 workflow_user = Table(
     'workflow_user',
     Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('workflow_id', ForeignKey('workflow.id')),
-    Column('user_id', ForeignKey('user.id'))
+    Column('workflow_id', ForeignKey('workflow.id'), primary_key=True),
+    Column('user_id', ForeignKey('user.id'), primary_key=True)
 )
 
 user_role = Table(
     'user_wf_role',
     Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('user_id', ForeignKey('user.id')),
-    Column('role_id', ForeignKey('wf_role.id'))
+    Column('user_id', ForeignKey('user.id'), primary_key=True),
+    Column('role_id', ForeignKey('wf_role.id'), primary_key=True)
 )
 
 
@@ -185,43 +178,6 @@ class WFTask(Base):  # ToDo: нужно ли делить на ProjectTask и WF
     work_direction: Mapped[Workflow] = relationship('WFWorkDirection', back_populates='tasks')
     parent_task: Mapped['WFTask'] = relationship('WFTask', back_populates='child_tasks', remote_side='WFTask.id')
     child_tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='parent_task')
-
-
-    @property
-    def plan_deadline_(self):
-        return self.plan_deadline
-
-    @plan_deadline_.setter
-    def set_plan_deadline(self, plan_deadline: datetime.datetime):
-        self.plan_deadline = datetime.datetime.isoformat(DataStruct.time_format, plan_deadline)
-
-    @property
-    def fact_deadline_(self):
-        return self.fact_deadline
-
-    def serialize(self):
-        return {
-            'id': self.id,
-            'workflow_id': self.workflow_id,
-            'project_id': self.project_id,
-            'creator_id': self.creator_id,
-            'entrusted_id': self.entrusted_id,
-            'work_direction_id': self.work_direction_id,
-            'parent_task_id': self.parent_task_id,
-
-            'executors': [executor.id for executor in self.executors],
-            'responsible': [responsible.id for responsible in self.responsible],
-            'child_tasks': [task.id for task in self.child_tasks],
-
-            'name': self.name,
-            'description': self.description,
-            'plan_deadline': self.plan_deadline,
-            'fact_deadline': self.fact_deadline,
-            'plan_time': self.plan_time,
-            'fact_time': self.fact_time,
-            'plan_start_work_date': self.plan_start_work_date,
-            'fact_start_work_date': self.fact_start_work_date
-        }
 
 
 class PersonalTask(Base):

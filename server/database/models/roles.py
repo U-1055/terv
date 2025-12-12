@@ -95,42 +95,37 @@ wf_role_project_permission = Table(
 wf_role_permission = Table(
     'wf_role_permission',
     db.Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('role_id', ForeignKey('wf_role.id')),
-    Column('permissions_id', ForeignKey('permission.id'))
+    Column('role_id', ForeignKey('wf_role.id'), primary_key=True),
+    Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 
 )
 
 wf_role_task_permission = Table(
     'wf_role_task_permission',
     db.Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('role_task_id', ForeignKey('wf_role_task.id')),
-    Column('permissions_id', ForeignKey('permission.id'))
+    Column('role_task_id', ForeignKey('wf_role_task.id'), primary_key=True),
+    Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
 wf_role_daily_event_permissions = Table(
     'wf_role_daily_event_permission',
     db.Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('role_daily_event_id', ForeignKey('wf_role_daily_event.id')),
-    Column('permissions_id', ForeignKey('permission.id'))
+    Column('role_daily_event_id', ForeignKey('wf_role_daily_event.id'), primary_key=True),
+    Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
 wf_role_many_days_event_permission = Table(
     'wf_role_many_days_event_permission',
     db.Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('role_many_days_event_id', ForeignKey('wf_role_many_days_event.id')),
-    Column('permissions_id', ForeignKey('permission.id'))
+    Column('role_many_days_event_id', ForeignKey('wf_role_many_days_event.id'), primary_key=True),
+    Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
 
 wf_role_document_permission = Table(
     'wf_role_document_permission',
     db.Base.metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('role_document_id', ForeignKey('wf_role_document.id')),
-    Column('permissions_id', ForeignKey('permission.id'))
+    Column('role_document_id', ForeignKey('wf_role_document.id'), primary_key=True),
+    Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 
 )
