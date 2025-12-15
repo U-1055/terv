@@ -125,8 +125,10 @@ class DataRepository:
             query = query.where(cm.User.notified_daily_events.all(cm.WFDailyEvent.id.in_(notified_daily_events_ids)))
         if notified_many_days_events_ids:
             query = query.where(cm.User.notified_many_days_events.all(cm.WFManyDaysEvent.id.in_(notified_many_days_events_ids)))
-        # ToDo: как возвращать число оставшихся записей?
-        query = query.limit(limit).offset(offset)
+
+        with self._session_maker() as session, session.begin():
+            session.execute(select(func.count(cm.User).where(cm.User)))
+
 
         return self._execute_select(query, limit, offset)
 

@@ -32,6 +32,11 @@ class Requester:
     def get_workflows(self):
         pass
 
+    def get_tasks(self):
+        from terv.models.common_models import PersonalTask
+        return (PersonalTask() for i in range(15))
+
+
     def update_workflows(self):
         pass
 

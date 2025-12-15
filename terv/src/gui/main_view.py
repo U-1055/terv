@@ -4,6 +4,7 @@ from PySide6.QtCore import Signal
 import logging
 
 from terv.src.ui.ui_main_window import Ui_Form
+from terv.src.gui.windows.windows import BaseWindow, PersonalTasksWindow, CalendarWindow
 
 
 logger = logging.getLogger()
@@ -17,25 +18,31 @@ class MainWindow(QMainWindow):
 
     btn_pressed = Signal()
 
+    btn_open_personal_tasks_window_pressed = Signal()
+    btn_open_userflow_pressed = Signal()
+
     def __init__(self):
         super().__init__()
-        self._main_widget = QStackedWidget()
 
         container = QWidget()
         self._view = Ui_Form()
         self._view.setupUi(container)
-        self._main_widget.insertWidget(0, container)
-        self.setCentralWidget(self._main_widget)
-        self._view.pushButton_2.clicked.connect(self.press_btn)
+        self.setCentralWidget(container)
+
+    def open_personal_tasks_window(self) -> BaseWindow:
+        return PersonalTasksWindow()
+
+    def open_calendar_window(self) -> BaseWindow:
+        return CalendarWindow()
+
+    def press_btn_open_personal_tasks_window(self):
+        self.btn_open_personal_tasks_window_pressed.emit()
+
+    def press_btn_open_userflow(self):
+        self.btn_open_userflow_pressed.emit()
 
     def press_btn(self):
         self.btn_pressed.emit()
-
-
-
-class BaseWindow:
-    # Сигналы закрытия самого окна или окна приложения
-    pass
 
 
 def setup_gui(root: MainWindow, app: QApplication):
