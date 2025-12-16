@@ -12,6 +12,6 @@ if __name__ == '__main__':
 
     app = QApplication()
     root = MainWindow()
-    logic = Logic(root, Requester(''), Requester(''), 30)
+    logic = Logic(root, Requester(''), Requester(''), 5)
 
     setup_gui(root, app)

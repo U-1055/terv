@@ -4,7 +4,8 @@ from PySide6.QtCore import Signal
 import logging
 
 from terv.src.ui.ui_main_window import Ui_Form
-from terv.src.gui.windows.windows import BaseWindow, PersonalTasksWindow, CalendarWindow
+from terv.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
+from terv.src.gui.windows.windows import BaseView
 
 
 logger = logging.getLogger()
@@ -28,12 +29,26 @@ class MainWindow(QMainWindow):
         self._view = Ui_Form()
         self._view.setupUi(container)
         self.setCentralWidget(container)
+        self._view.pushButton.clicked.connect(self.press_btn_open_personal_tasks_window)
+        self._view.pushButton_2.clicked.connect(self.press_btn_open_userflow)
 
-    def open_personal_tasks_window(self) -> BaseWindow:
-        return PersonalTasksWindow()
+    def _destroy_window(self, idx: int):
+        self._view.wdg_window.removeWidget(idx)
+        logging.debug(f'Window idx {idx} destroyed')
 
-    def open_calendar_window(self) -> BaseWindow:
+    def open_personal_tasks_window(self) -> BaseView:
+        window = PersonalTasksWindow()
+        self._view.wdg_window.insertWidget(-1, window)
+        current_idx = self._view.wdg_window.count()
+        window.destroyed.connect(lambda: self._destroy_window(current_idx))
+
+        return window
+
+    def open_calendar_window(self) -> BaseView:
         return CalendarWindow()
+
+    def open_window(self, window: BaseView):
+        self._view.wdg_window.setCurrentWidget(window)
 
     def press_btn_open_personal_tasks_window(self):
         self.btn_open_personal_tasks_window_pressed.emit()
@@ -70,6 +85,6 @@ if __name__ == '__main__':
 
     app = QApplication()
     root = MainWindow()
-    logic = Logic(root, Requester(''), Requester(''))
+    logic = Logic(root, Requester(''), Requester(''), 5)
 
     setup_gui(root, app)

@@ -2,6 +2,7 @@ from pydantic import Field
 
 import datetime
 from abc import abstractmethod, ABC
+import typing as tp
 
 from server.database.models.base import Base
 from server.data_const import DataStruct
@@ -45,8 +46,8 @@ class User(Base):
     personal_many_days_events: list[int]
 
     
-    one_links = []
-    many_links = [
+    one_links: tp.ClassVar = []
+    many_links: tp.ClassVar = [
         'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
         'assigned_to_user_tasks', 'assigned_by_user_tasks', 'responsibility_tasks', 'created_personal_tasks',
         'created_wf_documents', 'created_wf_daily_events', 'created_wf_many_days_events', 'notified_daily_events',

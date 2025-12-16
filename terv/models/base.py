@@ -1,15 +1,18 @@
-import datetime
-
 from pydantic import Field, BaseModel
+
+
+import datetime
+import typing as tp
+
 import server.database.models.common_models as db
 from server.data_const import Permissions
 
 
 class Base(BaseModel):
 
-    fields = ['id', 'created_at', 'updated_at']  # Поля с данными об объекте
-    one_links = []  # FK объектов otm-отношений
-    many_links = []  # Поля со ссылками на несколько объектов
+    fields: tp.ClassVar = ['id', 'created_at', 'updated_at']  # Поля с данными об объекте
+    one_links: tp.ClassVar = []  # FK объектов otm-отношений
+    many_links: tp.ClassVar = []  # Поля со ссылками на несколько объектов
 
     id: int
     created_at: datetime.datetime = Field(default=datetime.datetime.now())
