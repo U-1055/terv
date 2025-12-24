@@ -1,3 +1,4 @@
+from terv.src.gui.widgets_view.userflow_view import TaskWidgetView
 
 
 class DataStructConst:
@@ -13,10 +14,17 @@ class DataStructConst:
         'style_2': r'..\data\resources\ui\styles\dark_theme.qss'
     }
 
-    names_widgets = {  # Типы виджетов и их имена
+    tasks_widget = 'tasks_widget'
+    schedule_widget = 'schedule_widget'
+    memory_widget = 'memory_widget'
+    notes_widget = 'notes_widget'
 
+    names_widgets = {  # Типы виджетов и их имена
+        tasks_widget: TaskWidgetView
     }
 
     x, y = 'x', 'y'
     x_size = 'x_size'
     y_size = 'y_size'
+
+

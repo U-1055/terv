@@ -4,8 +4,8 @@ from PySide6.QtCore import Signal
 import logging
 
 from terv.src.ui.ui_main_window import Ui_Form
-from terv.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
-from terv.src.gui.windows.windows import BaseView
+from terv.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow, UserFlowWindow
+from terv.src.gui.windows.windows import BaseWindow
 
 
 logger = logging.getLogger()
@@ -21,6 +21,7 @@ class MainWindow(QMainWindow):
 
     btn_open_personal_tasks_window_pressed = Signal()
     btn_open_userflow_pressed = Signal()
+    btn_update_pressed = Signal()
 
     def __init__(self):
         super().__init__()
@@ -29,6 +30,8 @@ class MainWindow(QMainWindow):
         self._view = Ui_Form()
         self._view.setupUi(container)
         self.setCentralWidget(container)
+        self._view.pushButton.setText('Task')
+        self._view.pushButton_2.setText('UserFlow')
         self._view.pushButton.clicked.connect(self.press_btn_open_personal_tasks_window)
         self._view.pushButton_2.clicked.connect(self.press_btn_open_userflow)
 
@@ -36,19 +39,32 @@ class MainWindow(QMainWindow):
         self._view.wdg_window.removeWidget(idx)
         logging.debug(f'Window idx {idx} destroyed')
 
-    def open_personal_tasks_window(self) -> BaseView:
-        window = PersonalTasksWindow()
+    def _open_window(self, type_) -> BaseWindow:
+        """Открытие окна"""
+        window = type_()
         self._view.wdg_window.insertWidget(-1, window)
         current_idx = self._view.wdg_window.count()
         window.destroyed.connect(lambda: self._destroy_window(current_idx))
+        self._view.wdg_window.setCurrentWidget(window)
 
         return window
 
-    def open_calendar_window(self) -> BaseView:
-        return CalendarWindow()
+    def show_error(self, title: str, message: str):
+        pass
 
-    def open_window(self, window: BaseView):
+    def open_personal_tasks_window(self) -> BaseWindow:
+        return self._open_window(PersonalTasksWindow)
+
+    def open_userflow_window(self) -> BaseWindow:
+        return self._open_window(UserFlowWindow)
+
+    def open_calendar_window(self) -> BaseWindow:
+        return self._open_window(CalendarWindow)
+
+    def open_window(self, window: BaseWindow):
+        """Переключает окно в стековом виджете на указанное."""
         self._view.wdg_window.setCurrentWidget(window)
+        logging.debug(f'{window} opened')
 
     def press_btn_open_personal_tasks_window(self):
         self.btn_open_personal_tasks_window_pressed.emit()
@@ -85,6 +101,6 @@ if __name__ == '__main__':
 
     app = QApplication()
     root = MainWindow()
-    logic = Logic(root, Requester(''), Requester(''), 5)
+    logic = Logic(root, Requester(''), Requester(''), 4)
 
     setup_gui(root, app)

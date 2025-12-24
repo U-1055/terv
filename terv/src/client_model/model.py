@@ -78,7 +78,7 @@ class Model:
         """
         Возвращает настройки виджета. Если виджета нет в настройках (не настроен или неверный тип) - возвращает None.
         """
-        with shelve.open(self._storage, 'w') as storage:
+        with shelve.open(self._storage) as storage:
             settings = storage[self._ds_const.userflow_widgets].get(wdg_type)
             return settings
 
@@ -92,13 +92,5 @@ class Model:
 
 if __name__ == '__main__':
     model = Model(Path('..\\..\\data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst())
-    model.set_access_token('sth')
-    model.set_refresh_token('sth')
-
-    print(model.get_access_token())
-    print(model.get_refresh_token())
-
-    model.put_widget_settings('wdg_type#1', 1, 2, 3, 4)
-    print(model.get_widget_settings('wdg_type#1'))
-    model.delete_widget_settings('wdg_type#1')
-    print(model.get_widget_settings('wdg_type#1'))
+    model.put_widget_settings(DataStructConst.tasks_widget, 1, 1, 2, 3)
+    print(model.get_widget_settings(DataStructConst.tasks_widget))

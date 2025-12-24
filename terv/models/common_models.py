@@ -1,12 +1,10 @@
-from pydantic import Field 
+from pydantic import Field, BaseModel
 
 import datetime
 from abc import abstractmethod, ABC
 import typing as tp
 
-from server.database.models.base import Base
-from server.data_const import DataStruct
-
+from terv.models.base import Base
 
 class User(Base):
     __tablename__ = 'user'

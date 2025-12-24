@@ -70,61 +70,22 @@ class DataRepository:
         with self._session_maker() as session, session.begin():
             session.execute(update(base_model).where(base_model.id.in_(model['id'] for model in models)), models)
 
-    def get_users(self,
-                  username: str = None,
-                  fully_compliance: bool = None,
-                  email: str = None,
-
-                  linked_workflow_ids: tuple[int] = None,
-                  linked_projects_ids: tuple[int] = None,
-                  assigned_by_user_tasks_ids: tuple[int] = None,
-                  assigned_to_user_tasks_ids: tuple[int] = None,
-                  responsibility_tasks_ids: tuple[int] = None,
-                  notified_daily_events_ids: tuple[int] = None,
-                  notified_many_days_events_ids: tuple[int] = None,
-
-                  user_ids: tuple[int] = None,
-                  limit: int = None,
-                  offset: int = None) -> tuple:
+    def get_users(self, username: str = None, email: str = None, limit: int = None, offset: int = None) -> tuple:
         """
+        Базовый метод получения таблиц пользователей.
 
         :param username:
-        :param fully_compliance: полное\неполное соответствие (вхождение) username в User.username
         :param email:
-        :param linked_workflow_ids:
-        :param linked_projects_ids:
-        :param assigned_by_user_tasks_ids:
-        :param assigned_to_user_tasks_ids:
-        :param responsibility_tasks_ids:
-        :param notified_daily_events_ids:
-        :param notified_many_days_events_ids:
-        :param user_ids:
-        :param limit:
         :param offset:
+        :param limit:
         :return:
         """
 
         query = select(cm.User)
-        if user_ids:
-            query = query.where(cm.User.id.in_(user_ids))
         if username:
             query = query.where(cm.User.username == username)
         if email:
             query = query.where(cm.User.email == email)
-        if linked_workflow_ids:
-            query = query.where(cm.User.linked_workflows.all(cm.Workflow.id.in_(linked_workflow_ids)))
-        if linked_projects_ids:
-            query = query.where(cm.User.linked_projects.all(cm.Project.id.in_(linked_projects_ids)))
-        if assigned_by_user_tasks_ids:
-            query = query.where(cm.User.assigned_by_user_tasks.all(cm.WFTask.id.in_(assigned_by_user_tasks_ids)))
-        if assigned_to_user_tasks_ids:
-            query = query.where(cm.User.assigned_to_user_tasks.all(cm.WFTask.id.in_(assigned_to_user_tasks_ids)))
-        if responsibility_tasks_ids:
-            query = query.where(cm.User.responsibility_tasks.all(cm.WFTask.id.in_(responsibility_tasks_ids)))
-        if notified_daily_events_ids:
-            query = query.where(cm.User.notified_daily_events.all(cm.WFDailyEvent.id.in_(notified_daily_events_ids)))
-        if notified_many_days_events_ids:
-            query = query.where(cm.User.notified_many_days_events.all(cm.WFManyDaysEvent.id.in_(notified_many_days_events_ids)))
 
         with self._session_maker() as session, session.begin():
             session.execute(select(func.count(cm.User).where(cm.User)))
@@ -135,8 +96,6 @@ class DataRepository:
     def get_workflows(self,
                       workflow_ids: tuple[int] = None,
                       name: str = None,
-                      full_compliance: bool = False,
-                      users_ids: tuple[int] = None,
                       limit: int = None,
                       offset: int = None
                       ):
@@ -155,12 +114,7 @@ class DataRepository:
         if workflow_ids:
             query = query.where(cm.Workflow.id.in_(workflow_ids))
         if name:
-            if full_compliance:
-                query = query.where(cm.Workflow.name == name)
-            else:
-                query = query.where(cm.Workflow.name.contains(name))
-        if users_ids:
-            query = query.where(cm.Workflow.users.any(cm.User.id.in_(users_ids)))
+            query = query.where(cm.Workflow.name.contains(name))
 
         return self._execute_select(query, limit, offset)
 
