@@ -1,60 +1,44 @@
 import time
-from concurrent.futures import ThreadPoolExecutor
 import typing as tp
-import logging
 import asyncio
+import threading
 
-logging.basicConfig(level=logging.DEBUG)
-logging.debug('Module requester.py is running')
+import httpx
+
+
+def run_loop(loop: asyncio.AbstractEventLoop):
+    asyncio.set_event_loop(loop)
+    loop.run_forever()
+
+
+def synchronized_request(func):
+    def prepare(*args) -> asyncio.Future:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            thread = threading.Thread(target=lambda: run_loop(loop))
+            thread.start()
+            time.sleep(0.1)
+
+        future = asyncio.run_coroutine_threadsafe(func(*args), loop)
+        return future
+
+    return prepare
 
 
 class Requester:
-    """
-    Класс для взаимодействия с API.
-    """
 
     def __init__(self, server: str):
         self._server = server
-        self._thread_pool = ThreadPoolExecutor()
+        self._running_event_loop = None
 
-    def _execute(self, func: tp.Callable, *args, **kwargs):
-        thread = self._thread_pool.submit(func, *args, **kwargs)
-        result = thread.result()
-
-    def get_sth(self):
-        logging.debug('Request has been taken')
-        self._execute(time.sleep, 5)
-        logging.debug('Request has been completed')
-
-    def get_users(self):
-        pass
-
-    def get_workflows(self):
-        pass
-
-    def get_tasks(self):
-        from terv.models.common_models import PersonalTask
-        return (PersonalTask() for i in range(15))
-
-
-    def update_workflows(self):
-        pass
-
-    def delete_workflows(self):
-        pass
-
-    def add_workflows(self):
-        pass
-
-    def register(self):
-        pass
-
-    def authorize_by_token(self):
-        pass
-
-    def authorize_by_password(self):
-        pass
+    @synchronized_request
+    async def register(self, login: str, password: str, email: str):
+        async with httpx.AsyncClient() as client:
+            await client.post(f'{self._server}/register', json={'login': login, 'password': password, 'email': email})
 
 
 if __name__ == '__main__':
     pass
+

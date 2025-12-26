@@ -7,6 +7,23 @@ class DataStruct:
     date_format = '%d.%m.%Y'
     time_format = '%H:%M:%S'
     datetime_format = f'{date_format}-{time_format}'
+    blacklist = 'blacklist'
+    secret = 'secret'
+    access = 'access'
+    refresh = 'refresh'
+    jwt_alg = 'HS256'
+    access_token_lifetime = datetime.timedelta(minutes=15)
+    refresh_token_lifetime = datetime.timedelta(hours=24)
+
+    login = 'login'
+    email = 'email'
+    hashed_password = 'hashed_password'
+
+    task = 'task'
+    project = 'project'
+    document = 'document'
+    daily_event = 'daily_event'
+    many_days_event = 'many_days_event'
 
 
 class Permissions(enum.Enum):
@@ -37,3 +54,17 @@ class Permissions(enum.Enum):
     edit = 'edit'
     delete = 'delete'
     view = 'view'
+
+
+class APIAnswers:
+
+    no_login_message = 'There is no login in the token'
+    unknown_credentials_message = 'Unknown login or password'
+
+    @staticmethod
+    def no_params_error(param: str, endpoint: str) -> str:
+        return f'The endpoint {endpoint} expected parameter {param}, but it was not sent'
+
+    @staticmethod
+    def invalid_data_error(param: str, endpoint: str, message: str = '') -> str:
+        return f'The endpoint {endpoint} received the invalid param {param}: {message}'

@@ -56,7 +56,7 @@ class User(Base):
     personal_daily_events: Mapped[list['PersonalDailyEvent']] = relationship('PersonalDailyEvent', back_populates='owner')
     personal_many_days_events: Mapped[list['PersonalManyDaysEvent']] = relationship('PersonalManyDaysEvent', back_populates='owner')
 
-    fields = ['id', 'username', 'email']
+    fields = ['id', 'username', 'email', 'hashed_password']
     one_links = []
     many_links = [
         'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',

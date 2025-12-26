@@ -1,12 +1,11 @@
 """
 Точка входа
 """
-import asyncio
 
 from PySide6.QtWidgets import QApplication
 
 from terv.src.src.main_logic import Logic
-from terv.src.src.requester import Requester
+from terv.src.requester.requester import Requester
 from terv.src.gui.main_view import MainWindow, setup_gui
 from terv.src.client_model.model import Model
 

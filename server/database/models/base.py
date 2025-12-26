@@ -33,8 +33,18 @@ class Base(DeclarativeBase):
 
 
 def init_db() -> Engine:
+    """Создаёт базу заново и возвращает её движок."""
+
     engine = create_engine('sqlite:///')
     Base.metadata.create_all(bind=engine)
+    add_permissions(engine)
+    return engine
+
+
+def launch_db() -> Engine:
+    """Возвращает движок уже созданной базы данных."""
+    import server.database.models.roles as roles
+    engine = create_engine('sqlite:///')
     add_permissions(engine)
     return engine
 

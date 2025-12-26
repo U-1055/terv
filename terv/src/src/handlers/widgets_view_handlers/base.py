@@ -18,6 +18,12 @@ class BaseViewHandler(QObject):
     def set_model(self, model: Base):
         self._model = model
 
+    def to_loading_state(self):
+        pass
+
+    def to_normal_state(self):
+        pass
+
 
 if __name__ == '__main__':
     pass

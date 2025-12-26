@@ -56,7 +56,7 @@ class DataRepository:
     def _execute_select(self, query: Select, limit: int = None, offset: int = None) -> dict:
         with self._session_maker() as session, session.begin():
             result = session.execute(query.limit(limit).offset(offset)).scalars().all()
-        return result
+            return [model.serialize() for model in result]
 
     def _execute_delete(self, ids: tuple[int, ...], base_model: tp.Type[cm.Base]):
         with self._session_maker() as session, session.begin():
@@ -64,7 +64,7 @@ class DataRepository:
 
     def _execute_insert(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
         with self._session_maker() as session, session.begin():
-            session.add([base_model(**model) for model in models])
+            session.add_all([base_model(**model) for model in models])
 
     def _execute_update(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
         with self._session_maker() as session, session.begin():
@@ -88,8 +88,7 @@ class DataRepository:
             query = query.where(cm.User.email == email)
 
         with self._session_maker() as session, session.begin():
-            session.execute(select(func.count(cm.User).where(cm.User)))
-
+            session.execute(select(func.count('user')))
 
         return self._execute_select(query, limit, offset)
 

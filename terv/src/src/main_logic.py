@@ -4,7 +4,7 @@ import typing as tp
 import logging
 
 from terv.src.gui.main_view import MainWindow
-from terv.src.src.requester import Requester
+from terv.src.requester.requester import Requester
 from terv.utils.timeout_list import TimeoutList
 from terv.src.src.handlers.window_handlers.userflow_handler import UserFlowWindowHandler
 from terv.src.src.handlers.window_handlers.personal_tasks_handler import PersonalTasksWindowHandler
@@ -33,8 +33,6 @@ class Logic:
         self._data_const = data_const
         self._timer = QTimer()
 
-        self._view.btn_pressed.connect(self._requester.get_sth)
-
         self._opened_now: BaseWindowHandler = None
         self._current_open_method: tp.Callable = self._open_userflow
 
@@ -56,7 +54,6 @@ class Logic:
         if self._opened_now:
             self._close_outdated_window(self._opened_now)
         self._current_open_method()
-        self._loop.create_task(self._requester.get_sth)
 
     def _show_error(self, title: str, message: str):
         self._view.show_error(title, message)

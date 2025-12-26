@@ -1,4 +1,8 @@
+import asyncio
+
 from PySide6.QtCore import QTimer
+
+import typing as tp
 
 from terv.src.src.handlers.window_handlers.base import BaseWindowHandler, MainWindow, Requester, Model, BaseWindow
 from terv.src.base import DataStructConst
@@ -46,8 +50,8 @@ class UserFlowWindowHandler(BaseWindowHandler):
     def _set_task_handler(self, view: TaskWidgetView) -> TaskViewHandler:
         """Настраивает обработчик задач."""
         self._task_view_handler = TaskViewHandler(view, {'namer': int})
-        tasks = self._requester.get_sth()
-        self._timer.singleShot(1000 * 6, lambda: self._set_data_to_widget(tasks, self._set_tasks))
+        tasks: asyncio.Future = self._requester.get_sth()
+        tasks.add_done_callback(lambda future: print('Result'))
         return self._task_view_handler
 
 
