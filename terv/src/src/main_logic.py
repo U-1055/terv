@@ -11,6 +11,7 @@ from terv.src.src.handlers.window_handlers.personal_tasks_handler import Persona
 from terv.src.src.handlers.window_handlers.base import BaseWindowHandler
 from terv.src.client_model.model import Model
 from terv.src.base import DataStructConst
+from terv.src.src.handlers.window_handlers.main_auth_window_handler import MainAuthWindowHandler
 
 logging.basicConfig(level=logging.DEBUG)
 logging.debug('Module main_logic.py is running')
@@ -32,6 +33,7 @@ class Logic:
         self._model = model
         self._data_const = data_const
         self._timer = QTimer()
+        self._user = None
 
         self._opened_now: BaseWindowHandler = None
         self._current_open_method: tp.Callable = self._open_userflow
@@ -44,6 +46,11 @@ class Logic:
 
         self._timer.timeout.connect(self._update_current_window)
         self._timer.start(1000 * 60)
+
+    def _authorize(self):
+        main_auth_window = self._view.open_auth_window()
+        auth_window_handler = MainAuthWindowHandler(main_auth_window, self._view, self._requester, self._model)
+        auth_window_handler.tokens_updated.connect(auth_window_handler.close)
 
     def _update_current_window(self):
         if self._opened_now:
@@ -68,7 +75,7 @@ class Logic:
 
     def _open_personal_tasks_window(self):
         self._win_handlers.update()
-        self._current_open_method = self._open_userflow
+        self._current_open_method = self._open_personal_tasks_window
         current_handler = self._get_last_handler(UserFlowWindowHandler)
 
         if current_handler:
@@ -94,6 +101,8 @@ class Logic:
             win_handler = UserFlowWindowHandler(window, self._view, self._requester, self._model)
             self._win_handlers.append(win_handler)
             self._opened_now = win_handler
+            win_handler.incorrect_tokens_update.connect(self._authorize)
+            win_handler._update_state()
 
 
 if __name__ == '__main__':

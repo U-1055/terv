@@ -1,9 +1,11 @@
+import httpx
+
 import time
 import typing as tp
 import asyncio
 import threading
 
-import httpx
+import terv.src.requester.errors as err
 
 
 def run_loop(loop: asyncio.AbstractEventLoop):
@@ -36,7 +38,38 @@ class Requester:
     @synchronized_request
     async def register(self, login: str, password: str, email: str):
         async with httpx.AsyncClient() as client:
-            await client.post(f'{self._server}/register', json={'login': login, 'password': password, 'email': email})
+            result = await client.post(f'{self._server}/register', json={'login': login, 'password': password, 'email': email})
+        return result.json().get('content')
+
+    @synchronized_request
+    async def update_tokens(self, refresh_token: str) -> dict:
+        async with httpx.AsyncClient() as client:
+            result = await client.post(f'{self._server}/auth/refresh', json={'refresh_token': refresh_token})
+
+        if result.status_code == 400:
+            raise err.ExpiredRefreshToken
+
+        return result.json().get('content')
+
+    @synchronized_request
+    async def authorize(self, login: str, password: str) -> dict:
+        async with httpx.AsyncClient() as client:
+            result = await client.post(f'{self._server}/auth/login')
+        return result.json().get('content')
+
+    @synchronized_request
+    async def get_user_info(self, access_token: str):
+        async with httpx.AsyncClient() as client:
+            result = await client.get(f'{self._server}/users', headers={'Authorization': access_token})
+        if result.status_code == 401:
+            raise err.ExpiredAccessToken
+        return result.json().get('content')
+
+    @synchronized_request
+    async def get_personal_tasks(self, user_id: int, access_token: str):
+        async with httpx.AsyncClient() as client:
+            result = await client.get(f'{self._server}/personal_tasks')
+        return result.json().get('content')
 
 
 if __name__ == '__main__':

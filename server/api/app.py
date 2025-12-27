@@ -1,3 +1,5 @@
+import logging
+
 from flask import Flask, request, jsonify, Request, Response
 from sqlalchemy.orm.session import Session, sessionmaker
 
@@ -12,6 +14,8 @@ from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct
 
+logging.basicConfig(level=logging.DEBUG)
+logging.debug('Module app.py is running')
 
 app = Flask(__name__)
 engine = init_db()
@@ -38,6 +42,7 @@ def form_response(code: int, message: str, content: tp.Any = None) -> Response:
     result = jsonify(response)
     result.status_code = code
     return result
+
 
 @app.route('/register', methods=['POST'])
 def register():
@@ -75,6 +80,7 @@ def auth_login():
 
 @app.route('/auth/refresh', methods=['POST'])
 def auth_refresh():
+
     refresh_token = request.json.get('refresh_token')
     if not refresh_token:
         return form_response(400, APIAn.no_params_error('refresh_token', request.endpoint))
@@ -83,6 +89,36 @@ def auth_refresh():
         return form_response(200, 'OK', tokens)
     except ValueError:
         return form_response(400, APIAn.invalid_data_error('refresh_token', request.endpoint, APIAn.no_login_message))
+
+
+@app.route('/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def personal_tasks():
+    """server://tasks?user&from_date&until_date"""
+    params = request.json
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth):
+        return form_response(401, 'Expired access token')
+
+
+@app.route('/users', methods=['GET', 'PUT', 'DELETE'])
+def users():
+    logins = request.args.getlist('logins')
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth):
+        return form_response(401, 'Expired access token')
+
+    if logins:
+        users_data = repo.get_users(logins)
+    else:
+        login = authenticator.get_login(auth)
+        users_data = repo.get_users((login, ))
+    logging.debug(f'Userdata received: {users_data}')
+
+    if users_data:
+        logging.debug(f'Userdata received: {users_data}')
+        return form_response(200, 'OK', users_data)
+    else:
+        return form_response(400, f'There is no user with this login: {logins}')
 
 
 def run():

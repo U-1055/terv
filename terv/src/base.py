@@ -27,4 +27,25 @@ class DataStructConst:
     x_size = 'x_size'
     y_size = 'y_size'
 
+    min_password_length = 8
+    min_login_length = 3
+
+
+class GuiLabels:
+
+    authorize = 'Войти'
+    password = 'Пароль'
+    login = 'Логин'
+    register = 'Зарегистрироваться'
+    email = 'Email'
+
+
+class GUIStyles:
+
+    normal_style = ''
+    error_style = ''
+
+
+
+
 

@@ -53,7 +53,7 @@ class DataRepository:
 
         return permissions
 
-    def _execute_select(self, query: Select, limit: int = None, offset: int = None) -> dict:
+    def _execute_select(self, query: Select, limit: int = None, offset: int = None) -> list:
         with self._session_maker() as session, session.begin():
             result = session.execute(query.limit(limit).offset(offset)).scalars().all()
             return [model.serialize() for model in result]
@@ -70,7 +70,7 @@ class DataRepository:
         with self._session_maker() as session, session.begin():
             session.execute(update(base_model).where(base_model.id.in_(model['id'] for model in models)), models)
 
-    def get_users(self, username: str = None, email: str = None, limit: int = None, offset: int = None) -> tuple:
+    def get_users(self, usernames: tuple[str, ...] = None, email: str = None, limit: int = None, offset: int = None) -> list:
         """
         Базовый метод получения таблиц пользователей.
 
@@ -82,8 +82,8 @@ class DataRepository:
         """
 
         query = select(cm.User)
-        if username:
-            query = query.where(cm.User.username == username)
+        if usernames:
+            query = query.where(cm.User.username.in_(usernames))
         if email:
             query = query.where(cm.User.email == email)
 

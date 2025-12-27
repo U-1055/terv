@@ -1,11 +1,13 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 
 import logging
 
 from terv.src.ui.ui_main_window import Ui_Form
 from terv.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow, UserFlowWindow
 from terv.src.gui.windows.windows import BaseWindow
+from terv.src.gui.windows.auth_window import PopUpAuthWindow, AuthView, RegisterView
+from terv.src.base import GUIStyles, GuiLabels
 
 
 logger = logging.getLogger()
@@ -17,6 +19,7 @@ logging.debug(f'Module main_view.py is running')
 
 class MainWindow(QMainWindow):
 
+    showed = Signal()  # Окно отрисовано
     btn_pressed = Signal()
 
     btn_open_personal_tasks_window_pressed = Signal()
@@ -27,6 +30,9 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         container = QWidget()
+
+        self._auth_window: PopUpAuthWindow = None
+
         self._view = Ui_Form()
         self._view.setupUi(container)
         self.setCentralWidget(container)
@@ -49,8 +55,27 @@ class MainWindow(QMainWindow):
 
         return window
 
+    def _show_auth_window(self, window: BaseWindow):
+        window.setWindowModality(Qt.WindowModality.ApplicationModal)
+        window.show()
+
+    def press_btn_open_personal_tasks_window(self):
+        self.btn_open_personal_tasks_window_pressed.emit()
+
+    def press_btn_open_userflow(self):
+        self.btn_open_userflow_pressed.emit()
+
+    def press_btn(self):
+        self.btn_pressed.emit()
+
     def show_error(self, title: str, message: str):
         pass
+
+    def open_auth_window(self) -> PopUpAuthWindow:
+        window = PopUpAuthWindow(GUIStyles.normal_style, GUIStyles.error_style, GuiLabels())
+        self.showed.connect(lambda: self._show_auth_window(window))
+
+        return window
 
     def open_personal_tasks_window(self) -> BaseWindow:
         return self._open_window(PersonalTasksWindow)
@@ -66,14 +91,8 @@ class MainWindow(QMainWindow):
         self._view.wdg_window.setCurrentWidget(window)
         logging.debug(f'{window} opened')
 
-    def press_btn_open_personal_tasks_window(self):
-        self.btn_open_personal_tasks_window_pressed.emit()
-
-    def press_btn_open_userflow(self):
-        self.btn_open_userflow_pressed.emit()
-
-    def press_btn(self):
-        self.btn_pressed.emit()
+    def showEvent(self, event, /):
+        self.showed.emit()
 
 
 def setup_gui(root: MainWindow, app: QApplication):

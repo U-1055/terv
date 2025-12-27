@@ -26,5 +26,5 @@ if __name__ == '__main__':
     launch(
         Model, (Path('data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst()),
         MainWindow, (),
-        Logic, (Requester(''), 10)
+        Logic, (Requester('http://localhost:5000'), 10)
     )

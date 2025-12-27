@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from PySide6.QtCore import Signal, QObject
 
@@ -9,11 +10,13 @@ from terv.models.base import Base
 from terv.src.gui.main_view import MainWindow
 from terv.src.requester.requester import Requester
 from terv.src.client_model.model import Model
+import terv.src.requester.errors as err
 
 
 class BaseWindowHandler(QObject):
     closed = Signal()
     error_occurred = Signal(str, str)  # Произошла ошибка
+    incorrect_tokens_update = Signal()  # Ошибка при обновлении токенов
 
     def __init__(self, window: BaseWindow, main_view: MainWindow, requester: Requester, model: Model):
         super().__init__()
@@ -22,21 +25,44 @@ class BaseWindowHandler(QObject):
         self._requester = requester
         self._model = model
 
+    def _set_new_tokens(self, tokens: dict):
+        access_token = tokens.get('access')
+        refresh_token = tokens.get('refresh')
+        self._model.set_access_token(access_token)
+        self._model.set_refresh_token(refresh_token)
+
+    def _update_tokens(self):
+        """
+        Обновляет access и refresh токены по refresh-токену.
+        Если refresh-токен недействителен, испускает сигнал incorrect_tokens_update
+        """
+
+        refresh_token = self._model.get_refresh_token()
+        tokens: asyncio.Future = self._requester.update_tokens(refresh_token)
+        tokens.add_done_callback(lambda future: self._prepare_request(future, self._set_new_tokens))
+
     def _send_error(self, title: str, message: str):
         self.error_occurred.emit(title, message)
 
-    def _set_data_to_widget(self, task: asyncio.Future, prepare_data_func: tp.Callable):
+    def _prepare_request(self, future: asyncio.Future, prepare_data_func: tp.Callable = None):
         """
-        Обрабатывает передачу данных из асинхронного запроса в метод. Если данных не получено - выводит ошибку.
-        :param task:
-        :param prepare_data_func:
+        Обрабатывает асинхронный запрос. Если данных не получено - выводит ошибку.
+        :param future: Future-объект asyncio.
+        :param prepare_data_func: функция, куда будет передан результат Future future.result().
         :return:
         """
-        result = task.result()
-        if result:
-            prepare_data_func(result)
-        else:
-            self._send_error('Timeout error', 'The data has not been received')
+        try:
+            result = future.result()
+            if prepare_data_func:
+                if result:
+                    prepare_data_func(result)
+                else:
+                    self._send_error('Timeout error', 'The data has not been received')
+
+        except err.ExpiredAccessToken as e:
+            self._update_tokens()
+        except err.ExpiredRefreshToken as e:
+            self.incorrect_tokens_update.emit()
 
     def update_data(self):
         """

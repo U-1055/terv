@@ -45,7 +45,7 @@ class Authenticator:
         return token_
 
     def check_token_valid(self, token_: str) -> bool:
-        """Проверяет валидность токена."""
+        """Проверяет валидность токена. Возвращает логическое значение <Токен валиден>"""
         secret = self._model.get_secret()
         if self._model.check_token_in_blacklist(token_):
             return False
@@ -54,6 +54,12 @@ class Authenticator:
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return False
         return True
+
+    def get_login(self, token_: str) -> str:
+        if self.check_token_valid(token_):
+            secret = self._model.get_secret()
+            payload = jwt.decode(token_)
+            return payload.get('login')
 
     def update_tokens(self, refresh_token: str) -> dict[str, str]:
         """Возвращает новую пару access + refresh по refresh-токену."""
@@ -68,6 +74,8 @@ class Authenticator:
             self._model.add_token_to_blacklist(refresh_token)
 
             return {'access': access_token, 'refresh': new_refresh_token}
+        else:
+            raise ValueError
 
     def register(self, login: str, email: str, password: str):
         hashed_password = hash_password(password)
@@ -80,8 +88,7 @@ class Authenticator:
 
     def authorize(self, login: str, password: str) -> dict[str, str]:
         """Авторизует пользователя. Возвращает пару access + refresh JWT-токенов."""
-        result = self._repository.get_users(login)[0]
-        print(result)
+        result = self._repository.get_users((login, ))[0]
         if result['username'] == login and checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8')):
             access_token = self._create_token(login, self._access_token_lifetime)
             refresh_token = self._create_token(login, self._refresh_token_lifetime)
