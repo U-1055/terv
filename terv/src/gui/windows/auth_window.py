@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QStackedWidget
+from PySide6.QtWidgets import QStackedWidget, QDialog, QHBoxLayout
 
 from terv.src.gui.windows.windows import BaseWindow
 from terv.src.gui.widgets_view.auth_view import AuthView
@@ -6,7 +6,7 @@ from terv.src.gui.widgets_view.register_view import RegisterView
 from terv.src.base import GuiLabels
 
 
-class PopUpAuthWindow(BaseWindow):
+class PopUpAuthWindow(QDialog):
     """Всплывающее окно регистрации/аутентификации."""
     auth_win_num = 0  # Номер окна в стековом виджете QStackLayout
     register_win_num = 1
@@ -14,11 +14,16 @@ class PopUpAuthWindow(BaseWindow):
     def __init__(self, normal_style: str, error_style: str, labels: GuiLabels = GuiLabels()):
         super().__init__()
         self._stacked_widget = QStackedWidget()
+        main_layout = QHBoxLayout()
         register_window = RegisterView(normal_style, error_style, labels)
         auth_window = AuthView(normal_style, error_style, labels)
 
         self._stacked_widget.addWidget(auth_window)
         self._stacked_widget.addWidget(register_window)
+        main_layout.addWidget(self._stacked_widget)
+
+        self.setLayout(main_layout)
+        self.choose_auth_window()
 
     def choose_auth_window(self):
         self._stacked_widget.setCurrentIndex(self.auth_win_num)

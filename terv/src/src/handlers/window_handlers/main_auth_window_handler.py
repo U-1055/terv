@@ -27,17 +27,22 @@ class MainAuthWindowHandler(BaseWindowHandler):
         self._auth_handler = AuthViewHandler(auth_window, DataStructConst())
         self._register_handler = RegisterViewHandler(register_window)
 
+        self._auth_handler.tried_to_auth.connect(self._on_tried_to_auth)
+        self._auth_handler.tried_to_go_to_register.connect(self._on_tried_to_go_to_register)
+        self._register_handler.tried_to_register.connect(self._on_tried_to_register)
+        self._register_handler.tried_to_go_to_auth.connect(self._on_tried_to_go_to_auth)
+
     def _prepare_updating(self, tokens: dict):
         self._set_new_tokens(tokens)
         self.tokens_updated.emit()
 
-    def on_tried_to_go_to_auth(self):
+    def _on_tried_to_go_to_auth(self):
         self._window.choose_auth_window()
 
-    def on_tried_to_go_to_register(self):
+    def _on_tried_to_go_to_register(self):
         self._window.choose_register_window()
 
-    def on_tried_to_auth(self):
+    def _on_tried_to_auth(self):
         login = self._auth_handler.login
         password = self._auth_handler.password
 
@@ -49,7 +54,7 @@ class MainAuthWindowHandler(BaseWindowHandler):
         except err.IncorrectLogin:
             self._auth_handler.set_error_login()
 
-    def on_tried_to_register(self):
+    def _on_tried_to_register(self):
         login = self._register_handler.login
         password = self._register_handler.password
         email = self._register_handler.email

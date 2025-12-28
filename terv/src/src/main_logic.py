@@ -48,9 +48,11 @@ class Logic:
         self._timer.start(1000 * 60)
 
     def _authorize(self):
+        logging.debug('Opening authorize window')
         main_auth_window = self._view.open_auth_window()
         auth_window_handler = MainAuthWindowHandler(main_auth_window, self._view, self._requester, self._model)
         auth_window_handler.tokens_updated.connect(auth_window_handler.close)
+        self._view.show_modal_window(main_auth_window)
 
     def _update_current_window(self):
         if self._opened_now:

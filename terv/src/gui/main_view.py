@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QDialog
 from PySide6.QtCore import Signal, Qt
 
 import logging
@@ -8,7 +8,6 @@ from terv.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow, Us
 from terv.src.gui.windows.windows import BaseWindow
 from terv.src.gui.windows.auth_window import PopUpAuthWindow, AuthView, RegisterView
 from terv.src.base import GUIStyles, GuiLabels
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -56,8 +55,9 @@ class MainWindow(QMainWindow):
         return window
 
     def _show_auth_window(self, window: BaseWindow):
-        window.setWindowModality(Qt.WindowModality.ApplicationModal)
         window.show()
+        window.setWindowModality(Qt.WindowModality.ApplicationModal)
+        window.raise_()
 
     def press_btn_open_personal_tasks_window(self):
         self.btn_open_personal_tasks_window_pressed.emit()
@@ -71,10 +71,19 @@ class MainWindow(QMainWindow):
     def show_error(self, title: str, message: str):
         pass
 
-    def open_auth_window(self) -> PopUpAuthWindow:
-        window = PopUpAuthWindow(GUIStyles.normal_style, GUIStyles.error_style, GuiLabels())
-        self.showed.connect(lambda: self._show_auth_window(window))
+    def show_modal_window(self, window: QDialog):
+        if self._auth_window:
+            self._auth_window.exec()
+        else:
+            window.show()
+            window.exec()
 
+    def open_auth_window(self) -> PopUpAuthWindow:
+        if self._auth_window:
+            return self._auth_window
+
+        window = PopUpAuthWindow(GUIStyles.normal_style, GUIStyles.error_style, GuiLabels())
+        self._auth_window = window
         return window
 
     def open_personal_tasks_window(self) -> BaseWindow:
