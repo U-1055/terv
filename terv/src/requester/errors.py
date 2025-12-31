@@ -30,3 +30,8 @@ class IncorrectPassword(IncorrectParamsError):
 
 class IncorrectLogin(IncorrectParamsError):
     pass
+
+
+class ServerError(APIError):
+    pass
+

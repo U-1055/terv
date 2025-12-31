@@ -2,14 +2,14 @@ import logging
 
 from flask import Flask, request, jsonify, Request, Response
 from sqlalchemy.orm.session import Session, sessionmaker
+from sqlalchemy.engine import create_engine, Engine
 
 from pathlib import Path
 import typing as tp
 
-import server.database.models.common_models as db
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator
-from server.database.models.base import launch_db, init_db
+from server.database.models.base import launch_db, init_db, Base, config_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct
@@ -18,7 +18,8 @@ logging.basicConfig(level=logging.DEBUG)
 logging.debug('Module app.py is running')
 
 app = Flask(__name__)
-engine = init_db()
+engine = launch_db('sqlite:///../database/database')
+
 session = sessionmaker(bind=engine)
 repo = DataRepository(session)
 model = Model(Path('../storage/storage'))
@@ -56,7 +57,7 @@ def register():
 
     repo.add_users(
         ({
-            ds_const.login: login,
+            ds_const.username: login,
             ds_const.email: email,
             ds_const.hashed_password: password
         },)

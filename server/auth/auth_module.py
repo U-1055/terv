@@ -1,4 +1,5 @@
 import datetime
+import logging
 import shelve
 
 import jwt
@@ -58,13 +59,14 @@ class Authenticator:
     def get_login(self, token_: str) -> str:
         if self.check_token_valid(token_):
             secret = self._model.get_secret()
-            payload = jwt.decode(token_)
+            payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
             return payload.get('login')
 
     def update_tokens(self, refresh_token: str) -> dict[str, str]:
         """Возвращает новую пару access + refresh по refresh-токену."""
         if self.check_token_valid(refresh_token):
-            payload = jwt.decode(refresh_token)
+            secret = self._model.get_secret()
+            payload = jwt.decode(refresh_token, key=secret, algorithms=[self._jwt_alg])
             login = payload.get('login')
             if not login:
                 raise ValueError('Invalid token: no login')
@@ -89,10 +91,14 @@ class Authenticator:
     def authorize(self, login: str, password: str) -> dict[str, str]:
         """Авторизует пользователя. Возвращает пару access + refresh JWT-токенов."""
         result = self._repository.get_users((login, ))[0]
-        if result['username'] == login and checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8')):
-            access_token = self._create_token(login, self._access_token_lifetime)
-            refresh_token = self._create_token(login, self._refresh_token_lifetime)
-            return {self.access_name: access_token, self.refresh_name: refresh_token}
+        if result['username'] == login:
+            try:
+                checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8'))
+                access_token = self._create_token(login, self._access_token_lifetime)
+                refresh_token = self._create_token(login, self._refresh_token_lifetime)
+                return {self.access_name: access_token, self.refresh_name: refresh_token}
+            except ValueError:
+                logging.debug(f'INVALID PASSWORD: saved_hash: {result['hashed_password']}; received_hash: {bytes(password, encoding='utf-8')}')
 
     @property
     def access_name(self):

@@ -44,6 +44,9 @@ class BaseWindowHandler(QObject):
     def _send_error(self, title: str, message: str):
         self.error_occurred.emit(title, message)
 
+    def _remake_request(self, future: asyncio.Future, prepare_data_func: tp.Callable, method: tp.Callable):
+        """Выполняет запрос к функции"""
+
     def _prepare_request(self, future: asyncio.Future, prepare_data_func: tp.Callable = None):
         """
         Обрабатывает асинхронный запрос. Если данных не получено - выводит ошибку.
@@ -62,6 +65,7 @@ class BaseWindowHandler(QObject):
         except err.ExpiredAccessToken as e:
             self._update_tokens()
         except err.ExpiredRefreshToken as e:
+            logging.debug('Expired Refresh Token')
             self.incorrect_tokens_update.emit()
 
     def update_data(self):

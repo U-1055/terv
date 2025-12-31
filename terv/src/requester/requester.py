@@ -54,22 +54,42 @@ class Requester:
     @synchronized_request
     async def authorize(self, login: str, password: str) -> dict:
         async with httpx.AsyncClient() as client:
-            result = await client.post(f'{self._server}/auth/login')
+            result = await client.post(f'{self._server}/auth/login', json={'login': login, 'password': password})
+
+        if result.status_code == 400:
+            raise err.UnknownCredentials
+
         return result.json().get('content')
 
     @synchronized_request
     async def get_user_info(self, access_token: str):
         async with httpx.AsyncClient() as client:
             result = await client.get(f'{self._server}/users', headers={'Authorization': access_token})
+
         if result.status_code == 401:
             raise err.ExpiredAccessToken
+        if result.status_code == 500:
+            raise err.ServerError
+
         return result.json().get('content')
 
     @synchronized_request
     async def get_personal_tasks(self, user_id: int, access_token: str):
         async with httpx.AsyncClient() as client:
             result = await client.get(f'{self._server}/personal_tasks')
+
+        if result.status_code == 401:
+            raise err.ExpiredAccessToken
+        if result.status_code == 500:
+            raise err.ServerError
+
         return result.json().get('content')
+
+
+
+
+
+
 
 
 if __name__ == '__main__':

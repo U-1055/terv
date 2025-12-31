@@ -32,20 +32,19 @@ class Base(DeclarativeBase):
         return result
 
 
-def init_db() -> Engine:
+def init_db(path: str) -> Engine:
     """Создаёт базу заново и возвращает её движок."""
+    import server.database.models.common_models as cm
 
-    engine = create_engine('sqlite:///')
-    Base.metadata.create_all(bind=engine)
+    engine = create_engine(path)
+    cm.Base.metadata.create_all(bind=engine)
     add_permissions(engine)
     return engine
 
 
-def launch_db() -> Engine:
+def launch_db(path: str) -> Engine:
     """Возвращает движок уже созданной базы данных."""
-    import server.database.models.roles as roles
-    engine = create_engine('sqlite:///')
-    add_permissions(engine)
+    engine = create_engine(path)
     return engine
 
 
@@ -74,13 +73,14 @@ def config_db(engine):
 
 if __name__ == '__main__':
     from server.database.repository import DataRepository
+    from server.database.models.roles import *
     from server.database.models.common_models import *
-
-    engine = create_engine('sqlite:///')
-    Base.metadata.create_all(bind=engine)
+    path = 'sqlite:///../../database/database'
+    engine = init_db('sqlite:///../../database/database')
     config_db(engine)
     s = sessionmaker(bind=engine)
 
     repo = DataRepository(s)
+    repo.add_users([{'username': 'strv', 'hashed_password': 'ast', 'email': 'ss'}])
 
     print(repo.get_workflows()[0])

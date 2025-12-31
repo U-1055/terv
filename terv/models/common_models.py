@@ -6,6 +6,7 @@ import typing as tp
 
 from terv.models.base import Base
 
+
 class User(Base):
     __tablename__ = 'user'
 
@@ -25,25 +26,24 @@ class User(Base):
     assigned_by_user_tasks: list[int] # Порученные пользователЕМ
     responsibility_tasks: list[int]  # Задачи, где пользователь назначен ответственным
 
-    created_personal_tasks: list[int] # Личные задачи
+    created_personal_tasks: list[int] | None # Личные задачи
     # Роли
-    roles: list[int]
+    roles: list[int] | None
 
     # Документы РП
-    created_wf_documents: list[int]
+    created_wf_documents: list[int] | None
 
     # Мероприятия
-    created_wf_daily_events: list[int]
-    created_wf_many_days_events: list[int]
-    notified_daily_events: list[int]
-    notified_many_days_events: list[int]
+    created_wf_daily_events: list[int] | None
+    created_wf_many_days_events: list[int] | None
+    notified_daily_events: list[int] | None
+    notified_many_days_events: list[int] | None
 
     # Личные объекты
-    work_directions: list[int] 
-    personal_daily_events: list[int]
-    personal_many_days_events: list[int]
+    work_directions: list[int] | None
+    personal_daily_events: list[int] | None
+    personal_many_days_events: list[int] | None
 
-    
     one_links: tp.ClassVar = []
     many_links: tp.ClassVar = [
         'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
