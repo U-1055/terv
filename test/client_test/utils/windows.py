@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget
-from terv.src.gui.windows.windows import BaseView
+from client.src.gui.windows.windows import BaseView
 
 import logging
 
@@ -39,5 +39,5 @@ class WindowThird(BaseView):
 
 
 if __name__ == '__main__':
-    from terv.main import launch, Logic, MainWindow
+    from client.main import launch, Logic, MainWindow
 
