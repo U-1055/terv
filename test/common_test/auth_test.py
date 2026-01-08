@@ -2,9 +2,9 @@ import asyncio
 import logging
 import pathlib
 
-from terv.src.src.handlers.window_handlers.base import BaseWindowHandler
-from terv.src.requester.requester import Requester
-from terv.src.client_model.model import Model
+from client.src.src.handlers.window_handlers.base import BaseWindowHandler
+from client.src.requester.requester import Requester
+from client.src.client_model.model import Model
 
 
 logging.basicConfig(level=logging.DEBUG)

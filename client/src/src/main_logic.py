@@ -69,6 +69,7 @@ class Logic:
 
     def _close_outdated_window(self, handler: BaseWindowHandler):
         handler.close()
+        self._win_handlers.remove(handler)
 
     def _get_last_handler(self, type_) -> BaseWindowHandler | None:
         for handler in self._win_handlers:

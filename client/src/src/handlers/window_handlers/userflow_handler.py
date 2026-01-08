@@ -68,8 +68,9 @@ class UserFlowWindowHandler(BaseWindowHandler):
             request: asyncio.Future = self._requester.get_user_info(self._model.get_access_token())
             request.add_done_callback(lambda future: self._prepare_request(future, self._set_user))
 
-        tasks: asyncio.Future = self._requester.get_personal_tasks(self._user.id, access_token)
-        tasks.add_done_callback(lambda future: self._prepare_request(future, self._set_tasks))
+        if self._user:  # ToDo: что делать, если данные всё-таки не поступили?
+            tasks: asyncio.Future = self._requester.get_personal_tasks(self._user.id, access_token)
+            tasks.add_done_callback(lambda future: self._prepare_request(future, self._set_tasks))
 
 def close(self):
     pass

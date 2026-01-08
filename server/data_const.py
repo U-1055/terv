@@ -18,6 +18,7 @@ class DataStruct:
     login = 'login'
     email = 'email'
     hashed_password = 'hashed_password'
+    username = 'username'
 
     task = 'task'
     project = 'project'
