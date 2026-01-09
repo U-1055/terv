@@ -6,6 +6,7 @@ import asyncio
 import threading
 
 import client.src.requester.errors as err
+from common.base import DataStruct
 
 
 def run_loop(loop: asyncio.AbstractEventLoop):
@@ -31,35 +32,35 @@ def synchronized_request(func):
 
 class Requester:
 
-    def __init__(self, server: str):
+    def __init__(self, server: str, common_data_struct: DataStruct = DataStruct):
         self._server = server
-        self._running_event_loop = None
+        self._struct = common_data_struct
 
     @synchronized_request
     async def register(self, login: str, password: str, email: str):
         async with httpx.AsyncClient() as client:
-            result = await client.post(f'{self._server}/register', json={'login': login, 'password': password, 'email': email})
-        return result.json().get('content')
+            result = await client.post(f'{self._server}/register', json={self._struct.login: login, self._struct.password: password, self._struct.email: email})
+        return result.json().get(self._struct.content)
 
     @synchronized_request
     async def update_tokens(self, refresh_token: str) -> dict:
         async with httpx.AsyncClient() as client:
-            result = await client.post(f'{self._server}/auth/refresh', json={'refresh_token': refresh_token})
+            result = await client.post(f'{self._server}/auth/refresh', json={self._struct.refresh_token: refresh_token})
 
         if result.status_code == 400:
             raise err.ExpiredRefreshToken
 
-        return result.json().get('content')
+        return result.json().get(self._struct.refresh_token)
 
     @synchronized_request
     async def authorize(self, login: str, password: str) -> dict:
         async with httpx.AsyncClient() as client:
-            result = await client.post(f'{self._server}/auth/login', json={'login': login, 'password': password})
+            result = await client.post(f'{self._server}/auth/login', json={self._struct.login: login, self._struct.password: password})
 
         if result.status_code == 400:
             raise err.UnknownCredentials
 
-        return result.json().get('content')
+        return result.json().get(self._struct.content)
 
     @synchronized_request
     async def get_user_info(self, access_token: str):
@@ -71,7 +72,7 @@ class Requester:
         if result.status_code == 500:
             raise err.ServerError
 
-        return result.json().get('content')
+        return result.json().get(self._struct.content)
 
     @synchronized_request
     async def get_personal_tasks(self, user_id: int, access_token: str):
@@ -83,15 +84,8 @@ class Requester:
         if result.status_code == 500:
             raise err.ServerError
 
-        return result.json().get('content')
-
-
-
-
-
-
+        return result.json().get(self._struct.content)
 
 
 if __name__ == '__main__':
     pass
-

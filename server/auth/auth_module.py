@@ -57,13 +57,25 @@ class Authenticator:
         return True
 
     def get_login(self, token_: str) -> str:
+        """
+        Возвращает логин из access-токена. Вызывает ValueError, если токен недействителен или произошла ошибка при
+        декодировании.
+        """
+
         if self.check_token_valid(token_):
             secret = self._model.get_secret()
             payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
             return payload.get('login')
+        else:
+            raise ValueError
 
     def update_tokens(self, refresh_token: str) -> dict[str, str]:
-        """Возвращает новую пару access + refresh по refresh-токену."""
+        """
+        Возвращает новую пару access + refresh по refresh-токену.
+        Вызывает ValueError, если токен недействителен или произошла ошибка при
+        декодировании.
+        """
+
         if self.check_token_valid(refresh_token):
             secret = self._model.get_secret()
             payload = jwt.decode(refresh_token, key=secret, algorithms=[self._jwt_alg])
@@ -89,8 +101,17 @@ class Authenticator:
             self._model.add_token_to_blacklist(token_)
 
     def authorize(self, login: str, password: str) -> dict[str, str]:
-        """Авторизует пользователя. Возвращает пару access + refresh JWT-токенов."""
-        result = self._repository.get_users((login, ))[0]
+        """
+        Авторизует пользователя. Возвращает пару access + refresh JWT-токенов.
+        Вызывает ValueError, если авторизация не удалась.
+        """
+
+        results = self._repository.get_users((login, ))
+        if results:
+            result = results[0]
+        else:
+            raise ValueError
+
         if result['username'] == login:
             try:
                 checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8'))
@@ -102,11 +123,11 @@ class Authenticator:
 
     @property
     def access_name(self):
-        return self._data_struct.access
+        return self._data_struct.access_token
 
     @property
     def refresh_name(self):
-        return self._data_struct.refresh
+        return self._data_struct.refresh_token
 
 
 class Authorizer:

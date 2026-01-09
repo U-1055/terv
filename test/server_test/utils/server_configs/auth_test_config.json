@@ -1,0 +1,5 @@
+{
+  "env": "test",
+  "access_token_lifetime": 2,
+  "refresh_token_lifetime": 10
+}

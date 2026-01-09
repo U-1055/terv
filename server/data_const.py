@@ -1,5 +1,7 @@
 import datetime
 import enum
+from pathlib import Path
+import json
 
 
 class DataStruct:
@@ -9,11 +11,22 @@ class DataStruct:
     datetime_format = f'{date_format}-{time_format}'
     blacklist = 'blacklist'
     secret = 'secret'
-    access = 'access'
-    refresh = 'refresh'
     jwt_alg = 'HS256'
-    access_token_lifetime = datetime.timedelta(minutes=15)
-    refresh_token_lifetime = datetime.timedelta(hours=24)
+    access_token = 'access_token'
+    refresh_token = 'refresh_token'
+
+    # Поля конфига
+    env = 'env'
+    prod = 'prod'
+    dev = 'dev'
+    test = 'test'
+    access_token_lifetime = 'access_token_lifetime'
+    refresh_token_lifetime = 'refresh_token_lifetime'
+
+    # Параметры конфига по умолчанию
+
+    default_access_token_lifetime = datetime.timedelta(seconds=15 * 60)
+    default_refresh_token_lifetime = datetime.timedelta(seconds=24 * 3600)
 
     login = 'login'
     email = 'email'
@@ -25,6 +38,14 @@ class DataStruct:
     document = 'document'
     daily_event = 'daily_event'
     many_days_event = 'many_days_event'
+
+
+# Конфиг по умолчанию
+default_config = {
+    DataStruct.env: DataStruct.prod,
+    DataStruct.access_token_lifetime: DataStruct.default_access_token_lifetime,
+    DataStruct.refresh_token_lifetime: DataStruct.default_refresh_token_lifetime
+}
 
 
 class Permissions(enum.Enum):
@@ -69,3 +90,59 @@ class APIAnswers:
     @staticmethod
     def invalid_data_error(param: str, endpoint: str, message: str = '') -> str:
         return f'The endpoint {endpoint} received the invalid param {param}: {message}'
+
+
+class Config:
+    """
+    Представление конфиг-файла config.json.
+
+    Структура config-файла: {
+        'env': str [prod, dev, test]
+        'access_token_lifetime': int (seconds)
+        'refresh_token_lifetime': int (seconds)
+    }
+
+    """
+
+    def __init__(self, config_path: Path):
+        self._config_path = config_path
+
+        try:
+            with open(self._config_path, 'rb') as config:
+                config_data = json.load(config)
+                self._env = config_data.get('env')
+
+                if not self._env:  # Окружение по умолчанию
+                    self._env = default_config[DataStruct.env]
+
+                access_lifetime = str(config_data.get('access_token_lifetime'))
+                if access_lifetime and access_lifetime.isdigit():  # Время жизни access-токена по умолчанию
+                    self._access_token_lifetime = datetime.timedelta(seconds=int(access_lifetime))
+                else:
+                    self._access_token_lifetime = DataStruct.default_access_token_lifetime
+
+                refresh_lifetime = str(config_data.get('refresh_token_lifetime'))
+                if refresh_lifetime and refresh_lifetime.isdigit():  # Время жизни refresh-токена по умолчанию
+                    self._refresh_token_lifetime = datetime.timedelta(seconds=int(refresh_lifetime))
+                else:
+                    self._refresh_token_lifetime = DataStruct.default_refresh_token_lifetime
+        except (OSError, json.JSONDecodeError):
+            self._env = default_config[DataStruct.env]
+            self._refresh_token_lifetime = DataStruct.default_refresh_token_lifetime
+            self._access_token_lifetime = DataStruct.default_access_token_lifetime
+
+    @property
+    def env(self) -> str:
+        return self._env
+
+    @property
+    def access_token_lifetime(self) -> datetime.timedelta:
+        return self._access_token_lifetime
+
+    @property
+    def refresh_token_lifetime(self) -> datetime.timedelta:
+        return self._refresh_token_lifetime
+
+if __name__ == '__main__':
+    Config('config.json')
+
