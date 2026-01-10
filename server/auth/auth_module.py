@@ -1,7 +1,8 @@
+from sqlalchemy.exc import IntegrityError
+
 import datetime
 import logging
 import shelve
-
 import jwt
 from bcrypt import checkpw, hashpw, gensalt
 
@@ -37,21 +38,38 @@ class Authenticator:
         secret = self._model.get_secret()
         token_ = jwt.encode(
             payload={
-                'login': login,
-                'exp': datetime.datetime.now(tz=datetime.timezone.utc) + lifetime
+                'sub': login,
+                'exp': datetime.datetime.now(tz=datetime.timezone.utc) + lifetime,  # Время истечения токена
+                'iat': datetime.datetime.now(tz=datetime.timezone.utc)  # Время создания токена
             },
             key=secret,
             algorithm=self._jwt_alg
         )
         return token_
 
-    def check_token_valid(self, token_: str) -> bool:
-        """Проверяет валидность токена. Возвращает логическое значение <Токен валиден>"""
+    def check_token_valid(self, token_: str, type_: str) -> bool:
+        """
+        Проверяет валидность токена. Возвращает логическое значение <Токен валиден>
+        :param token_: токен
+        :param type_: тип токена (access_token или refresh_token)
+        """
+
         secret = self._model.get_secret()
         if self._model.check_token_in_blacklist(token_):
             return False
         try:
-            jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
+            payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
+            creating_time = payload.get('iat')  # Проверка типа токена
+            expiring_time = payload.get('exp')
+            if type_ == self._data_struct.access_token:
+                if expiring_time - creating_time != self._access_token_lifetime.seconds:
+                    return False
+            elif type_ == self._data_struct.refresh_token:
+                if expiring_time - creating_time != self._refresh_token_lifetime.seconds:
+                    return False
+            else:
+                raise ValueError(f'Unknown token_type: {type_}. Must be access or refresh')
+
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return False
         return True
@@ -62,10 +80,10 @@ class Authenticator:
         декодировании.
         """
 
-        if self.check_token_valid(token_):
+        if self.check_token_valid(token_, self._data_struct.access_token):
             secret = self._model.get_secret()
             payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
-            return payload.get('login')
+            return payload.get('sub')
         else:
             raise ValueError
 
@@ -76,10 +94,10 @@ class Authenticator:
         декодировании.
         """
 
-        if self.check_token_valid(refresh_token):
+        if self.check_token_valid(refresh_token, self._data_struct.refresh_token):
             secret = self._model.get_secret()
             payload = jwt.decode(refresh_token, key=secret, algorithms=[self._jwt_alg])
-            login = payload.get('login')
+            login = payload.get('sub')
             if not login:
                 raise ValueError('Invalid token: no login')
             access_token = self._create_token(login, self._access_token_lifetime)
@@ -93,7 +111,10 @@ class Authenticator:
 
     def register(self, login: str, email: str, password: str):
         hashed_password = hash_password(password)
-        self._repository.add_users(({'username': login, 'email': email, 'hashed_password': hashed_password},))
+        try:  # ToDo: переделать на константы
+            self._repository.add_users(({'username': login, 'email': email, 'hashed_password': hashed_password},))
+        except IntegrityError:
+            raise ValueError
 
     def recall_tokens(self, tokens: list):
         """Добавляет полученные токены в blacklist."""
@@ -118,8 +139,11 @@ class Authenticator:
                 access_token = self._create_token(login, self._access_token_lifetime)
                 refresh_token = self._create_token(login, self._refresh_token_lifetime)
                 return {self.access_name: access_token, self.refresh_name: refresh_token}
-            except ValueError:
+            except ValueError as e:
                 logging.debug(f'INVALID PASSWORD: saved_hash: {result['hashed_password']}; received_hash: {bytes(password, encoding='utf-8')}')
+                raise ValueError
+        else:
+            raise ValueError
 
     @property
     def access_name(self):
@@ -170,7 +194,7 @@ if __name__ == '__main__':
     from server.database.models.base import init_db, sessionmaker
     from pathlib import Path
 
-    engine = init_db()
+    engine = init_db('sqlite:///../database/database')
     session = sessionmaker(bind=engine)
     repo = DataRepository(session)
     model = Model(Path('../storage/storage'))
@@ -180,10 +204,9 @@ if __name__ == '__main__':
         repo,
         model,
         ds_const.jwt_alg,
-        ds_const.access_token_lifetime,
-        ds_const.refresh_token_lifetime
+        ds_const.default_access_token_lifetime,
+        ds_const.default_refresh_token_lifetime
     )
 
     authenticator.register('log1', 'em1', 'pass1')
-    print(authenticator.authorize('log1', 'pass1'))
-
+    authenticator.register('log1', 'em1', 'pass1')

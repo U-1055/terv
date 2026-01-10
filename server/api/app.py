@@ -1,4 +1,5 @@
 import logging
+import os
 
 from flask import Flask, request, jsonify, Request, Response
 from sqlalchemy.orm.session import Session, sessionmaker
@@ -13,22 +14,28 @@ from server.database.models.base import launch_db, init_db, Base, config_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config
-from common.base import DataStruct as CommonStruct
+from common.base import DataStruct as CommonStruct, check_password
+from server.utils.data_checkers import check_email
+
 # ToDo: проверка уникальности параметров пользователя
+
 logging.basicConfig(level=logging.DEBUG)
 logging.debug('Module app.py is running')
 
 app = Flask(__name__)
-config = Config(Path('../config.json'))
-print(config.env)
-if config.env == DataStruct.test:  # В тестовом окружении БД инициализируется заново
+config = Config('../config.json')
+base_config = None
+if config.env == DataStruct.test:
     engine = init_db('sqlite:///../database/database')
 else:
     engine = launch_db('sqlite:///../database/database')
 
+logging.debug(f'Module app.py is running. Environment: {config.env}')
+
 session = sessionmaker(bind=engine)
 repo = DataRepository(session)
 model = Model(Path('../storage/storage'))
+model.get_secret()
 ds_const = DataStruct()
 
 common_struct = CommonStruct()
@@ -55,22 +62,46 @@ def form_response(code: int, message: str, content: tp.Any = None) -> Response:
 
 @app.route('/register', methods=['POST'])
 def register():
-    login, password, email = request.json.get(common_struct.login), request.json.get(common_struct.password), request.json.get(common_struct.email)
+    login, password, email = request.json.get(common_struct.login), request.json.get(
+        common_struct.password), request.json.get(common_struct.email)
     if not login:
         return form_response(400, APIAn.no_params_error(common_struct.login, request.endpoint))
+
+    if len(login) < common_struct.min_login_length or len(
+            login) > common_struct.max_login_length:  # Проверка длины логина
+        return form_response(400,
+                             APIAn.invalid_data_error(common_struct.login, request.endpoint,
+                                                      ds_const.login_conditions)
+                             )
+
     if not password:
         return form_response(400, APIAn.no_params_error(common_struct.password, request.endpoint))
+    if not check_password(password):
+        return form_response(400,
+                             APIAn.invalid_data_error(
+                                 common_struct.password, request.endpoint, ds_const.password_conditions
+                                )
+                             )
     if not email:
         return form_response(400, APIAn.no_params_error(common_struct.email, request.endpoint))
+    if not check_email(email):
+        return form_response(400, APIAn.invalid_data_error(common_struct.email, request.endpoint, "This email doesn't exist."))
 
-    repo.add_users(
-        ({
-            ds_const.username: login,
-            ds_const.email: email,
-            ds_const.hashed_password: password
-        },)
-    )
-    return form_response(200, 'OK', {})
+    try:
+        authenticator.register(login, email, password)
+        return form_response(200, 'OK', {})
+    except ValueError:
+        by_login = repo.get_users((login, ))
+        if by_login:  # Если есть пользователь с таким же логинов
+            return form_response(400, APIAn.invalid_data_error(
+                common_struct.login, request.endpoint, f'That user ({login}) already exists')
+                                 )
+        by_email = repo.get_users(email=email)
+        if by_email: # Если есть пользователь с таким же email'ом
+            return form_response(400, APIAn.invalid_data_error(
+                common_struct.login, request.endpoint, f'User with this email already exists')
+                                 )
+        return form_response(500, 'Unknown error during registration')  # Все параметры уникальны, но регистрация не удалась
 
 
 @app.route('/auth/login', methods=['POST'])
@@ -89,7 +120,6 @@ def auth_login():
 
 @app.route('/auth/refresh', methods=['POST'])
 def auth_refresh():
-
     refresh_token = request.json.get(common_struct.refresh_token)
     if not refresh_token:
         return form_response(400, APIAn.no_params_error(common_struct.refresh_token, request.endpoint))
@@ -97,7 +127,22 @@ def auth_refresh():
         tokens = authenticator.update_tokens(refresh_token)
         return form_response(200, 'OK', tokens)
     except ValueError:
-        return form_response(400, APIAn.invalid_data_error(common_struct.refresh_token, request.endpoint, APIAn.no_login_message))
+        return form_response(400, APIAn.invalid_data_error(common_struct.refresh_token, request.endpoint,
+                                                           APIAn.no_login_message))
+
+
+@app.route('/auth/recall', methods=['POST'])
+def auth_recall():
+    """Отзывает переданные токены."""
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
+        return form_response(401, 'Expired access token')
+
+    params = request.json
+    tokens = params.get(common_struct.tokens)
+    if tokens:
+        authenticator.recall_tokens(tokens)
+    return form_response(200, 'OK')
 
 
 @app.route('/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
@@ -105,16 +150,16 @@ def personal_tasks():
     """server://tasks?user&from_date&until_date"""
     params = request.json
     auth = request.headers.get('Authorization')
-    if not authenticator.check_token_valid(auth):
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
         return form_response(401, 'Expired access token')
 
 
 @app.route('/users', methods=['GET', 'PUT', 'DELETE'])
 def users():
     auth = request.headers.get('Authorization')
-    logins = request.json.get(common_struct.logins)
+    logins = request.args.get(common_struct.logins)
 
-    if not authenticator.check_token_valid(auth):
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
         return form_response(401, 'Expired access token')
 
     if not logins:  # Если передан только

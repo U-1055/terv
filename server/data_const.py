@@ -1,7 +1,13 @@
 import datetime
 import enum
+import logging
+import os
 from pathlib import Path
 import json
+
+from common.base import DataStruct as CommonStruct
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class DataStruct:
@@ -38,6 +44,11 @@ class DataStruct:
     document = 'document'
     daily_event = 'daily_event'
     many_days_event = 'many_days_event'
+
+    # Описания требований к параметрам (Возвращаются в ответах)
+    login_conditions = f'The length of the login must be in range {CommonStruct.min_login_length}-{CommonStruct.max_login_length}'
+    password_conditions = (f'Length of the password must be in range {CommonStruct.min_password_length}-{CommonStruct.max_password_length}.'
+                           f'The password must include letters, numbers and other symbols.')
 
 
 # Конфиг по умолчанию
@@ -106,22 +117,22 @@ class Config:
 
     def __init__(self, config_path: Path):
         self._config_path = config_path
-
+        p = os.getcwd()
         try:
             with open(self._config_path, 'rb') as config:
                 config_data = json.load(config)
-                self._env = config_data.get('env')
+                self._env = config_data.get(DataStruct.env)
 
                 if not self._env:  # Окружение по умолчанию
                     self._env = default_config[DataStruct.env]
 
-                access_lifetime = str(config_data.get('access_token_lifetime'))
+                access_lifetime = str(config_data.get(DataStruct.access_token_lifetime))
                 if access_lifetime and access_lifetime.isdigit():  # Время жизни access-токена по умолчанию
                     self._access_token_lifetime = datetime.timedelta(seconds=int(access_lifetime))
                 else:
                     self._access_token_lifetime = DataStruct.default_access_token_lifetime
 
-                refresh_lifetime = str(config_data.get('refresh_token_lifetime'))
+                refresh_lifetime = str(config_data.get(DataStruct.refresh_token_lifetime))
                 if refresh_lifetime and refresh_lifetime.isdigit():  # Время жизни refresh-токена по умолчанию
                     self._refresh_token_lifetime = datetime.timedelta(seconds=int(refresh_lifetime))
                 else:
@@ -142,6 +153,7 @@ class Config:
     @property
     def refresh_token_lifetime(self) -> datetime.timedelta:
         return self._refresh_token_lifetime
+
 
 if __name__ == '__main__':
     Config('config.json')

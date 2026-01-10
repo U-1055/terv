@@ -1,3 +1,5 @@
+"""Слой API для использования в тестах."""
+
 import httpx
 
 from common.base import DataStruct
@@ -22,5 +24,13 @@ class TestRequester:
         return result
 
     def get_user_info(self, access_token: str) -> httpx.Response:
-        result = httpx.post(f'{self._server}/users', headers={'Authorization': access_token})
+        result = httpx.get(f'{self._server}/users', headers={'Authorization': access_token})
+        return result
+
+    def recall_tokens(self, tokens: tuple[str, ...], access_token: str):
+        result = httpx.post(
+            f'{self._server}/auth/recall',
+            headers={'Authorization': access_token},
+            json={DataStruct.tokens: tokens}
+        )
         return result
