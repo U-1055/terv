@@ -111,7 +111,7 @@ class Authenticator:
 
     def register(self, login: str, email: str, password: str):
         hashed_password = hash_password(password)
-        try:  # ToDo: переделать на константы
+        try:  # ToDo: переделать на константы (константы-названия полей хранить в common.base, т.к. они относятся и к клиенту (модели) и к серверу (модели sqlalchemy))
             self._repository.add_users(({'username': login, 'email': email, 'hashed_password': hashed_password},))
         except IntegrityError:
             raise ValueError
@@ -208,5 +208,4 @@ if __name__ == '__main__':
         ds_const.default_refresh_token_lifetime
     )
 
-    authenticator.register('log1', 'em1', 'pass1')
     authenticator.register('log1', 'em1', 'pass1')

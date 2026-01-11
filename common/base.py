@@ -2,6 +2,7 @@
 
 
 class DataStruct:
+    """Названия параметров запросов и ответов API и требования к данным"""
 
     login = 'login'
     password = 'password'
@@ -10,6 +11,8 @@ class DataStruct:
     refresh_token = 'refresh_token'
     content = 'content'
     status_code = 'status_code'
+    error_id = 'error_id'
+    message = 'message'
     logins = 'logins'
     tokens = 'tokens'
 
@@ -18,6 +21,38 @@ class DataStruct:
 
     max_password_length = 50
     min_password_length = 10
+
+
+class ErrorCodes:
+    """
+    Конкретные коды ошибок (error ids).
+
+    Префиксы ошибок:
+    no - данные отсутствуют
+    invalid - данные не соответствуют требованиям
+    existing - (для идентификаторов) уже есть объект с таким идентификатором
+
+    """
+    ok = 200
+    server_error = 500
+
+    no_email = 0
+    invalid_email = 1
+    no_password = 2
+    invalid_password = 3
+    no_login = 4
+    invalid_login = 5
+
+    existing_login = 6
+    existing_email = 7
+
+    invalid_credentials = 8
+    invalid_refresh = 9
+    invalid_access = 10
+    no_access = 11
+    no_refresh = 12
+
+    no_tokens = 13
 
 
 def check_password(password: str) -> bool:

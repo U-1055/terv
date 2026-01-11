@@ -45,17 +45,22 @@ class MainAuthWindowHandler(BaseWindowHandler):
         self._window.choose_register_window()
 
     def _on_tried_to_auth(self):
+
+        def prepare_auth(future: asyncio.Future):
+            try:
+                self._prepare_request(future, self._set_new_tokens)
+            except err.UnknownCredentials:
+                self._auth_handler.set_error_password(self._labels.incorrect_credentials)
+                self._auth_handler.set_error_login(self._labels.incorrect_credentials)
+
         login = self._auth_handler.login
         password = self._auth_handler.password
 
-        try:
-            request: asyncio.Future = self._requester.authorize(login, password)
-            request.add_done_callback(lambda future: self._prepare_request(future, self._set_new_tokens))
-        except err.UnknownCredentials:
-            self._auth_handler.set_error_password(self._labels.incorrect_credentials)
-            self._auth_handler.set_error_login(self._labels.incorrect_credentials)
+        request: asyncio.Future = self._requester.authorize(login, password)
+        request.add_done_callback(lambda future: prepare_auth(future))
 
     def _on_tried_to_register(self):
+
         login = self._register_handler.login
         password = self._register_handler.password
         email = self._register_handler.email

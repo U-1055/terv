@@ -1,3 +1,4 @@
+from common.base import ErrorCodes
 
 
 class APIError(BaseException):
@@ -42,4 +43,44 @@ class LoginAlreadyExists(IncorrectParamsError):  # Login уже существу
 
 class ServerError(APIError):
     pass
+
+
+class NoLogin(IncorrectParamsError):
+    pass
+
+
+class NoPassword(IncorrectParamsError):
+    pass
+
+
+class NoEmail(IncorrectParamsError):
+    pass
+
+
+class NoTokens(IncorrectParamsError):
+    pass
+
+# Соответствие между кодами ошибок и исключениями
+
+
+exceptions_error_ids = {
+    ErrorCodes.server_error: ServerError,
+    ErrorCodes.no_email: NoEmail,
+    ErrorCodes.no_login: NoLogin,
+    ErrorCodes.no_password: NoPassword,
+    ErrorCodes.invalid_email: IncorrectEmail,
+    ErrorCodes.invalid_login: IncorrectLogin,
+    ErrorCodes.invalid_credentials: UnknownCredentials,
+    ErrorCodes.invalid_password: IncorrectPassword,
+    ErrorCodes.invalid_refresh: ExpiredRefreshToken,
+    ErrorCodes.no_refresh: ExpiredRefreshToken,  # Для токенов вызывается одно и то же исключение, если токена нет и если токен просрочен
+    ErrorCodes.no_access: ExpiredAccessToken,
+    ErrorCodes.invalid_access: ExpiredAccessToken,
+    ErrorCodes.no_tokens: NoTokens,
+    ErrorCodes.existing_email: EmailAlreadyExists,
+    ErrorCodes.existing_login: LoginAlreadyExists
+}
+
+
+
 

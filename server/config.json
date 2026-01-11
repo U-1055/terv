@@ -1,1 +1,1 @@
-{"env": "test", "access_token_lifetime": 2, "refresh_token_lifetime": 4}
+{"env": "prod", "access_token_lifetime": 900, "refresh_token_lifetime": 86400}

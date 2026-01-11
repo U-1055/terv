@@ -1,3 +1,6 @@
+"""Слой API."""
+import json
+
 import httpx
 
 import time
@@ -6,7 +9,7 @@ import asyncio
 import threading
 
 import client.src.requester.errors as err
-from common.base import DataStruct
+from common.base import DataStruct, ErrorCodes
 
 
 def run_loop(loop: asyncio.AbstractEventLoop):
@@ -36,10 +39,37 @@ class Requester:
         self._server = server
         self._struct = common_data_struct
 
+    async def _get(self, path: str, query_params: dict = None, headers: dict = None) -> 'Response':  # Базовые методы запросов
+        async with httpx.AsyncClient() as client:
+            result = await client.get(path, headers=headers, params=query_params)
+        return Response(result)
+
+    async def _post(self, path: str, query_params: dict = None, headers: dict = None, json_: dict = None) -> 'Response':
+        async with httpx.AsyncClient() as client:
+            result = await client.post(path, json=json, headers=headers, params=query_params)
+        return Response(result)
+
+    async def _delete(self, path: str, query_params: dict = None, headers: dict = None) -> 'Response':
+        async with httpx.AsyncClient() as client:
+            result = await client.delete(path, headers=headers, params=query_params)
+        return Response(result)  # ToDo: переписать запросы с новыми методами
+
+    async def _put(self, path: str, query_params: dict = None, headers: dict = None, json_: dict = None) -> 'Response':
+        async with httpx.AsyncClient() as client:
+            result = await client.put(path, json=json, headers=headers, params=query_params)
+        return Response(result)
+
     @synchronized_request
     async def register(self, login: str, password: str, email: str):
         async with httpx.AsyncClient() as client:
             result = await client.post(f'{self._server}/register', json={self._struct.login: login, self._struct.password: password, self._struct.email: email})
+        error_code = result.json().get(self._struct.error_id)
+        message = result.json().get(self._struct.message)
+
+        if error_code != ErrorCodes.ok:  # Вызов исключения по коду
+            exc = err.exceptions_error_ids.get(error_code)
+            raise exc(message)
+
         return result.json().get(self._struct.content)
 
     @synchronized_request
@@ -47,8 +77,12 @@ class Requester:
         async with httpx.AsyncClient() as client:
             result = await client.post(f'{self._server}/auth/refresh', json={self._struct.refresh_token: refresh_token})
 
-        if result.status_code == 400:
-            raise err.ExpiredRefreshToken
+        error_code = result.json().get(self._struct.error_id)
+        message = result.json().get(self._struct.message)
+
+        if error_code != ErrorCodes.ok:  # Вызов исключения по коду
+            exc = err.exceptions_error_ids.get(error_code)
+            raise exc(message)
 
         return result.json().get(self._struct.refresh_token)
 
@@ -85,6 +119,32 @@ class Requester:
             raise err.ServerError
 
         return result.json().get(self._struct.content)
+
+
+class Response:
+    """
+    Ответ API.
+
+    :var response: объект httpx.Response.
+    :var http_code: код статуса HTTP.
+    :var error_id: ID ошибки. Если JSON в ответе отсутствует, error_id = 500 Server Error.
+    :var content: содержимое ответа (только для успешных запросов). Если JSON отсутствует, content = None.
+    :var message: сообщение из ответа.
+    """
+
+    def __init__(self, response: httpx.Response):
+        self.response = response
+        self.http_code = response.status_code
+
+        try:
+            response_data = response.json()
+            self.error_id = response_data.get(DataStruct.error_id)
+            self.content = response_data.get(DataStruct.content)
+            self.message = response_data.get(DataStruct.message)
+        except (json.JSONDecodeError, AttributeError):
+            self.error_id = ErrorCodes.server_error
+            self.content = None
+            self.message = 'No data in response'
 
 
 if __name__ == '__main__':

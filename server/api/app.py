@@ -14,7 +14,7 @@ from server.database.models.base import launch_db, init_db, Base, config_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config
-from common.base import DataStruct as CommonStruct, check_password
+from common.base import DataStruct as CommonStruct, check_password, ErrorCodes as ErCodes
 from server.utils.data_checkers import check_email
 
 # ToDo: проверка уникальности параметров пользователя
@@ -49,14 +49,15 @@ authenticator = Authenticator(
 )
 
 
-def form_response(code: int, message: str, content: tp.Any = None) -> Response:
+def form_response(http_code: int, message: str, content: tp.Any = None, error_id: int = ErCodes.ok) -> Response:
     response = {
-        'message': message
+        common_struct.message: message,
+        common_struct.error_id: error_id
     }
     if content:
         response.update(content=content)
     result = jsonify(response)
-    result.status_code = code
+    result.status_code = http_code
     return result
 
 
@@ -71,21 +72,38 @@ def register():
             login) > common_struct.max_login_length:  # Проверка длины логина
         return form_response(400,
                              APIAn.invalid_data_error(common_struct.login, request.endpoint,
-                                                      ds_const.login_conditions)
+                                                      ds_const.login_conditions), error_id=ErCodes.invalid_login
                              )
 
-    if not password:
-        return form_response(400, APIAn.no_params_error(common_struct.password, request.endpoint))
+    if not password or password:
+        return form_response(400, 
+                             APIAn.no_params_error(
+                                 common_struct.password, request.endpoint
+                             ),
+                             error_id=ErCodes.no_password
+                             )
     if not check_password(password):
         return form_response(400,
                              APIAn.invalid_data_error(
-                                 common_struct.password, request.endpoint, ds_const.password_conditions
-                                )
+                                 common_struct.password,
+                                 request.endpoint, 
+                                 ds_const.password_conditions
+                             ),
+                             error_id=ErCodes.invalid_password
                              )
     if not email:
-        return form_response(400, APIAn.no_params_error(common_struct.email, request.endpoint))
+        return form_response(400, 
+                             APIAn.no_params_error(common_struct.email, request.endpoint),
+                             error_id=ErCodes.no_email
+                             )
     if not check_email(email):
-        return form_response(400, APIAn.invalid_data_error(common_struct.email, request.endpoint, "This email doesn't exist."))
+        return form_response(400, 
+                             APIAn.invalid_data_error(
+                                 common_struct.email,
+                                 request.endpoint, 
+                                 "This email doesn't exist."),
+                             error_id=ErCodes.invalid_email
+                             )
 
     try:
         authenticator.register(login, email, password)
@@ -93,42 +111,55 @@ def register():
     except ValueError:
         by_login = repo.get_users((login, ))
         if by_login:  # Если есть пользователь с таким же логинов
-            return form_response(400, APIAn.invalid_data_error(
-                common_struct.login, request.endpoint, f'That user ({login}) already exists')
+            return form_response(400, 
+                                 APIAn.invalid_data_error(
+                                     common_struct.login,
+                                     request.endpoint,
+                                     f'That user ({login}) already exists'
+                                 ),
+                                 error_id=ErCodes.existing_login
                                  )
         by_email = repo.get_users(email=email)
         if by_email: # Если есть пользователь с таким же email'ом
-            return form_response(400, APIAn.invalid_data_error(
-                common_struct.login, request.endpoint, f'User with this email already exists')
+            return form_response(400,
+                                 APIAn.invalid_data_error(
+                                     common_struct.login,
+                                     request.endpoint, 
+                                     f'User with this email already exists'),
+                                 error_id=ErCodes.existing_email
                                  )
-        return form_response(500, 'Unknown error during registration')  # Все параметры уникальны, но регистрация не удалась
+        return form_response(500, 'Unknown error during registration', error_id=ErCodes.server_error)  # Все параметры уникальны, но регистрация не удалась
 
 
 @app.route('/auth/login', methods=['POST'])
 def auth_login():
     login, password = request.json.get(common_struct.login), request.json.get(common_struct.password)
     if not login:
-        return form_response(400, APIAn.no_params_error(common_struct.login, request.endpoint))
+        return form_response(400,
+                             APIAn.no_params_error(common_struct.login, request.endpoint),
+                             error_id=ErCodes.no_login)
     if not password:
-        return form_response(400, APIAn.no_params_error(common_struct.password, request.endpoint))
+        return form_response(400,
+                             APIAn.no_params_error(common_struct.password, request.endpoint),
+                             error_id=ErCodes.no_password)
     try:
         tokens = authenticator.authorize(login, password)
         return form_response(200, 'OK', tokens)
     except ValueError:
-        return form_response(400, APIAn.unknown_credentials_message)
+        return form_response(400, APIAn.unknown_credentials_message, error_id=ErCodes.invalid_credentials)
 
 
 @app.route('/auth/refresh', methods=['POST'])
 def auth_refresh():
     refresh_token = request.json.get(common_struct.refresh_token)
     if not refresh_token:
-        return form_response(400, APIAn.no_params_error(common_struct.refresh_token, request.endpoint))
+        return form_response(400, APIAn.no_params_error(common_struct.refresh_token, request.endpoint), error_id=ErCodes.no_refresh)
     try:
         tokens = authenticator.update_tokens(refresh_token)
         return form_response(200, 'OK', tokens)
     except ValueError:
         return form_response(400, APIAn.invalid_data_error(common_struct.refresh_token, request.endpoint,
-                                                           APIAn.no_login_message))
+                                                           'Invalid refresh'), error_id=ErCodes.invalid_refresh)
 
 
 @app.route('/auth/recall', methods=['POST'])
@@ -136,12 +167,14 @@ def auth_recall():
     """Отзывает переданные токены."""
     auth = request.headers.get('Authorization')
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token')
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access)
 
     params = request.json
     tokens = params.get(common_struct.tokens)
     if tokens:
         authenticator.recall_tokens(tokens)
+    else:
+        return form_response(400, 'No tokens', error_id=ErCodes.no_tokens)
     return form_response(200, 'OK')
 
 
@@ -151,7 +184,7 @@ def personal_tasks():
     params = request.json
     auth = request.headers.get('Authorization')
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token')
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access)
 
 
 @app.route('/users', methods=['GET', 'PUT', 'DELETE'])
@@ -160,13 +193,13 @@ def users():
     logins = request.args.get(common_struct.logins)
 
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token')
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access)
 
-    if not logins:  # Если передан только
+    if not logins:  # Если передан только access
         try:
             logins = [authenticator.get_login(auth)]
         except ValueError:
-            return form_response(401, 'Expired access token')
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access)
 
     users = repo.get_users(logins)
 
