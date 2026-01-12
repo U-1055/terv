@@ -1,7 +1,15 @@
 from common.base import ErrorCodes
 
 
-class APIError(BaseException):
+class APIError(BaseException):  # Ошибка, возвращённая API
+    pass
+
+
+class RequesterError(BaseException):  # Ошибка внутри Requester'а
+    pass
+
+
+class NoLastRequest(RequesterError):  # Не было запросов
     pass
 
 

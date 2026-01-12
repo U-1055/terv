@@ -17,6 +17,7 @@ class BaseWindowHandler(QObject):
     closed = Signal()
     error_occurred = Signal(str, str)  # Произошла ошибка
     incorrect_tokens_update = Signal()  # Ошибка при обновлении токенов
+    tokens_updated = Signal()  # Установлены новые токены
 
     def __init__(self, window: BaseWindow, main_view: MainWindow, requester: Requester, model: Model):
         super().__init__()
@@ -32,10 +33,7 @@ class BaseWindowHandler(QObject):
         self._model.set_refresh_token(refresh_token)
 
     def _update_tokens(self):
-        """
-        Обновляет access и refresh токены по refresh-токену.
-        Если refresh-токен недействителен, испускает сигнал incorrect_tokens_update
-        """
+        """Обновляет access и refresh токены по refresh-токену."""
 
         refresh_token = self._model.get_refresh_token()
         tokens: asyncio.Future = self._requester.update_tokens(refresh_token)
@@ -49,10 +47,10 @@ class BaseWindowHandler(QObject):
 
     def _prepare_request(self, future: asyncio.Future, prepare_data_func: tp.Callable = None):
         """
-        Обрабатывает асинхронный запрос. Если данных не получено - выводит ошибку.
+        Обрабатывает асинхронный запрос. Если данных не получено - выводит ошибку. Если access-токен недействителен,
+        обновляет его по refresh-токену. Если refresh-токен недействителен, испускает сигнал incorrect_tokens_update
         :param future: Future-объект asyncio.
         :param prepare_data_func: функция, куда будет передан результат Future future.result().
-        :return:
         """
         try:
             result = future.result()
@@ -61,15 +59,15 @@ class BaseWindowHandler(QObject):
                     prepare_data_func(result)
                 else:
                     self._send_error('Timeout error', 'The data has not been received')
-
         except err.ExpiredAccessToken as e:  # Обработка просрочки access-токена
             self._update_tokens()
+
+
         except err.ExpiredRefreshToken as e:  # Обработка просрочки refresh-токена
             logging.debug('Expired Refresh Token')
             self.incorrect_tokens_update.emit()
         except Exception as e:  # Все остальные исключения передаются вызывающей стороне
             raise e
-
 
     def update_data(self):
         """

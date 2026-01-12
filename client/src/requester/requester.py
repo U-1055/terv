@@ -1,4 +1,6 @@
 """Слой API."""
+import datetime
+
 import httpx
 
 import json
@@ -33,10 +35,19 @@ def synchronized_request(func):
 
 
 class Requester:
+    """
+    Слой API.
 
-    def __init__(self, server: str, common_data_struct: DataStruct = DataStruct):
+    :param server: адрес сервера.
+    :param common_data_struct: константы и требования к данным.
+    :param timeout: минимальное время между двумя одинаковыми запросами
+    """
+
+    def __init__(self, server: str, common_data_struct: DataStruct = DataStruct, timeout: int = 0.1):
         self._server = server
         self._struct = common_data_struct
+        self._timeout = timeout
+        self._requests: list[Request] = []
 
     def _prepare_response(self, response: 'Response'):
         """Обрабатывает ответ: вызывает исключения, если запрос неудачный, передаёт ответ дальше, если успешный"""
@@ -47,34 +58,22 @@ class Requester:
             exc = err.exceptions_error_ids.get(error_code)
             raise exc(message)
 
-    async def _get(self, path: str, query_params: dict = None, headers: dict = None) -> 'Response':  # Базовые методы запросов
-        async with httpx.AsyncClient() as client:
-            result = await client.get(path, headers=headers, params=query_params)
+    async def _make_request(self, request: 'Request') -> 'Response':  # Базовые методы запросов
 
-        try:
-            return self._prepare_response(Response(result))
-        except err.APIError as e:
-            raise e
-
-    async def _post(self, path: str, query_params: dict = None, headers: dict = None, json_: dict = None) -> 'Response':
         async with httpx.AsyncClient() as client:
-            result = await client.post(path, json=json_, headers=headers, params=query_params)
-        try:
-            return self._prepare_response(Response(result))
-        except err.APIError as e:
-            raise e
-
-    async def _delete(self, path: str, query_params: dict = None, headers: dict = None) -> 'Response':
-        async with httpx.AsyncClient() as client:
-            result = await client.delete(path, headers=headers, params=query_params)
-        try:
-            return self._prepare_response(Response(result))
-        except err.APIError as e:
-            raise e
-
-    async def _put(self, path: str, query_params: dict = None, headers: dict = None, json_: dict = None) -> 'Response':
-        async with httpx.AsyncClient() as client:
-            result = await client.put(path, json=json_, headers=headers, params=query_params)
+            if request.method == Request.GET:
+                result = await client.get(request.path, headers=request.headers, params=request.query_params)
+            elif request.method == Request.POST:
+                result = await client.post(request.path, headers=request.headers, params=request.query_params,
+                                           json=request.json)
+            elif request.method == Request.DELETE:
+                result = await client.post(request.path, headers=request.headers, params=request.query_params)
+            elif request.method == Request.PUT:
+                result = await client.post(request.path, headers=request.headers, params=request.query_params,
+                                           json=request.json)
+            else:
+                raise err.RequesterError(f'Unknown method: {self._last_request.method}')
+            self._last_request = request
         try:
             return self._prepare_response(Response(result))
         except err.APIError as e:
@@ -83,14 +82,13 @@ class Requester:
     @synchronized_request
     async def register(self, login: str, password: str, email: str):
         try:
-            response = await self._post(
-                f'{self._server}/register',
-                json_={
-                    self._struct.login: login,
-                    self._struct.password: password,
-                    self._struct.email: email
-                }
-            )
+            request = Request(f'{self._server}/register', Request.POST,
+                              json_={
+                self._struct.login: login,
+                self._struct.password: password,
+                self._struct.email: email
+            })
+            response = await self._make_request(request)
             return response.content.get(self._struct.content)
         except err.APIError as e:
             raise e
@@ -98,10 +96,9 @@ class Requester:
     @synchronized_request
     async def update_tokens(self, refresh_token: str) -> dict:
         try:
-            response = await self._post(
-                f'{self._server}/auth/refresh',
-                json_={self._struct.refresh_token: refresh_token}
-            )
+            request = Request(f'{self._server}/auth/refresh', Request.POST,
+                              json_={self._struct.refresh_token: refresh_token})
+            response = await self._make_request(request)
             return response.content.get(self._struct.refresh_token)
         except err.APIError as e:
             raise e
@@ -109,10 +106,9 @@ class Requester:
     @synchronized_request
     async def authorize(self, login: str, password: str) -> dict:
         try:
-            response = await self._post(
-                f'{self._server}/auth/login',
-                json_={self._struct.login: login, self._struct.password: password}
-            )
+            request = Request(f'{self._server}/auth/login', Request.POST,
+                              json_={self._struct.login: login, self._struct.password: password})
+            response = await self._make_request(request)
             return response.content.get(self._struct.content)
         except err.APIError as e:
             raise e
@@ -120,7 +116,8 @@ class Requester:
     @synchronized_request
     async def get_user_info(self, access_token: str, ):
         try:
-            response = await self._get(f'{self._server}/users', headers={'Authorization': access_token})
+            request = Request(f'{self._server}/users', Request.GET, headers={'Authorization': access_token})
+            response = await self._make_request(request)
             return response.content.get(self._struct.content)
         except err.APIError as e:
             raise e
@@ -132,8 +129,29 @@ class Requester:
             path = f'{self._server}/personal_tasks'
             if task_id:
                 path = f'{self._server}/personal_tasks/{task_id}'
-            response = await self._get(path, headers={'Authorization': access_token})
+            request = Request(path, Request.GET, headers={'Authorization': access_token})
+            response = await self._make_request(request)
             return response.content.get(self._struct.content)
+        except err.APIError as e:
+            raise e
+
+    @synchronized_request
+    async def retry(self, access_token: str, request_num: int):
+        """
+        Повторяет один из предыдущих запросов.
+        :param access_token: access токен.
+        :param request_num: номер запроса относительно последнего. 0 - последний, -1 - предпоследний и т.д.
+        """
+        try:
+            request = self._requests[request_num - 1]  # Обращение к запросу
+            if not request:
+                raise err.NoLastRequest('There is no requests before.')
+            if request.headers.get('Authorization'):
+                request.headers['Authorization'] = access_token
+
+            response = await self._make_request(request)
+            return response.content.get(self._struct.content)
+
         except err.APIError as e:
             raise e
 
@@ -161,6 +179,38 @@ class Response:
             self.error_id = ErrorCodes.server_error
             self.content = None
             self.message = 'No data in response'
+
+
+class Request:
+    """
+    Запрос.
+
+    :var path: URL-адрес, на который идёт запрос.
+    :var method: HTTP-метод запроса.
+    :var query_params: параметры запроса
+    :var json: JSON, отправляемый в запросе.
+    :var headers: заголовки.
+    :cvar time: время создания запроса
+    """
+
+    GET = 'GET'
+    POST = 'POST'
+    PUT = 'PUT'
+    DELETE = 'DELETE'
+    ids = []
+
+    def __init__(self, path: str, method: str, query_params: dict = None, json_: dict = None, headers: dict = None):
+        self.path = path
+        self.method = method
+        self.query_params = query_params
+        self.json = json_
+        self.headers = headers
+
+        self._time = datetime.datetime.now()
+
+    @property
+    def time(self) -> datetime:
+        return self._time
 
 
 if __name__ == '__main__':

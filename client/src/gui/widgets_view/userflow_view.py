@@ -24,6 +24,12 @@ class TaskWidgetView(BaseView):
         widget = UserFlowTask(name)
         self._view.verticalLayout_2.addWidget(widget)
 
+    def to_loading_state(self):
+        pass
+
+    def to_normal_state(self):
+        pass
+
     @property
     def tasks(self) -> tuple[str, ...]:
         return '', ''
