@@ -14,7 +14,7 @@ from server.database.models.base import launch_db, init_db, Base, config_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config
-from common.base import DataStruct as CommonStruct, check_password, ErrorCodes as ErCodes
+from common.base import CommonStruct, check_password, ErrorCodes as ErCodes
 from server.utils.data_checkers import check_email
 
 # ToDo: проверка уникальности параметров пользователя

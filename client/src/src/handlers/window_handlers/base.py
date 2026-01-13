@@ -11,6 +11,7 @@ from client.src.gui.main_view import MainWindow
 from client.src.requester.requester import Requester
 from client.src.client_model.model import Model
 import client.src.requester.errors as err
+from common.base import CommonStruct
 
 
 class BaseWindowHandler(QObject):
@@ -27,8 +28,8 @@ class BaseWindowHandler(QObject):
         self._model = model
 
     def _set_new_tokens(self, tokens: dict):
-        access_token = tokens.get('access')
-        refresh_token = tokens.get('refresh')
+        access_token = tokens.get(CommonStruct.access_token)
+        refresh_token = tokens.get(CommonStruct.refresh_token)
         self._model.set_access_token(access_token)
         self._model.set_refresh_token(refresh_token)
 

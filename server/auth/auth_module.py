@@ -66,6 +66,7 @@ class Authenticator:
                     return False
             elif type_ == self._data_struct.refresh_token:
                 if expiring_time - creating_time != self._refresh_token_lifetime.seconds:
+                    assert ValueError(f'Refresh-Token expired: {expiring_time}')
                     return False
             else:
                 raise ValueError(f'Unknown token_type: {type_}. Must be access or refresh')
@@ -135,7 +136,8 @@ class Authenticator:
 
         if result['username'] == login:
             try:
-                checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8'))
+                if not checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8')):
+                    raise ValueError
                 access_token = self._create_token(login, self._access_token_lifetime)
                 refresh_token = self._create_token(login, self._refresh_token_lifetime)
                 return {self.access_name: access_token, self.refresh_name: refresh_token}
