@@ -11,7 +11,7 @@ from client.src.gui.widgets_view.base_view import BaseView
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import TaskViewHandler
 from client.src.gui.windows.windows import UserFlowWindow
 from client.src.gui.widgets_view.userflow_view import TaskWidgetView
-from client.models.common_models import User
+from client.models.common_models import User, PersonalTask
 
 from client.utils.data_tools import make_unique_dict_names
 
@@ -41,7 +41,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
 
         dicts = []
         for task in tasks:
-            dicts.append({task['name']: task['id']})
+            dicts.append({task[PersonalTask.name]: task[PersonalTask.id]})
         tasks_list = make_unique_dict_names(dicts)
         self._task_view_handler.tasks = tasks_list
 
@@ -65,12 +65,9 @@ class UserFlowWindowHandler(BaseWindowHandler):
             tasks.add_done_callback(lambda future: self._prepare_request(future, self._set_tasks))
             return self._task_view_handler
         else:
-            request: asyncio.Future = self._requester.get_user_info(self._model.get_access_token())
-            request.add_done_callback(lambda future: self._prepare_request(future, self._set_user))
+            request: asyncio.Future = self._requester.get_user_info(access_token)
+            request.add_done_callback(lambda future: self._prepare_request(future, lambda: self._set_task_handler(view)))
 
-        if self._user:  # ToDo: что делать, если данные всё-таки не поступили?
-            tasks: asyncio.Future = self._requester.get_personal_tasks(self._user.id, access_token)
-            tasks.add_done_callback(lambda future: self._prepare_request(future, self._set_tasks))
 
 def close(self):
     pass

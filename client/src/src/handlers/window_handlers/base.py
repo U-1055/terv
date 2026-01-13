@@ -42,26 +42,24 @@ class BaseWindowHandler(QObject):
     def _send_error(self, title: str, message: str):
         self.error_occurred.emit(title, message)
 
-    def _remake_request(self, future: asyncio.Future, prepare_data_func: tp.Callable, method: tp.Callable):
-        """Выполняет запрос к функции"""
-
     def _prepare_request(self, future: asyncio.Future, prepare_data_func: tp.Callable = None):
         """
-        Обрабатывает асинхронный запрос. Если данных не получено - выводит ошибку. Если access-токен недействителен,
-        обновляет его по refresh-токену. Если refresh-токен недействителен, испускает сигнал incorrect_tokens_update
+        Обрабатывает асинхронный запрос. Отправляет Response.content в prepare_data_dunc.
+        Если данных не получено - выводит ошибку. Если access-токен недействителен, обновляет его по refresh-токену.
+        Если refresh-токен недействителен, испускает сигнал incorrect_tokens_update
         :param future: Future-объект asyncio.
         :param prepare_data_func: функция, куда будет передан результат Future future.result().
         """
         try:
             result = future.result()
+            content = result.content
             if prepare_data_func:
                 if result:
-                    prepare_data_func(result)
+                    prepare_data_func(content)
                 else:
-                    self._send_error('Timeout error', 'The data has not been received')
+                    self._send_error('Error', 'The data has not been received')
         except err.ExpiredAccessToken as e:  # Обработка просрочки access-токена
             self._update_tokens()
-
 
         except err.ExpiredRefreshToken as e:  # Обработка просрочки refresh-токена
             logging.debug('Expired Refresh Token')

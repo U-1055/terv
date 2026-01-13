@@ -10,11 +10,13 @@ from client.src.client_model.model import Model
 from client.src.src.handlers.widgets_view_handlers.auth_view_handlers import AuthViewHandler, RegisterViewHandler
 from client.src.base import DataStructConst, GuiLabels
 import client.src.requester.errors as err
+from common.base import CommonStruct, check_password
 
 
 class MainAuthWindowHandler(BaseWindowHandler):
-    tokens_updated = Signal()
-    authorize_complete = Signal()  # Авторизация прошла успешно
+
+    registration_complete = Signal()  # Регистрация прошла успешно
+    auth_complete = Signal()  # Аутентификация прошла успешно
 
     def __init__(self, window: PopUpAuthWindow, main_view: MainWindow, requester: Requester, model: Model, labels: GuiLabels = GuiLabels()):
         super().__init__(window, main_view, requester, model)
@@ -46,32 +48,68 @@ class MainAuthWindowHandler(BaseWindowHandler):
 
     def _on_tried_to_auth(self):
 
-        def prepare_auth(future: asyncio.Future):
+        def prepare_auth(future: asyncio.Future):  # ToDo: как можно избежать написания вложенных функций под каждый запрос
             try:
                 self._prepare_request(future, self._set_new_tokens)
-            except err.UnknownCredentials:
-                self._auth_handler.set_error_password(self._labels.incorrect_credentials)
-                self._auth_handler.set_error_login(self._labels.incorrect_credentials)
+                self.auth_complete.emit()
+            except Exception as e:
+                raise e
 
         login = self._auth_handler.login
         password = self._auth_handler.password
 
-        request: asyncio.Future = self._requester.authorize(login, password)
-        request.add_done_callback(lambda future: prepare_auth(future))
+        if not all((login, password)):  # Нет параметра
+            self._auth_handler.set_error_login(self._labels.fill_all)
+            return
+
+        try:
+            request: asyncio.Future = self._requester.authorize(login, password)
+            request.add_done_callback(prepare_auth)
+        except err.UnknownCredentials:
+            self._auth_handler.set_error_password(self._labels.incorrect_credentials)
+        except (err.NoLogin, err.NoPassword):
+            self._auth_handler.set_error_login(self._labels.fill_all)
 
     def _on_tried_to_register(self):
+
+        def prepare_register(future: asyncio.Future):
+            try:
+                self._prepare_request(future)
+                self.registration_complete.emit()
+            except Exception as e:
+                raise e
 
         login = self._register_handler.login
         password = self._register_handler.password
         email = self._register_handler.email
 
-        try:
+        is_error = False
+
+        if not all((login, password, email)):  # Нет параметра
+            self._register_handler.set_error_login(self._labels.fill_all)
+        elif len(login) < CommonStruct.min_login_length or len(login) > CommonStruct.max_login_length:  # Недопустимая длина логина
+            self._register_handler.set_error_login(self._labels.incorrect_login)
+        elif not check_password(password):  # Пароль не подходит
+            self._register_handler.set_error_password(self._labels.incorrect_password)
+
+        if is_error:
+            return
+
+        try:  # Запрос
             request: asyncio.Future = self._requester.register(login, password, email)
-            request.add_done_callback(lambda future: self._prepare_request(future, self._set_new_tokens))
-        except err.LoginAlreadyExists:  # ToDo: разобраться, какие конкретно ошибки обрабатывать
+            request.add_done_callback(prepare_register)
+        # Ошибки, которые можно обнаружить только после запроса на сервер
+        except err.LoginAlreadyExists:
             self._register_handler.set_error_login(self._labels.used_login)
         except err.IncorrectEmail:
             self._register_handler.set_error_email(self._labels.incorrect_email)
         except err.EmailAlreadyExists:
             self._register_handler.set_error_email(self._labels.used_email)
+        # Ошибки, которые можно обнаружить на клиенте (Проверяются на всякий случай)
+        except (err.NoLogin, err.NoEmail, err.NoPassword):
+            self._register_handler.set_error_login(self._labels.fill_all)
+        except err.IncorrectLogin:
+            self._register_handler.set_error_login(self._labels.incorrect_login)
+        except err.IncorrectPassword:
+            self._register_handler.set_error_password(self._labels.incorrect_password)
 

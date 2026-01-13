@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QDialog
+from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QDialog, QMessageBox
 from PySide6.QtCore import Signal, Qt
 
 import logging
@@ -77,6 +77,12 @@ class MainWindow(QMainWindow):
         else:
             window.show()
             window.exec()
+
+    def show_message(self, title: str, message: str):
+        message_box = QMessageBox()
+        message_box.setText(message)
+        message_box.setWindowTitle(title)
+        message_box.exec()
 
     def open_auth_window(self) -> PopUpAuthWindow:
         if self._auth_window:

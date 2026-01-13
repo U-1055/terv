@@ -11,6 +11,7 @@ from client.src.requester.requester import Requester
 from client.src.gui.main_view import MainWindow, setup_gui
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst
+from common.base import CommonStruct
 
 
 def launch(model_class, model_params: tuple, view_class, view_params: tuple, presenter_class, presenter_params: tuple):
@@ -26,7 +27,7 @@ def run_main_config():
     launch(
         Model, (Path('data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst()),
         MainWindow, (),
-        Logic, (Requester('http://localhost:5000'), 10)
+        Logic, (Requester('http://localhost:5000'), 0.1)
     )
 
 

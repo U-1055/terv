@@ -1,8 +1,18 @@
 from common.base import ErrorCodes
+import typing as tp
+
+Request = tp.Any
+if tp.TYPE_CHECKING:
+    from client.src.requester.requester import Request
 
 
 class APIError(BaseException):  # Ошибка, возвращённая API
-    pass
+    """
+    Ошибка API.
+    :param request: запрос, при котором произошла ошибка.
+    """
+    def __init__(self, message: str, request: Request):
+        self.request = request
 
 
 class RequesterError(BaseException):  # Ошибка внутри Requester'а

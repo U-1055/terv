@@ -10,7 +10,9 @@ import asyncio
 import threading
 
 import client.src.requester.errors as err
-from common.base import DataStruct, ErrorCodes
+from common.base import CommonStruct, ErrorCodes
+from client.src.base import DataStructConst
+from client.utils.timeout_list import TimeoutList
 
 
 def run_loop(loop: asyncio.AbstractEventLoop):
@@ -43,22 +45,27 @@ class Requester:
     :param timeout: минимальное время между двумя одинаковыми запросами
     """
 
-    def __init__(self, server: str, common_data_struct: DataStruct = DataStruct, timeout: int = 0.1):
+    def __init__(self, server: str, common_data_struct: CommonStruct = CommonStruct, timeout: int = 0.1):
         self._server = server
         self._struct = common_data_struct
         self._timeout = timeout
-        self._requests: list[Request] = []
+        self._requests: TimeoutList[Request] = TimeoutList(self._timeout, max_length=100)
 
-    def _prepare_response(self, response: 'Response'):
+    def _prepare_response(self, response: 'ServerResponse', request: 'Request'):
         """Обрабатывает ответ: вызывает исключения, если запрос неудачный, передаёт ответ дальше, если успешный"""
         error_code = response.error_id
         message = response.message
-
+        print(request)
         if error_code != ErrorCodes.ok:  # Вызов исключения по коду
             exc = err.exceptions_error_ids.get(error_code)
-            raise exc(message)
+            raise exc(message, request=request)
 
-    async def _make_request(self, request: 'Request') -> 'Response':  # Базовые методы запросов
+    async def _make_request(self, request: 'Request') -> 'Response':
+        self._requests.update()  # Обновляем список запросов
+        if self._requests and self._requests[-1].path == request.path and self._requests[-1].method == request.method: # Запросы одинаковы
+            diff = request.time - self._requests[-1].time  # Разница во времени отправки
+            if diff < self._timeout:
+                await asyncio.sleep(diff)  # Задержка до допустимого времени между запросами
 
         async with httpx.AsyncClient() as client:
             if request.method == Request.GET:
@@ -72,15 +79,17 @@ class Requester:
                 result = await client.post(request.path, headers=request.headers, params=request.query_params,
                                            json=request.json)
             else:
-                raise err.RequesterError(f'Unknown method: {self._last_request.method}')
-            self._last_request = request
-        try:
-            return self._prepare_response(Response(result))
+                raise err.RequesterError(f'Unknown method: {request.method}')
+            self._requests.append(request)  # Добавляем запрос в список
+        try:  # Обработка запроса и его возврат в виде Response
+            server_response = ServerResponse(result)
+            self._prepare_response(server_response, request)
+            return Response(request, server_response.content)
         except err.APIError as e:
             raise e
 
     @synchronized_request
-    async def register(self, login: str, password: str, email: str):
+    async def register(self, login: str, password: str, email: str) -> 'Response':
         try:
             request = Request(f'{self._server}/register', Request.POST,
                               json_={
@@ -89,41 +98,41 @@ class Requester:
                 self._struct.email: email
             })
             response = await self._make_request(request)
-            return response.content.get(self._struct.content)
+            return response
         except err.APIError as e:
             raise e
 
     @synchronized_request
-    async def update_tokens(self, refresh_token: str) -> dict:
+    async def update_tokens(self, refresh_token: str) -> 'Response':
         try:
             request = Request(f'{self._server}/auth/refresh', Request.POST,
                               json_={self._struct.refresh_token: refresh_token})
             response = await self._make_request(request)
-            return response.content.get(self._struct.refresh_token)
+            return response
         except err.APIError as e:
             raise e
 
     @synchronized_request
-    async def authorize(self, login: str, password: str) -> dict:
+    async def authorize(self, login: str, password: str) -> 'Response':
         try:
             request = Request(f'{self._server}/auth/login', Request.POST,
                               json_={self._struct.login: login, self._struct.password: password})
             response = await self._make_request(request)
-            return response.content.get(self._struct.content)
+            return response
         except err.APIError as e:
             raise e
 
     @synchronized_request
-    async def get_user_info(self, access_token: str, ):
+    async def get_user_info(self, access_token: str, ) -> 'Response':
         try:
             request = Request(f'{self._server}/users', Request.GET, headers={'Authorization': access_token})
             response = await self._make_request(request)
-            return response.content.get(self._struct.content)
+            return response
         except err.APIError as e:
             raise e
 
     @synchronized_request
-    async def get_personal_tasks(self, user_id: int, access_token: str, task_id: int = None):
+    async def get_personal_tasks(self, user_id: int, access_token: str, task_id: int = None) -> 'Response':
         """Получает личные задачи (конкретную или по user_id)."""
         try:
             path = f'{self._server}/personal_tasks'
@@ -131,21 +140,18 @@ class Requester:
                 path = f'{self._server}/personal_tasks/{task_id}'
             request = Request(path, Request.GET, headers={'Authorization': access_token})
             response = await self._make_request(request)
-            return response.content.get(self._struct.content)
+            return response
         except err.APIError as e:
             raise e
 
     @synchronized_request
-    async def retry(self, access_token: str, request_num: int):
+    async def retry(self, access_token: str, request: 'Request') -> 'Response':
         """
-        Повторяет один из предыдущих запросов.
+        Повторяет один из предыдущих запросов, предварительно меняя его access_token на переданный.
         :param access_token: access токен.
-        :param request_num: номер запроса относительно последнего. 0 - последний, -1 - предпоследний и т.д.
+        :param request: запрос.
         """
         try:
-            request = self._requests[request_num - 1]  # Обращение к запросу
-            if not request:
-                raise err.NoLastRequest('There is no requests before.')
             if request.headers.get('Authorization'):
                 request.headers['Authorization'] = access_token
 
@@ -156,7 +162,7 @@ class Requester:
             raise e
 
 
-class Response:
+class ServerResponse:
     """
     Ответ API.
 
@@ -172,13 +178,21 @@ class Response:
 
         try:
             response_data = response.json()
-            self.error_id = response_data.get(DataStruct.error_id)
-            self.content = response_data.get(DataStruct.content)
-            self.message = response_data.get(DataStruct.message)
+            self.error_id = response_data.get(CommonStruct.error_id)
+            self.content = response_data.get(CommonStruct.content)
+            self.message = response_data.get(CommonStruct.message)
         except (json.JSONDecodeError, AttributeError):
             self.error_id = ErrorCodes.server_error
             self.content = None
             self.message = 'No data in response'
+
+
+class Response:
+    """Ответ Requester'a."""
+
+    def __init__(self, request: 'Request', content: dict):
+        self.request = request
+        self.content = content
 
 
 class Request:
@@ -197,13 +211,14 @@ class Request:
     POST = 'POST'
     PUT = 'PUT'
     DELETE = 'DELETE'
-    ids = []
 
     def __init__(self, path: str, method: str, query_params: dict = None, json_: dict = None, headers: dict = None):
         self.path = path
         self.method = method
         self.query_params = query_params
         self.json = json_
+        if headers:  # Проверка заголовков
+            headers = {header: headers[header] for header in headers if headers[header]}
         self.headers = headers
 
         self._time = datetime.datetime.now()
@@ -211,6 +226,10 @@ class Request:
     @property
     def time(self) -> datetime:
         return self._time
+
+    @property
+    def id(self) -> int:
+        return self._id
 
 
 if __name__ == '__main__':

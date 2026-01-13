@@ -1,7 +1,7 @@
 """Общие константы, используемые и клиентом и сервером. (Названия параметров, элементов ответа, требования к данным)."""
 
 
-class DataStruct:
+class CommonStruct:
     """Названия параметров запросов и ответов API и требования к данным"""
 
     login = 'login'
@@ -61,7 +61,7 @@ def check_password(password: str) -> bool:
     is_digits = any([char.isdigit() for char in password])
     is_other_symbols = any([not char.isdigit() and not char.isalpha() for char in password])
 
-    return DataStruct.min_password_length <= len(password) <= DataStruct.max_password_length and is_chars and is_digits and is_other_symbols
+    return CommonStruct.min_password_length <= len(password) <= CommonStruct.max_password_length and is_chars and is_digits and is_other_symbols
 
 
 if __name__ == '__main__':

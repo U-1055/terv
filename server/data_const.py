@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import json
 
-from common.base import DataStruct as CommonStruct
+from common.base import CommonStruct
 
 logging.basicConfig(level=logging.DEBUG)
 

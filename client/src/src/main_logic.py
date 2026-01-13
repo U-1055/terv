@@ -10,7 +10,7 @@ from client.src.src.handlers.window_handlers.userflow_handler import UserFlowWin
 from client.src.src.handlers.window_handlers.personal_tasks_handler import PersonalTasksWindowHandler
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler
 from client.src.client_model.model import Model
-from client.src.base import DataStructConst
+from client.src.base import DataStructConst, GuiLabels
 from client.src.src.handlers.window_handlers.main_auth_window_handler import MainAuthWindowHandler
 
 logging.basicConfig(level=logging.DEBUG)
@@ -26,12 +26,14 @@ class Logic:
             model: Model,
             requester: Requester,
             timeout: int,
-            data_const: DataStructConst = DataStructConst()
+            data_const: DataStructConst = DataStructConst(),
+            labels: GuiLabels = GuiLabels()
     ):
         self._view = view
         self._requester = requester
         self._model = model
         self._data_const = data_const
+        self._labels = labels
         self._timer = QTimer()
         self._user = None
 
@@ -47,11 +49,19 @@ class Logic:
         self._timer.timeout.connect(self._update_current_window)
         self._timer.start(1000 * 60)
 
+    def _on_auth_complete(self):
+        self._view.show_message(self._labels.op_complete, self._labels.authentication_complete)
+        self._auth_window_handler.close()
+
+    def _on_registration_complete(self):
+        self._view.show_message(self._labels.op_complete, self._labels.register_complete)
+
     def _authorize(self):
         logging.debug('Opening authorize window')
         main_auth_window = self._view.open_auth_window()
-        auth_window_handler = MainAuthWindowHandler(main_auth_window, self._view, self._requester, self._model)
-        auth_window_handler.tokens_updated.connect(auth_window_handler.close)
+        self._auth_window_handler = MainAuthWindowHandler(main_auth_window, self._view, self._requester, self._model)
+        self._auth_window_handler.auth_complete.connect(self._on_auth_complete)
+        self._auth_window_handler.registration_complete.connect(self._on_registration_complete)
         self._view.show_modal_window(main_auth_window)
 
     def _update_current_window(self):
