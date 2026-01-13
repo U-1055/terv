@@ -64,7 +64,7 @@ class Requester:
         self._requests.update()  # Обновляем список запросов
         if self._requests and self._requests[-1].path == request.path and self._requests[-1].method == request.method: # Запросы одинаковы
             diff = request.time - self._requests[-1].time  # Разница во времени отправки
-            if diff < self._timeout:
+            if diff < datetime.timedelta(seconds=self._timeout):
                 await asyncio.sleep(diff)  # Задержка до допустимого времени между запросами
 
         async with httpx.AsyncClient() as client:

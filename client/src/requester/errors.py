@@ -6,7 +6,7 @@ if tp.TYPE_CHECKING:
     from client.src.requester.requester import Request
 
 
-class APIError(BaseException):  # Ошибка, возвращённая API
+class APIError(Exception):  # Ошибка, возвращённая API
     """
     Ошибка API.
     :param request: запрос, при котором произошла ошибка.
@@ -15,7 +15,7 @@ class APIError(BaseException):  # Ошибка, возвращённая API
         self.request = request
 
 
-class RequesterError(BaseException):  # Ошибка внутри Requester'а
+class RequesterError(Exception):  # Ошибка внутри Requester'а
     pass
 
 

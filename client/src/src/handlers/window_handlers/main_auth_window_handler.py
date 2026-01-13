@@ -52,8 +52,10 @@ class MainAuthWindowHandler(BaseWindowHandler):
             try:
                 self._prepare_request(future, self._set_new_tokens)
                 self.auth_complete.emit()
-            except Exception as e:
-                raise e
+            except err.UnknownCredentials:
+                self._auth_handler.set_error_password(self._labels.incorrect_credentials)
+            except (err.NoLogin, err.NoPassword):
+                self._auth_handler.set_error_login(self._labels.fill_all)
 
         login = self._auth_handler.login
         password = self._auth_handler.password
@@ -62,13 +64,9 @@ class MainAuthWindowHandler(BaseWindowHandler):
             self._auth_handler.set_error_login(self._labels.fill_all)
             return
 
-        try:
-            request: asyncio.Future = self._requester.authorize(login, password)
-            request.add_done_callback(prepare_auth)
-        except err.UnknownCredentials:
-            self._auth_handler.set_error_password(self._labels.incorrect_credentials)
-        except (err.NoLogin, err.NoPassword):
-            self._auth_handler.set_error_login(self._labels.fill_all)
+        request: asyncio.Future = self._requester.authorize(login, password)
+        request.add_done_callback(prepare_auth)
+
 
     def _on_tried_to_register(self):
 
@@ -76,8 +74,20 @@ class MainAuthWindowHandler(BaseWindowHandler):
             try:
                 self._prepare_request(future)
                 self.registration_complete.emit()
-            except Exception as e:
-                raise e
+            # Ошибки, которые можно обнаружить только после запроса на сервер
+            except err.LoginAlreadyExists:
+                self._register_handler.set_error_login(self._labels.used_login)
+            except err.IncorrectEmail:
+                self._register_handler.set_error_email(self._labels.incorrect_email)
+            except err.EmailAlreadyExists:
+                self._register_handler.set_error_email(self._labels.used_email)
+            # Ошибки, которые можно обнаружить на клиенте (Проверяются на всякий случай)
+            except (err.NoLogin, err.NoEmail, err.NoPassword):
+                self._register_handler.set_error_login(self._labels.fill_all)
+            except err.IncorrectLogin:
+                self._register_handler.set_error_login(self._labels.incorrect_login)
+            except err.IncorrectPassword:
+                self._register_handler.set_error_password(self._labels.incorrect_password)
 
         login = self._register_handler.login
         password = self._register_handler.password
@@ -95,21 +105,7 @@ class MainAuthWindowHandler(BaseWindowHandler):
         if is_error:
             return
 
-        try:  # Запрос
-            request: asyncio.Future = self._requester.register(login, password, email)
-            request.add_done_callback(prepare_register)
-        # Ошибки, которые можно обнаружить только после запроса на сервер
-        except err.LoginAlreadyExists:
-            self._register_handler.set_error_login(self._labels.used_login)
-        except err.IncorrectEmail:
-            self._register_handler.set_error_email(self._labels.incorrect_email)
-        except err.EmailAlreadyExists:
-            self._register_handler.set_error_email(self._labels.used_email)
-        # Ошибки, которые можно обнаружить на клиенте (Проверяются на всякий случай)
-        except (err.NoLogin, err.NoEmail, err.NoPassword):
-            self._register_handler.set_error_login(self._labels.fill_all)
-        except err.IncorrectLogin:
-            self._register_handler.set_error_login(self._labels.incorrect_login)
-        except err.IncorrectPassword:
-            self._register_handler.set_error_password(self._labels.incorrect_password)
+        request: asyncio.Future = self._requester.register(login, password, email)
+        request.add_done_callback(prepare_register)
+
 

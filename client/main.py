@@ -18,6 +18,8 @@ def launch(model_class, model_params: tuple, view_class, view_params: tuple, pre
     app = QApplication()
     root = view_class(*view_params)
     model = model_class(*model_params)
+    model.set_access_token(None)
+    model.set_refresh_token(None)
     logic = presenter_class(root, model, *presenter_params)
 
     setup_gui(root, app)
