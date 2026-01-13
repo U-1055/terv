@@ -13,7 +13,7 @@ import json
 from test.server_test.utils.requester import TestRequester
 from test.server_test.utils.model import Model
 from common.base import DataStruct
-from test.conftest import set_authentication_config
+from test.conftest import set_config, test_config_path, server_config_path, server_working_dir
 
 access_token_lifetime = 2  # Время жизни токенов (из auth_test_config.json)
 refresh_token_life_time = 10
@@ -42,22 +42,33 @@ def invalid_token() -> tp.Callable:
     yield create_token
 
 
-def test_no_register(requester, set_authentication_config):
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
+def test_no_register(requester, set_config):
 
     response = requester.authorize('___', '_')
     status_code = response.status_code
     content = response.json().get(DataStruct.content)
 
-    set_authentication_config
+    set_config
 
     assert status_code == 400, f'Unknown status code when authorizing unknown user. Received status code: {status_code} must be 400'
     assert content is None, f'Content of the response is not None: {content}'
 
+
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login', 'sth_password1', 'sth_email']]
 )
-def test_expired_access_token(requester, set_authentication_config, login: str, password: str, email: str):
+def test_expired_access_token(requester, set_config, login: str, password: str, email: str):
     response = requester.register(login, password, email)  # Регистрируем
     status_code = response.status_code
 
@@ -75,18 +86,24 @@ def test_expired_access_token(requester, set_authentication_config, login: str, 
     get_request_status_code = response.status_code
     get_content = response.json().get(DataStruct.content)
 
-    set_authentication_config
+    set_config
     assert status_code == 200, f'Status code {status_code} must be 200'
     assert auth_status_code == 200, f'Status code {auth_status_code} must be 200'
     assert access_token, 'No access token in response to request to endpoint /auth/login'
     assert get_request_status_code == 401, f'Status code {get_request_status_code} must be 401. Response: {response}'
     assert get_content is None, f'Content of the response is not None: {get_content}'
 
+
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login1', 'sth_password1', 'sth_email1']]
 )
-def test_expired_refresh_token(requester, set_authentication_config, login: str, password: str, email: str):
+def test_expired_refresh_token(requester, set_config, login: str, password: str, email: str):
     requester.register(login, password, email)
     response = requester.authorize(login, password)
     refresh_token = response.json().get(DataStruct.content).get(DataStruct.refresh_token)
@@ -97,10 +114,16 @@ def test_expired_refresh_token(requester, set_authentication_config, login: str,
     status_code = response.status_code
     content = response.json().get(DataStruct.content)
 
-    set_authentication_config
+    set_config
     assert status_code == 400, f'Status code {status_code} must be 400'
     assert content is None, f'Content of the response is not None: {content}'
 
+
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
 @pytest.mark.parametrize(
     ['login', 'password', 'email', 'exp', 'iat'],
     [[
@@ -112,7 +135,7 @@ def test_expired_refresh_token(requester, set_authentication_config, login: str,
 )
 def test_invalid_access(
         requester,
-        set_authentication_config,
+        set_config,
         invalid_token,
         login: str,
         password: str,
@@ -133,7 +156,7 @@ def test_invalid_access(
     refresh_status_code = refresh_response.status_code
     refresh_content = refresh_response.json().get(DataStruct.content)
 
-    set_authentication_config
+    set_config
 
     assert invalid_status_code == 401, f'Status code {invalid_status_code} must be 401. Response: {invalid_response}'
     assert refresh_status_code == 401, f'Status code {refresh_status_code} must be 401. Response: {refresh_status_code}'
@@ -151,9 +174,14 @@ def test_invalid_access(
         datetime.datetime.now(),
         datetime.datetime.now() + datetime.timedelta(seconds=access_token_lifetime)]]
 )
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
 def test_invalid_refresh(
         requester,
-        set_authentication_config,
+        set_config,
         invalid_token,
         login: str,
         password: str,
@@ -161,7 +189,6 @@ def test_invalid_refresh(
         exp: datetime.datetime,  # Параметры JWT.payload
         iat: datetime.datetime
         ):
-
     requester.register(login, password, email)
     response = requester.authorize(login, password)
     access_token = response.json().get(DataStruct.content).get(DataStruct.access_token)
@@ -175,7 +202,7 @@ def test_invalid_refresh(
     access_status_code = access_response.status_code
     access_content = access_response.json().get(DataStruct.content)
 
-    set_authentication_config
+    set_config
 
     assert invalid_content is None, f'Content of the response is not None: {invalid_content}'
     assert access_content is None, f'Content of the response is not None: {access_content}'
@@ -186,12 +213,17 @@ def test_invalid_refresh(
  # Токен с временем жизни в 2 сек. успевает истечь. Запускать отдельно от других тестов и
                      # менять access_token_lifetime в auth_test_config
 
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
 @pytest.mark.skip()
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login2', 'sth_password2', 'sth_email2']]
 )
-def test_recall_tokens(requester, login: str, password: str, email: str, set_authentication_config):
+def test_recall_tokens(requester, login: str, password: str, email: str, set_config):
     requester.register(login, password, email)
     response = requester.authorize(login, password)
     refresh_token = response.json().get(DataStruct.content).get(DataStruct.refresh_token)
@@ -207,7 +239,7 @@ def test_recall_tokens(requester, login: str, password: str, email: str, set_aut
     update_response = requester.update_tokens(refresh_token)
     update_status_code = update_response.status_code
 
-    set_authentication_config
+    set_config
 
     assert status_code == 200, f'Status code {status_code} must be 200. Response: {response}. Message: {response.json().get('message')}'
     assert get_status_code == 401, f'Status code {status_code} must be 401. Response: {get_response}'
@@ -215,11 +247,16 @@ def test_recall_tokens(requester, login: str, password: str, email: str, set_aut
     assert update_status_code == 400, f'Status code {status_code} must be 400. Response: {update_response}'
 
 
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login2', 'sth_password2', 'sth_email2']]
 )
-def test_not_unique_credentials(requester, set_authentication_config, login: str, password: str, email: str):
+def test_not_unique_credentials(requester, set_config, login: str, password: str, email: str):
     requester.register(login, password, email)
 
     existing_login_response = requester.register(login, password, '@')
@@ -228,7 +265,7 @@ def test_not_unique_credentials(requester, set_authentication_config, login: str
     existing_email_response = requester.register('sth', password, email)
     existing_email_status_code = existing_email_response.status_code
 
-    set_authentication_config
+    set_config
 
     assert existing_login_status_code == 400, f'Status code {existing_login_status_code} must be 400. Response: {existing_login_response}'
     assert existing_email_status_code == 400, f'Status code {existing_email_status_code} must be 400. Response: {existing_email_response}'

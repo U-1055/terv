@@ -75,7 +75,7 @@ def register():
                                                       ds_const.login_conditions), error_id=ErCodes.invalid_login
                              )
 
-    if not password or password:
+    if not password:
         return form_response(400, 
                              APIAn.no_params_error(
                                  common_struct.password, request.endpoint
