@@ -2,13 +2,10 @@ from PySide6.QtCore import Signal, QObject
 
 from client.src.gui.windows.windows import UserFlowWindow, PersonalTasksWindow
 from test.client_test.utils.mocked_objects.views import TestBaseView, TestTaskWidgetView
+from test.client_test.utils.mocked_objects.test_auth import TestRegisterView, TestAuthView
 
 
 class TestBaseWindow(QObject):
-    pass
-
-
-class TestPopUpAuthWindow:
     pass
 
 

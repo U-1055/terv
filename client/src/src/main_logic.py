@@ -49,8 +49,6 @@ class Logic:
         self._timer.timeout.connect(self._update_current_window)
         self._timer.start(1000 * 60)
 
-        print(self._model.get_refresh_token())
-
     def _on_auth_complete(self):
         self._view.show_message(self._labels.op_complete, self._labels.authentication_complete)
         self._auth_window_handler.close()

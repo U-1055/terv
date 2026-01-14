@@ -2,12 +2,12 @@
 
 import httpx
 
-from common.base import DataStruct
+from common.base import CommonStruct
 
 
 class TestRequester:
 
-    def __init__(self, server: str, common_data_struct: DataStruct = DataStruct()):
+    def __init__(self, server: str, common_data_struct: CommonStruct = CommonStruct()):
         self._server = server
         self._common_ds = common_data_struct
 
@@ -31,6 +31,6 @@ class TestRequester:
         result = httpx.post(
             f'{self._server}/auth/recall',
             headers={'Authorization': access_token},
-            json={DataStruct.tokens: tokens}
+            json={CommonStruct.tokens: tokens}
         )
         return result

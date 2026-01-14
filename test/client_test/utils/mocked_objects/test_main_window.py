@@ -2,8 +2,9 @@
 
 from PySide6.QtCore import QObject, Signal
 
-from test.client_test.utils.mocked_objects.windows import TestBaseWindow, TestPopUpAuthWindow, TestUserFlowWindow, TestPersonalTasksWindow
+from test.client_test.utils.mocked_objects.windows import TestBaseWindow, TestUserFlowWindow, TestPersonalTasksWindow
 from client.src.gui.main_view import MainWindow
+from test.client_test.utils.mocked_objects.test_auth import TestPopUpAuthWindow
 
 
 class TestMainWindow(QObject):
@@ -17,6 +18,7 @@ class TestMainWindow(QObject):
 
     def __init__(self):
         super().__init__()
+        self.auth_window = TestPopUpAuthWindow()
 
     def _destroy_window(self, idx: int):
         pass
@@ -24,6 +26,9 @@ class TestMainWindow(QObject):
     def _open_window(self, type_) -> TestBaseWindow:
         """Открытие окна"""
     def _show_auth_window(self, window: TestBaseWindow):
+        pass
+
+    def show_message(self, title: str, text: str):
         pass
 
     def press_btn_open_personal_tasks_window(self):
@@ -42,7 +47,9 @@ class TestMainWindow(QObject):
         pass
 
     def open_auth_window(self) -> TestPopUpAuthWindow:
-        pass
+        auth_window = TestPopUpAuthWindow()
+        self.auth_window_sent.emit(auth_window)
+        return auth_window
 
     def open_personal_tasks_window(self) -> TestPersonalTasksWindow:
         return TestPersonalTasksWindow()

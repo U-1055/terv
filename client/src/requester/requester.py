@@ -55,7 +55,7 @@ class Requester:
         """Обрабатывает ответ: вызывает исключения, если запрос неудачный, передаёт ответ дальше, если успешный"""
         error_code = response.error_id
         message = response.message
-        print(request)
+
         if error_code != ErrorCodes.ok:  # Вызов исключения по коду
             exc = err.exceptions_error_ids.get(error_code)
             raise exc(message, request=request)
@@ -87,6 +87,15 @@ class Requester:
             return Response(request, server_response.content)
         except err.APIError as e:
             raise e
+
+    @synchronized_request
+    async def make_custom_request(self, request: 'Request') -> 'Response':
+        try:
+            response = await self._make_request(request)
+            return response
+        except err.APIError as e:
+            raise e
+
 
     @synchronized_request
     async def register(self, login: str, password: str, email: str) -> 'Response':
@@ -233,4 +242,16 @@ class Request:
 
 
 if __name__ == '__main__':
-    pass
+    from test.client_test.utils.test_server import launch
+    launch()
+    requester = Requester('http://127.0.0.1:5000')
+
+    def prepare(future: asyncio.Future):
+        assert False
+        with pytest.raises(err.exceptions_error_ids.get(error_id), match='.') as exc:
+            future.result()
+
+
+    response = requester.get_user_info('a')
+    response.add_done_callback(prepare)
+

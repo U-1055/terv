@@ -52,3 +52,6 @@ def set_config(request: pytest.FixtureRequest):
 @pytest.fixture(scope='session')
 def launch_test_server():
     launch()
+
+
+

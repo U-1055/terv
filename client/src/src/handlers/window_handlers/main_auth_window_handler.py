@@ -67,7 +67,6 @@ class MainAuthWindowHandler(BaseWindowHandler):
         request: asyncio.Future = self._requester.authorize(login, password)
         request.add_done_callback(prepare_auth)
 
-
     def _on_tried_to_register(self):
 
         def prepare_register(future: asyncio.Future):

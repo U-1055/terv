@@ -1,4 +1,5 @@
 """Общие константы, используемые и клиентом и сервером. (Названия параметров, элементов ответа, требования к данным)."""
+import enum
 
 
 class CommonStruct:
@@ -23,7 +24,7 @@ class CommonStruct:
     min_password_length = 10
 
 
-class ErrorCodes:
+class ErrorCodes(enum.Enum):
     """
     Конкретные коды ошибок (error ids).
 

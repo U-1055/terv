@@ -4,17 +4,22 @@ from client.src.client_model.model import Model
 class TestModel(Model):
     """Класс для работы с файлами клиента."""
 
+    def __init__(self, storage: str, data_root: str):
+        super().__init__(storage, data_root)
+        self._access_token = None
+        self._refresh_token = None
+
     def set_access_token(self, token_: str):
-        pass
+        self._access_token = token_
 
     def set_refresh_token(self, token_: str):
-        pass
+        self._refresh_token = token_
 
     def get_access_token(self) -> str:
-        pass
+        return self._access_token
 
     def get_refresh_token(self) -> str:
-        pass
+        return self._refresh_token
 
     def get_style(self) -> str:
         pass
