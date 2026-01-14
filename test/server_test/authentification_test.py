@@ -12,7 +12,7 @@ import json
 
 from test.server_test.utils.requester import TestRequester
 from test.server_test.utils.model import Model
-from common.base import DataStruct
+from common.base import CommonStruct as DataStruct
 from test.conftest import set_config, test_config_path, server_config_path, server_working_dir
 
 access_token_lifetime = 2  # Время жизни токенов (из auth_test_config.json)
@@ -210,15 +210,13 @@ def test_invalid_refresh(
     assert access_status_code == 400, f'Status code {access_status_code} muse be 401. Response: {access_status_code}'
 
 
- # Токен с временем жизни в 2 сек. успевает истечь. Запускать отдельно от других тестов и
-                     # менять access_token_lifetime в auth_test_config
-
 @pytest.mark.f_data({
     test_config_path: 'utils/server_configs/auth_test_config.json',
     server_config_path: '../../server/config.json',
     server_working_dir: '../../server/api'
 })
-@pytest.mark.skip()
+@pytest.mark.skip(reason='Токен с временем жизни в 2 сек. успевает истечь. Запускать отдельно от других тестов и '
+                         'менять access_token_lifetime в auth_test_config')
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login2', 'sth_password2', 'sth_email2']]
@@ -269,3 +267,29 @@ def test_not_unique_credentials(requester, set_config, login: str, password: str
 
     assert existing_login_status_code == 400, f'Status code {existing_login_status_code} must be 400. Response: {existing_login_response}'
     assert existing_email_status_code == 400, f'Status code {existing_email_status_code} must be 400. Response: {existing_email_response}'
+
+
+@pytest.mark.f_data({
+    test_config_path: 'utils/server_configs/auth_test_config.json',
+    server_config_path: '../../server/config.json',
+    server_working_dir: '../../server/api'
+})
+@pytest.mark.parametrize(
+    ['login', 'password', 'email'],
+    [['sth_login5', 'sth_password5', 'sth_email5']]
+)
+def test_incorrect_credentials(requester, set_config, login: str, password: str, email: str):
+    requester.register(login, password, email)
+
+    incorrect_login_response = requester.authorize('11', password)
+    incorrect_login_status_code = incorrect_login_response.status_code
+
+    incorrect_password_response = requester.authorize(login, 'p')
+    incorrect_password_status_code = incorrect_password_response.status_code
+
+    incorrect_credentials_response = requester.authorize('11', 'p')
+    incorrect_credentials_status_code = incorrect_credentials_response.status_code
+
+    assert incorrect_login_status_code == 400, f'Status code {incorrect_login_status_code} must be 400. Response: {incorrect_login_status_code}'
+    assert incorrect_password_status_code == 400, f'Status code {incorrect_password_status_code} must be 400. Response: {incorrect_password_status_code}'
+    assert incorrect_credentials_status_code == 400, f'Status code {incorrect_credentials_status_code} must be 400. Response: {incorrect_credentials_status_code}'

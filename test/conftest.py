@@ -6,6 +6,7 @@ import json
 import os
 import contextlib
 
+from test.client_test.utils.test_server import launch
 
 test_config_path = 'test_config_path'
 server_config_path = 'server_config_path'
@@ -47,3 +48,7 @@ def set_config(request: pytest.FixtureRequest):
         with open(Path(params.get(server_config_path)), 'w') as file:  # Возвращение старого конфига
             json.dump(last_config, file)
 
+
+@pytest.fixture(scope='session')
+def launch_test_server():
+    launch()
