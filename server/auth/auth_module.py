@@ -1,3 +1,5 @@
+import os
+
 from sqlalchemy.exc import IntegrityError
 
 import datetime
@@ -30,6 +32,7 @@ class Authenticator:
         self._jwt_alg = jwt_alg
         self._repository = repository
         self._model = model
+        self._model.get_secret()
         self._access_token_lifetime = access_token_lifetime
         self._refresh_token_lifetime = refresh_token_lifetime
         self._data_struct = data_struct
@@ -128,13 +131,14 @@ class Authenticator:
         Вызывает ValueError, если авторизация не удалась.
         """
 
-        results = self._repository.get_users((login, ))
+        results = self._repository.get_users((login, )).content
+
         if results:
             result = results[0]
         else:
             raise ValueError
 
-        if result['username'] == login:
+        if result.get('username') == login:
             try:
                 if not checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8')):
                     raise ValueError

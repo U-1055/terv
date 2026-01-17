@@ -3,9 +3,8 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import ForeignKey, Table, Column, Integer, String
 
 from server.database.models.base import Base
-import typing as tp
-
-import server.database.models.common_models as db
+import server.database.models.common_models as cm
+from server.data_const import DBStruct
 
 
 class WFRole(Base):
@@ -18,7 +17,7 @@ class WFRole(Base):
     color: Mapped[str] = mapped_column(String[30])
 
     permissions: Mapped[list['Permission']] = relationship(secondary='wf_role_permission', back_populates='roles')
-    users: Mapped[list[db.User]] = relationship(secondary='user_wf_role', back_populates='roles')
+    users: Mapped[list[cm.User]] = relationship(secondary='user_wf_role', back_populates='roles')
 
 
 class Permission(Base):
@@ -86,7 +85,7 @@ class WFRoleDocument(Base):
 
 wf_role_project_permission = Table(
     'wf_role_project_permission',
-    db.Base.metadata,
+    Base.metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('role_project_id', ForeignKey('wf_role_project.id')),
     Column('permissions_id', ForeignKey('permission.id'))
@@ -94,7 +93,7 @@ wf_role_project_permission = Table(
 
 wf_role_permission = Table(
     'wf_role_permission',
-    db.Base.metadata,
+    Base.metadata,
     Column('role_id', ForeignKey('wf_role.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 
@@ -102,21 +101,21 @@ wf_role_permission = Table(
 
 wf_role_task_permission = Table(
     'wf_role_task_permission',
-    db.Base.metadata,
+    Base.metadata,
     Column('role_task_id', ForeignKey('wf_role_task.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
 wf_role_daily_event_permissions = Table(
     'wf_role_daily_event_permission',
-    db.Base.metadata,
+    Base.metadata,
     Column('role_daily_event_id', ForeignKey('wf_role_daily_event.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
 wf_role_many_days_event_permission = Table(
     'wf_role_many_days_event_permission',
-    db.Base.metadata,
+    Base.metadata,
     Column('role_many_days_event_id', ForeignKey('wf_role_many_days_event.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
@@ -124,7 +123,7 @@ wf_role_many_days_event_permission = Table(
 
 wf_role_document_permission = Table(
     'wf_role_document_permission',
-    db.Base.metadata,
+    Base.metadata,
     Column('role_document_id', ForeignKey('wf_role_document.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator
-from server.database.models.base import launch_db, init_db, Base, config_db
+from server.database.models.db_utils import launch_db, init_db, config_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config
@@ -16,25 +16,20 @@ from common.base import CommonStruct, check_password, ErrorCodes as ErCodes
 from server.utils.data_checkers import check_email
 from server.utils.api_utils import form_response
 
-# ToDo: проверка уникальности параметров пользователя
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARN)
 logging.debug('Module app.py is running')
 
 app = Flask(__name__)
 config = Config('../config.json')
-base_config = None
-if config.env == DataStruct.test:
-    engine = init_db('sqlite:///../database/database')
-else:
-    engine = launch_db('sqlite:///../database/database')
+database_path = config.database_path
+engine = launch_db(database_path)
 
 logging.debug(f'Module app.py is running. Environment: {config.env}')
 
 session = sessionmaker(bind=engine)
 repo = DataRepository(session)
 model = Model(Path('../storage/storage'))
-model.get_secret()
 ds_const = DataStruct()
 
 common_struct = CommonStruct()
@@ -107,7 +102,7 @@ def register():
                                  error_id=ErCodes.existing_login.value
                                  )
         by_email = repo.get_users(email=email)
-        if by_email: # Если есть пользователь с таким же email'ом
+        if by_email:  # Если есть пользователь с таким же email'ом
             return form_response(400,
                                  APIAn.invalid_data_error(
                                      common_struct.login,
@@ -167,7 +162,7 @@ def auth_recall():
 
 @app.route('/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def personal_tasks():
-    """server://tasks?user&from_date&until_date"""
+    """server://personal_tasks?user&from_date&until_date"""
     params = request.json
     auth = request.headers.get('Authorization')
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
@@ -190,7 +185,50 @@ def users():
 
     users = repo.get_users(logins)
 
-    return form_response(200, 'OK', content=users)
+    return form_response(200, 'OK', content=users.content)
+
+
+@app.route('/wf_tasks')
+def wf_tasks():
+    """
+    Ресурс задач РП. Запроса вида: server://wf_tasks/id
+    """
+
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    ids = request.args.getlist(common_struct.wf_tasks_ids)
+    limit = request.args.get(common_struct.limit)
+    offset = request.args.get(common_struct.offset)
+
+    if not limit.isdigit():
+        return form_response(400,
+                             APIAn.invalid_data_error(CommonStruct.limit, request.endpoint, f'Incorrect limit'),
+                             error_id=ErCodes.incorrect_limit.value
+                             )
+    if not offset.isdigit():
+        return form_response(400,
+                             APIAn.invalid_data_error(CommonStruct.offset, request.endpoint, 'Incorrect offset'),
+                             error_id=ErCodes.incorrect_offset.value
+                             )
+    limit = int(limit)
+    offset = int(offset)
+
+    for id_ in ids:
+        if not id_.isdigit():
+            return form_response(400,
+                                 APIAn.invalid_data_error(
+                                     CommonStruct.wf_tasks_ids,
+                                     request.endpoint,
+                                     f'Incorrect id: {id_}',
+                                 ),
+                                 error_id=ErCodes.incorrect_id
+                                 )
+    ids = [int(id_) for id_ in ids]
+
+    tasks = repo.get_wf_tasks(ids, limit, offset)
+    return form_response(200, 'OK', content=tasks.content)
 
 
 def run():

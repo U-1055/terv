@@ -1,13 +1,11 @@
 from sqlalchemy.orm import relationship, mapped_column, DeclarativeBase, MappedColumn, Mapped
 from sqlalchemy import ForeignKey, engine, create_engine, Table, Column, Integer
 from sqlalchemy.types import String
-from sqlalchemy.orm.session import sessionmaker
 
 import datetime
-from abc import abstractmethod, ABC
 
 from server.database.models.base import Base
-from server.data_const import DataStruct
+from server.data_const import DBStruct
 
 
 class User(Base):
@@ -74,7 +72,7 @@ class Workflow(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500])
+    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
 
     projects: Mapped[list['Project']] = relationship('Project', back_populates='workflow')
     tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='workflow')
@@ -92,11 +90,12 @@ class Project(Base):
     workflow_id: Mapped[int] = mapped_column(ForeignKey(Workflow.id))
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500])
+    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
 
     workflow: Mapped[Workflow] = relationship(Workflow, back_populates='projects')
     users: Mapped[list[User]] = relationship(secondary='project_user', back_populates='linked_projects')
     creator: Mapped[User] = relationship(User, back_populates='created_projects')
+    tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='project')
 
 
 project_user = Table(
@@ -150,25 +149,25 @@ user_role = Table(
 )
 
 
-class WFTask(Base):  # ToDo: нужно ли делить на ProjectTask и WFTask
+class WFTask(Base):
 
     __tablename__ = 'wf_task'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     workflow_id: Mapped[int] = mapped_column(ForeignKey(Workflow.id))  # РП
-    project_id: Mapped[int] = mapped_column(ForeignKey(Project.id))  # Проект
+    project_id: Mapped[int] = mapped_column(ForeignKey(Project.id), nullable=True)  # Проект
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))  # Создатель
     entrusted_id: Mapped[int] = mapped_column(ForeignKey(User.id))  # Поручивший
-    work_direction_id: Mapped[int] = mapped_column(ForeignKey('wf_work_direction.id'))  # Направление работы
-    parent_task_id: Mapped[int] = mapped_column(ForeignKey('wf_task.id'))  # Родительская задача
+    work_direction_id: Mapped[int] = mapped_column(ForeignKey('wf_work_direction.id'), nullable=True)  # Направление работы
+    parent_task_id: Mapped[int] = mapped_column(ForeignKey('wf_task.id'), nullable=True)  # Родительская задача
 
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[1000])
-    plan_deadline: Mapped[datetime.datetime] = mapped_column(nullable=False)
-    fact_deadline: Mapped[datetime.datetime] = mapped_column()
-    plan_time: Mapped[datetime.datetime] = mapped_column()
-    fact_time: Mapped[datetime.datetime] = mapped_column()
-    plan_start_work_date: Mapped[datetime.datetime] = mapped_column()
-    fact_start_work_date: Mapped[datetime.datetime] = mapped_column()
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
+    plan_deadline: Mapped[datetime.datetime] = mapped_column()
+    fact_deadline: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    plan_time: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    fact_time: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    plan_start_work_date: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    fact_start_work_date: Mapped[datetime.datetime] = mapped_column(nullable=True)
 
     responsible: Mapped[list[User]] = relationship(secondary='responsible_task', back_populates='responsibility_tasks')
     executors: Mapped[list[User]] = relationship(secondary='executor_task', back_populates='assigned_to_user_tasks')
@@ -178,6 +177,7 @@ class WFTask(Base):  # ToDo: нужно ли делить на ProjectTask и WF
     work_direction: Mapped[Workflow] = relationship('WFWorkDirection', back_populates='tasks')
     parent_task: Mapped['WFTask'] = relationship('WFTask', back_populates='child_tasks', remote_side='WFTask.id')
     child_tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='parent_task')
+    project: Mapped[Project] = relationship(Project, back_populates='tasks')
 
 
 class PersonalTask(Base):
@@ -185,7 +185,8 @@ class PersonalTask(Base):
     __tablename__ = 'personal_task'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
-    work_direction_id: Mapped[int] = mapped_column(ForeignKey('personal_work_direction.id'))
+    work_direction_id: Mapped[int] = mapped_column(ForeignKey('personal_work_direction.id'), nullable=True)
+    parent_task_id: Mapped[int] = mapped_column(ForeignKey('personal_task.id'), nullable=True)
 
     name: Mapped[str] = mapped_column(String[30])
     description: Mapped[str] = mapped_column(String[1000])
@@ -198,6 +199,8 @@ class PersonalTask(Base):
 
     owner: Mapped[User] = relationship(User, back_populates='created_personal_tasks')
     work_direction: Mapped['PersonalWorkDirection'] = relationship('PersonalWorkDirection', back_populates='tasks')
+    parent_task: Mapped['PersonalTask'] = relationship('PersonalTask', back_populates='child_tasks', remote_side='WFTask.id')
+    child_tasks: Mapped[list['PersonalTask']] = relationship('PersonalTask', back_populates='parent_task')
 
 
 class WFWorkDirection(Base):
@@ -232,7 +235,7 @@ class PersonalDailyEvent(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500])
+    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
     date: Mapped[datetime.date] = mapped_column()
     time_start: Mapped[datetime.time] = mapped_column()
     time_end: Mapped[datetime.time] = mapped_column()
@@ -247,7 +250,7 @@ class PersonalManyDaysEvent(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500])
+    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
     datetime_start: Mapped[datetime.datetime] = mapped_column()
     datetime_end: Mapped[datetime.datetime] = mapped_column()
 
@@ -263,7 +266,7 @@ class WFDailyEvent(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500])
+    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
     date: Mapped[datetime.date] = mapped_column()
     time_start: Mapped[datetime.time] = mapped_column()
     time_end: Mapped[datetime.time] = mapped_column()
@@ -281,7 +284,7 @@ class WFManyDaysEvent(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500])
+    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
     datetime_start: Mapped[datetime.datetime] = mapped_column()
     datetime_end: Mapped[datetime.datetime] = mapped_column()
 
@@ -295,9 +298,9 @@ class WFBaseCategory(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
-    parent_category_id: Mapped[int] = mapped_column(ForeignKey('wf_base_category.id'))
+    parent_category_id: Mapped[int] = mapped_column(ForeignKey('wf_base_category.id'), nullable=True)
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[250])
+    description: Mapped[str] = mapped_column(String[250], default=DBStruct.default_description)
 
     parent_category: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='child_categories', remote_side='WFBaseCategory.id')
     child_categories: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='parent_category')

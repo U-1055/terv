@@ -16,6 +16,12 @@ class CommonStruct:
     message = 'message'
     logins = 'logins'
     tokens = 'tokens'
+    wf_tasks_ids = ''
+    creator_id = ''
+    executor_id = ''
+    limit = 'limit'
+    offset = 'offset'
+    last_rec_num = 'last_rec_num'
 
     max_login_length = 25
     min_login_length = 5
@@ -54,6 +60,9 @@ class ErrorCodes(enum.Enum):
     no_refresh = 12
 
     no_tokens = 13
+    incorrect_id = 14
+    incorrect_limit = 15
+    incorrect_offset = 16
 
 
 def check_password(password: str) -> bool:
