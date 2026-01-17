@@ -26,10 +26,6 @@ class Model:
             secret = storage.get(self._data_const.secret)
         return secret
 
-    def set_secret(self, secret: str):
-        with shelve.open(self._storage_path, 'w') as storage:
-            storage.update({self._data_const.secret: secret})
-
     def add_token_to_blacklist(self, token_: str):
         with shelve.open(self._storage_path, 'w') as storage:
             tokens = storage[self._data_const.blacklist]
@@ -52,7 +48,6 @@ class Model:
 
 if __name__ == '__main__':
     model = Model(Path('storage'))
-    model.set_secret('')
     print(model.get_secret())
 
     model.update_blacklist()

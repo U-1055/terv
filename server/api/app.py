@@ -8,14 +8,14 @@ from pathlib import Path
 
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator
-from server.database.models.db_utils import launch_db, init_db, config_db
+from server.database.models.db_utils import launch_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config
 from common.base import CommonStruct, check_password, ErrorCodes as ErCodes
 from server.utils.data_checkers import check_email
 from server.utils.api_utils import form_response
-
+# ToDo: заголовок с Authorization на Authorization Bearer
 
 logging.basicConfig(level=logging.WARN)
 logging.debug('Module app.py is running')
@@ -202,18 +202,24 @@ def wf_tasks():
     limit = request.args.get(common_struct.limit)
     offset = request.args.get(common_struct.offset)
 
-    if not limit.isdigit():
+    if limit and (not limit.isdigit() or int(limit) < 0):
         return form_response(400,
                              APIAn.invalid_data_error(CommonStruct.limit, request.endpoint, f'Incorrect limit'),
                              error_id=ErCodes.incorrect_limit.value
                              )
-    if not offset.isdigit():
+    if offset and (not offset.isdigit() or int(offset) < 0):
         return form_response(400,
                              APIAn.invalid_data_error(CommonStruct.offset, request.endpoint, 'Incorrect offset'),
                              error_id=ErCodes.incorrect_offset.value
                              )
-    limit = int(limit)
-    offset = int(offset)
+    if limit:
+        limit = int(limit)
+    else:
+        limit = None
+    if offset:
+        offset = int(offset)
+    else:
+        offset = None
 
     for id_ in ids:
         if not id_.isdigit():

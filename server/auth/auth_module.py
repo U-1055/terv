@@ -11,6 +11,7 @@ from bcrypt import checkpw, hashpw, gensalt
 from server.storage.server_model import Model
 from server.database.repository import DataRepository
 from server.data_const import DataStruct, Permissions
+from common.base import DBFields
 
 
 def hash_password(password: str) -> str:
@@ -115,8 +116,8 @@ class Authenticator:
 
     def register(self, login: str, email: str, password: str):
         hashed_password = hash_password(password)
-        try:  # ToDo: переделать на константы (константы-названия полей хранить в common.base, т.к. они относятся и к клиенту (модели) и к серверу (модели sqlalchemy))
-            self._repository.add_users(({'username': login, 'email': email, 'hashed_password': hashed_password},))
+        try:
+            self._repository.add_users(({DBFields.username: login, DBFields.email: email, DBFields.hashed_password: hashed_password},))
         except IntegrityError:
             raise ValueError
 
@@ -138,15 +139,15 @@ class Authenticator:
         else:
             raise ValueError
 
-        if result.get('username') == login:
+        if result.get(DBFields.username) == login:
             try:
-                if not checkpw(bytes(password, encoding='utf-8'), bytes(result['hashed_password'], encoding='utf-8')):
+                if not checkpw(bytes(password, encoding='utf-8'), bytes(result[DBFields.hashed_password], encoding='utf-8')):
                     raise ValueError
                 access_token = self._create_token(login, self._access_token_lifetime)
                 refresh_token = self._create_token(login, self._refresh_token_lifetime)
                 return {self.access_name: access_token, self.refresh_name: refresh_token}
             except ValueError as e:
-                logging.debug(f'INVALID PASSWORD: saved_hash: {result['hashed_password']}; received_hash: {bytes(password, encoding='utf-8')}')
+                logging.debug(f'INVALID PASSWORD: saved_hash: {result[DBFields.hashed_password]}; received_hash: {bytes(password, encoding='utf-8')}')
                 raise ValueError
         else:
             raise ValueError

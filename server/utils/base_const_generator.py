@@ -50,4 +50,4 @@ def generate_base_const(models_file_path: Path, const_file_path: Path, encoding:
 
 
 if __name__ == '__main__':
-    generate_base_const(Path('../database/models/roles.py'), Path('common_const.py'), unique=True)
+    generate_base_const(Path('../database/models/common_models.py'), Path('common_const.py'), unique=True)

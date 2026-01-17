@@ -54,9 +54,9 @@ class User(Base):
     personal_daily_events: Mapped[list['PersonalDailyEvent']] = relationship('PersonalDailyEvent', back_populates='owner')
     personal_many_days_events: Mapped[list['PersonalManyDaysEvent']] = relationship('PersonalManyDaysEvent', back_populates='owner')
 
-    fields = ['id', 'username', 'email', 'hashed_password']
-    one_links = []
-    many_links = [
+    fields: list = ['id', 'username', 'email', 'hashed_password']
+    one_links: list = []
+    many_links: list = [
         'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
         'assigned_to_user_tasks', 'assigned_by_user_tasks', 'responsibility_tasks', 'created_personal_tasks',
         'created_wf_documents', 'created_wf_daily_events', 'created_wf_many_days_events', 'notified_daily_events',
@@ -199,7 +199,7 @@ class PersonalTask(Base):
 
     owner: Mapped[User] = relationship(User, back_populates='created_personal_tasks')
     work_direction: Mapped['PersonalWorkDirection'] = relationship('PersonalWorkDirection', back_populates='tasks')
-    parent_task: Mapped['PersonalTask'] = relationship('PersonalTask', back_populates='child_tasks', remote_side='WFTask.id')
+    parent_task: Mapped['PersonalTask'] = relationship('PersonalTask', back_populates='child_tasks', remote_side='PersonalTask.id')
     child_tasks: Mapped[list['PersonalTask']] = relationship('PersonalTask', back_populates='parent_task')
 
 
