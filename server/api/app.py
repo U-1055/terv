@@ -234,7 +234,14 @@ def wf_tasks():
     ids = [int(id_) for id_ in ids]
 
     tasks = repo.get_wf_tasks(ids, limit, offset)
-    return form_response(200, 'OK', content=tasks.content)
+    if not tasks.records_left:
+        tasks.records_left = 0
+    if not tasks.last_record_num:
+        tasks.last_record_num = 0
+
+    return form_response(200, 'OK', content=tasks.content,
+                             last_rec_num=tasks.last_record_num,
+                             records_left=tasks.records_left)
 
 
 def run():

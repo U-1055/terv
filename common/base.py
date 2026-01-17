@@ -22,6 +22,7 @@ class CommonStruct:
     limit = 'limit'
     offset = 'offset'
     last_rec_num = 'last_rec_num'
+    records_left = 'records_left'
 
     max_login_length = 25
     min_login_length = 5

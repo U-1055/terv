@@ -5,7 +5,13 @@ import typing as tp
 from common.base import CommonStruct, ErrorCodes
 
 
-def form_response(http_code: int, message: str, content: tp.Any = None, error_id: int = ErrorCodes.ok.value, last_rec_num: int = None) -> Response:
+def form_response(http_code: int,
+                  message: str,
+                  content: tp.Any = None,
+                  error_id: int = ErrorCodes.ok.value,
+                  last_rec_num: int = None,
+                  records_left: int = None
+                  ) -> Response:
     """
     Формирует ответ API.
 
@@ -14,7 +20,7 @@ def form_response(http_code: int, message: str, content: tp.Any = None, error_id
     :param content: Содержимое ответа.
     :param error_id: ID ошибки.
     :param last_rec_num: Номер последней записи в БД (для GET-запросов).
-
+    :param records_left: Осталось записей в БД (для GET-запросов).
     """
 
     response = {
@@ -23,8 +29,10 @@ def form_response(http_code: int, message: str, content: tp.Any = None, error_id
     }
     if content:
         response.update(content=content)
-    if last_rec_num:
+    if last_rec_num is not None:
         response.update(last_rec_num=last_rec_num)
+    if records_left is not None:
+        response.update(records_left=records_left)
 
     result = jsonify(response)
     result.status_code = http_code

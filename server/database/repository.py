@@ -30,12 +30,17 @@ class DataRepository:
 
     def _execute_select(self, query: Select, limit: int = None, offset: int = None, require_last_rec_num: bool = False) -> 'RepoResponse':
         with self._session_maker() as session, session.begin():
+
             result = session.execute(query.limit(limit).offset(offset)).scalars().all()
             response = RepoResponse(content=[model.serialize() for model in result])
             if limit or offset or require_last_rec_num:  # Поиск номера последней таблицы
-                results_num = result.count(cm.Base)
+                results_num = len(response.content)
                 last_rec_num = results_num + offset
                 response.last_record_num = last_rec_num
+                all_records = session.execute(query.offset(offset)).scalars().all()  # Получаем все записи
+                all_records_num = len(all_records)
+
+                response.records_left = all_records_num - results_num  # Осталось: все - полученные
 
             return response
 
@@ -83,7 +88,7 @@ class DataRepository:
         if name:
             query = query.where(cm.Workflow.name.contains(name))
 
-        return self._execute_select(query, require_last_rec_num, limit, offset)
+        return self._execute_select(query, limit, offset, require_last_rec_num)
 
     def get_wf_tasks(self, wf_tasks_ids: list[int], limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoResponse':
         query = select(cm.WFTask)
@@ -148,6 +153,7 @@ class RepoResponse:
     """Ответ DataRepository."""
     content: list
     last_record_num: int = None
+    records_left: int = None
 
 
 if __name__ == '__main__':

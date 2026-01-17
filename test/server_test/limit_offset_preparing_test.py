@@ -25,19 +25,25 @@ base_params = {
 @pytest.mark.f_data(base_params)
 @pytest.mark.parametrize(
     ('limit',),
-    ((5, ), (15, ), (25, ), (50, ), (75, ), (100, ))
+    ((1, ), (15, ), (25, ), (50, ), (75, ), (100, ))
 )
 def test_normal_limit(config_limit_offset_test_db, set_config, requester: TestRequester, access_token, limit: int):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
     request = requester.get_workflow_tasks(access_token, ids, limit, 0)
 
-    request_content = request.json().get(CommonStruct.content)
+    request_json = request.json()
 
-    length = len(request_content)
+    length = len(request_json.get(CommonStruct.content))
+    records_left = request_json.get(CommonStruct.records_left)
+    last_record_num = request_json.get(CommonStruct.last_rec_num)
+    tasks_num = base_params.get(cf.TASKS_NUM)
 
     assert length == limit, f'Num of returned records ({length}) not equal the limit ({request}).'
-
+    assert records_left == tasks_num - length, \
+        f'Num of left records must be {tasks_num - limit}, but it is {records_left}. Response: {request_json}'
+    assert last_record_num == limit, \
+        f'Num of the last record must be {limit} but it is {last_record_num}. Response" {request_json}'
 
 @pytest.mark.f_data(base_params)
 @pytest.mark.parametrize(
@@ -83,10 +89,18 @@ def test_normal_offset(config_limit_offset_test_db, set_config, requester: TestR
 
     content = request.json().get(CommonStruct.content)
 
-    for rec in content:  # Предполагается, что нумерация id начинается с 0 (т.к. каждый раз делается новый конфиг)
+    for rec in content:  # Предполагается, что нумерация id начинается с 1 (т.к. каждый раз делается новый конфиг)
         rec_id = rec.get(DBFields.id)
+        last_rec_num = request.json().get(CommonStruct.last_rec_num)
+        records_left = request.json().get(CommonStruct.records_left)
+        expecting_records_left = base_params.get(cf.TASKS_NUM) - len(request.json().get(CommonStruct.content)) - offset
         assert rec_id in range(offset, base_params.get(cf.TASKS_NUM) + 1), \
             f'ID of the model not in allowed range ({offset} - {cf.TASKS_NUM}). ID: {rec_id}'
+        assert last_rec_num == base_params.get(cf.TASKS_NUM), \
+            f'Num of the last record must be {base_params.get(cf.TASKS_NUM)}, but it is {last_rec_num}'
+        assert records_left == expecting_records_left, \
+            f'Num of left records must be {expecting_records_left}, but it is {records_left}'
+
 
 @pytest.mark.f_data(base_params)
 @pytest.mark.parametrize(
