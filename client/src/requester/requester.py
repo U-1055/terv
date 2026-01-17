@@ -1,5 +1,6 @@
 """Слой API."""
 import datetime
+import logging
 
 import httpx
 
@@ -43,12 +44,14 @@ class Requester:
     :param server: адрес сервера.
     :param common_data_struct: константы и требования к данным.
     :param timeout: минимальное время между двумя одинаковыми запросами
+    :param request_limit: максимальное число записей (элементов в поле content) в одном запросе
     """
 
-    def __init__(self, server: str, common_data_struct: CommonStruct = CommonStruct, timeout: int = 0.1):
+    def __init__(self, server: str, common_data_struct: CommonStruct = CommonStruct, timeout: int = 0.1, request_limit: int = 100):
         self._server = server
         self._struct = common_data_struct
         self._timeout = timeout
+        self._request_limit = request_limit
         self._requests: TimeoutList[Request] = TimeoutList(self._timeout, max_length=100)
 
     def _prepare_response(self, response: 'ServerResponse', request: 'Request'):
@@ -56,16 +59,50 @@ class Requester:
         error_code = response.error_id
         message = response.message
 
-        if error_code != ErrorCodes.ok:  # Вызов исключения по коду
+        if error_code != ErrorCodes.ok.value:  # Вызов исключения по коду
+            logging.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. Request:'
+                            f'{request}. Response: {response}.')
             exc = err.exceptions_error_ids.get(error_code)
             raise exc(message, request=request)
+
+    async def _prepare_requests_sequence(self, request: 'Request', limit: int | None):  # ToDo: а что делать, если в процессе отправки истечёт access?
+        """
+        Посылает запросы на URL переданного запроса, меняя их offset до тех пор, пока не будут получены все записи
+        или не будет достигнут limit.
+        Предназначен для запросов, в ответ на которые API отдаёт список записей. Для других запросов корректного
+        результата не будет.
+
+        :param limit: максимальное число записей, который могут быть получены от сервера.
+
+        """
+
+        request.set_limit(self._request_limit)  # Установка лимита
+        if not request.offset:
+            request.set_offset(0)
+        offset = request.offset
+        try:
+            response = await self._make_request(request)  # Первый запрос
+            content = response.content
+        # Запрашиваем данные, пока не превысим лимит или не получим все данные (в этом случае придёт records_left = 0)
+            while response.records_left and len(content) < limit:
+                request.set_offset(offset + len(content))  # Прибавляем offset
+                response = await self._make_request(request)
+                if response.content:
+                    content.extend(response.content)
+
+            response = Response(request, content, response.records_left, 0)
+
+            return response
+
+        except err.APIError as e:
+            raise e
 
     async def _make_request(self, request: 'Request') -> 'Response':
         self._requests.update()  # Обновляем список запросов
         if self._requests and self._requests[-1].path == request.path and self._requests[-1].method == request.method: # Запросы одинаковы
             diff = request.time - self._requests[-1].time  # Разница во времени отправки
             if diff < datetime.timedelta(seconds=self._timeout):
-                await asyncio.sleep(diff)  # Задержка до допустимого времени между запросами
+                await asyncio.sleep(diff.seconds)  # Задержка до допустимого времени между запросами
 
         async with httpx.AsyncClient() as client:
             if request.method == Request.GET:
@@ -84,8 +121,11 @@ class Requester:
         try:  # Обработка запроса и его возврат в виде Response
             server_response = ServerResponse(result)
             self._prepare_response(server_response, request)
-            return Response(request, server_response.content)
+
+            return Response(request, server_response.content, server_response.records_left,
+                            server_response.last_record_num)
         except err.APIError as e:
+            logging.warning(f'Excepted error {e} during making request {Request}')
             raise e
 
     @synchronized_request
@@ -95,7 +135,6 @@ class Requester:
             return response
         except err.APIError as e:
             raise e
-
 
     @synchronized_request
     async def register(self, login: str, password: str, email: str) -> 'Response':
@@ -132,7 +171,7 @@ class Requester:
             raise e
 
     @synchronized_request
-    async def get_user_info(self, access_token: str, ) -> 'Response':
+    async def get_user_info(self, access_token: str) -> 'Response':
         try:
             request = Request(f'{self._server}/users', Request.GET, headers={'Authorization': access_token})
             response = await self._make_request(request)
@@ -141,14 +180,36 @@ class Requester:
             raise e
 
     @synchronized_request
-    async def get_personal_tasks(self, user_id: int, access_token: str, task_id: int = None) -> 'Response':
+    async def get_personal_tasks(self, user_id: int, access_token: str, task_ids: list[int] = None,
+                                 limit: int = None, offset: int = None) -> 'Response':
         """Получает личные задачи (конкретную или по user_id)."""
         try:
             path = f'{self._server}/personal_tasks'
-            if task_id:
-                path = f'{self._server}/personal_tasks/{task_id}'
-            request = Request(path, Request.GET, headers={'Authorization': access_token})
-            response = await self._make_request(request)
+            request = Request(path, Request.GET, headers={'Authorization': access_token},
+                              query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+            if limit:
+                response = await self._prepare_requests_sequence(request, limit)
+
+            return response
+        except err.APIError as e:
+            raise e
+
+    @synchronized_request
+    async def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> 'Response':
+        try:
+            path = f'{self._server}/wf_tasks'
+            request = Request(path, Request.GET, headers={'Authorization': access_token},
+                              query_params={
+                                  CommonStruct.limit: limit,
+                                  CommonStruct.offset: offset
+                              })
+            if not limit:  # Если лимит не установлен
+                response = await self._prepare_requests_sequence(request, limit)
+            elif limit > self._request_limit:  # Если лимит больше максимального за запрос
+                response = await self._prepare_requests_sequence(request, limit)
+            else:
+                response = await self._make_request(request)
+
             return response
         except err.APIError as e:
             raise e
@@ -190,21 +251,37 @@ class ServerResponse:
             self.error_id = response_data.get(CommonStruct.error_id)
             self.content = response_data.get(CommonStruct.content)
             self.message = response_data.get(CommonStruct.message)
+            self.records_left = response_data.get(CommonStruct.records_left)
+            self.last_record_num = response_data.get(CommonStruct.last_rec_num)
         except (json.JSONDecodeError, AttributeError):
             self.error_id = ErrorCodes.server_error
             self.content = None
             self.message = 'No data in response'
+            self.records_left = None
+            self.last_record_num = None
 
 
 class Response:
-    """Ответ Requester'a."""
+    """
+    Ответ Requester'a.
+    :param request: запрос типа Request.
+    :param content: содержимое (поле content) ответа API.
+    :param records_left: число оставшихся записей (для запросов, в ответ на которые возвращается список записей).
+    :param last_record_num: номер последней полученной записи
+           (для запросов, в ответ на которые возвращается список записей).
+    """
 
-    def __init__(self, request: 'Request', content: dict):
+    def __init__(self, request: 'Request', content: tp.Any, records_left: int, last_record_num: int):
         self.request = request
         self.content = content
+        self.records_left = records_left
+        self.last_record_num = last_record_num
+
+    def __str__(self):
+        return str(self.__dict__)
 
 
-class Request:
+class Request:  # ToDo: переделать в датаклассы
     """
     Запрос.
 
@@ -240,18 +317,24 @@ class Request:
     def id(self) -> int:
         return self._id
 
+    @property
+    def limit(self) -> int | None:
+        return self.query_params.get(CommonStruct.limit)
+
+    def set_limit(self, limit: int):
+        self.query_params[CommonStruct.limit] = limit
+
+    @property
+    def offset(self) -> int | None:
+        return self.query_params.get(CommonStruct.offset)
+
+    def set_offset(self, offset: int):
+        self.query_params[CommonStruct.offset] = offset
+
+    def __str__(self):
+        return str(self.__dict__)
+
 
 if __name__ == '__main__':
-    from test.client_test.utils.test_server import launch
-    launch()
-    requester = Requester('http://127.0.0.1:5000')
-
-    def prepare(future: asyncio.Future):
-        assert False
-        with pytest.raises(err.exceptions_error_ids.get(error_id), match='.') as exc:
-            future.result()
-
-
-    response = requester.get_user_info('a')
-    response.add_done_callback(prepare)
+    pass
 

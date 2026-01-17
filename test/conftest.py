@@ -10,6 +10,8 @@ from test.client_test.utils.test_server import launch
 from test.server_test.utils.test_database.base import DatabaseManager
 from common.base import CommonStruct
 from test.server_test.utils.requester import TestRequester
+from client.src.requester.requester import Requester
+
 
 TEST_CONFIG_PATH = 'TEST_CONFIG_PATH'  # Параметры фикстур
 SERVER_CONFIG_PATH = 'SERVER_CONFIG_PATH'
@@ -19,6 +21,9 @@ LOGIN = 'login'
 PASSWORD = 'password'
 EMAIL = 'email'
 TASKS_NUM = 'tasks_num'
+REQUEST_LIMIT = 'request_limit'
+
+LEN_TEST_REPO_CONTENT = 1000
 
 
 @pytest.fixture(scope='function')
@@ -81,7 +86,7 @@ def config_limit_offset_test_db(request: pytest.FixtureRequest):
     db_manager.set_limit_offset_test_config(login, password, email, tasks_num)
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def launch_test_server():
     launch()
 
@@ -116,6 +121,13 @@ def refresh_token(request: pytest.FixtureRequest, requester) -> str:
     return result.json().get(CommonStruct.content).get(CommonStruct.refresh_token)
 
 
-@pytest.fixture()
+@pytest.fixture(scope='function')
 def requester() -> TestRequester:
     return TestRequester('http://localhost:5000')
+
+
+@pytest.fixture(scope='function')
+def client_requester(request: pytest.FixtureRequest) -> Requester:
+    params = request.node.get_closest_marker('f_data').args[0]
+    request_limit = params.get(REQUEST_LIMIT)
+    return Requester('http://localhost:5000', request_limit=request_limit)

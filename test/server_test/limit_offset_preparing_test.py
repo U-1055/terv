@@ -45,6 +45,7 @@ def test_normal_limit(config_limit_offset_test_db, set_config, requester: TestRe
     assert last_record_num == limit, \
         f'Num of the last record must be {limit} but it is {last_record_num}. Response" {request_json}'
 
+
 @pytest.mark.f_data(base_params)
 @pytest.mark.parametrize(
     ('limit',),
