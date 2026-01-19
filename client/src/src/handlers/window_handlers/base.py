@@ -19,6 +19,7 @@ class BaseWindowHandler(QObject):
     error_occurred = Signal(str, str)  # Произошла ошибка
     incorrect_tokens_update = Signal()  # Ошибка при обновлении токенов
     tokens_updated = Signal()  # Установлены новые токены
+    network_error_occurred = Signal()  # Произошла ошибка сети
 
     def __init__(self, window: BaseWindow, main_view: MainWindow, requester: Requester, model: Model):
         super().__init__()
@@ -65,6 +66,10 @@ class BaseWindowHandler(QObject):
         except err.ExpiredRefreshToken as e:  # Обработка просрочки refresh-токена
             logging.debug('Expired Refresh Token')
             self.incorrect_tokens_update.emit()
+
+        except err.NetworkTimeoutError as e:  # Обработка ошибки сети
+            self.network_error_occurred.emit()
+
         except Exception as e:  # Все остальные исключения передаются вызывающей стороне
             raise e
 

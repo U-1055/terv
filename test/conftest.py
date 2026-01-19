@@ -22,6 +22,7 @@ PASSWORD = 'password'
 EMAIL = 'email'
 TASKS_NUM = 'tasks_num'
 REQUEST_LIMIT = 'request_limit'
+TIMEOUT = 'timeout'
 
 LEN_TEST_REPO_CONTENT = 1000
 
@@ -130,4 +131,5 @@ def requester() -> TestRequester:
 def client_requester(request: pytest.FixtureRequest) -> Requester:
     params = request.node.get_closest_marker('f_data').args[0]
     request_limit = params.get(REQUEST_LIMIT)
-    return Requester('http://localhost:5000', request_limit=request_limit)
+    timeout = params.get(TIMEOUT)
+    return Requester('http://localhost:5000', request_limit=request_limit, timeout=timeout)

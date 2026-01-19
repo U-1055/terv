@@ -15,7 +15,6 @@ repo = TestRepo()
 
 @app.route('/error/<int:err_id>', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def error(err_id: int):
-    print(ErrorCodes.no_password.value == err_id)
     return form_response(200, error_id=err_id, message='')
 
 

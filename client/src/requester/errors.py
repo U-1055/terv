@@ -1,5 +1,17 @@
+import httpx
+
 from common.base import ErrorCodes
 import typing as tp
+
+
+def get_network_error(error_type: httpx.NetworkError, request) -> 'NetworkTimeoutError':
+    if type(error_type) == httpx.ConnectError:
+        return ConnectTimeoutError('Network error', request)
+    elif type(error_type) == httpx.ReadError:
+        return ReadTimeoutError('Network error', request)
+    elif type(error_type) == httpx.WriteError:
+        return WriteTimeoutError('Network error', request)
+
 
 Request = tp.Any
 if tp.TYPE_CHECKING:
@@ -13,6 +25,22 @@ class APIError(Exception):  # Ошибка, возвращённая API
     """
     def __init__(self, message: str, request: Request):
         self.request = request
+
+
+class NetworkTimeoutError(APIError):  # Ошибка сети
+    pass
+
+
+class ReadTimeoutError(NetworkTimeoutError):  # Не удалось получить данных с сервера
+    pass
+
+
+class ConnectTimeoutError(NetworkTimeoutError):  # Не удалось установить соединение
+    pass
+
+
+class WriteTimeoutError(NetworkTimeoutError):   # Не удалось отправить запрос
+    pass
 
 
 class RequesterError(Exception):  # Ошибка внутри Requester'а
@@ -98,7 +126,6 @@ exceptions_error_ids = {
     ErrorCodes.existing_email.value: EmailAlreadyExists,
     ErrorCodes.existing_login.value: LoginAlreadyExists
 }
-
 
 
 

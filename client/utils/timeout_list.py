@@ -9,12 +9,12 @@ class TimeoutList(list):
     передаётся аргументом этот элемент.
     Если достигнута максимальная длина списка, при добавлении нового элемента будет удалён элемент, добавленный раньше всего.
 
-    :param timeout:  тайм-аут.
+    :param timeout: тайм-аут. (в секундах)
     :param func: функция с сигнатурой вида func(value: tp.Any) -> None, в которую передаётся элемент списка с истёкшим тайм-аутом при обновлении списка
     :param max_length: максимальная длина списка.
     """
 
-    def __init__(self, timeout: int = 0, func: tp.Callable[[tp.Any], None] = lambda a: None, max_length: int = -1):
+    def __init__(self, timeout: float = 0.0, func: tp.Callable[[tp.Any], None] = lambda a: None, max_length: int = -1):
         super().__init__()
         self._timeout = timeout
         self._func = func
@@ -30,6 +30,14 @@ class TimeoutList(list):
 
         self.pop(max_timeout_idx)
 
+    def set_timeout(self, timeout: int):
+        """Установить timeout (в сек.)."""
+        self._timeout = timeout
+
+    @property
+    def timeout(self) -> int:
+        return self._timeout
+
     def append(self, __object):
         if self._max_length > 0 and len(self) == self._max_length:
             self._del_elements()
@@ -40,7 +48,7 @@ class TimeoutList(list):
     def pop(self, __index=-1):
         super().pop(__index)
         self._timeouts.pop(__index)
-        for idx in self._timeouts:
+        for idx in list(self._timeouts.keys()):
             if idx > __index:
                 value = self._timeouts.pop(idx)
                 self._timeouts[idx - 1] = value
@@ -58,7 +66,7 @@ class TimeoutList(list):
 
 
 if __name__ == '__main__':
-    timeout_list = TimeoutList(2, print, 3)
+    timeout_list = TimeoutList(2, print, 100)
 
     timeout_list.append('string1')
     timeout_list.append('string2')
