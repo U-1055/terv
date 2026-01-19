@@ -51,8 +51,12 @@ class GuiLabels:
 
     register_complete = 'Регистрация прошла успешно. Теперь войдите в аккаунт'
     authentication_complete = 'Аутентификация прошла успешно!'
+    network_error = 'Ошибка сети: не удалось выполнить операцию. Попробуйте обновить окно.'
 
     op_complete = 'Операция выполнена'
+    error_occurred = 'Произошла ошибка'
+
+
 
 class GUIStyles:
 

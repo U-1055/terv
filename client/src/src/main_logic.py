@@ -56,6 +56,9 @@ class Logic:
     def _on_registration_complete(self):
         self._view.show_message(self._labels.op_complete, self._labels.register_complete)
 
+    def _on_network_error_occurred(self):
+        self._view.show_message(self._labels.error_occurred, self._labels.network_error)
+
     def _authorize(self):
         logging.debug('Opening authorize window')
         main_auth_window = self._view.open_auth_window()
@@ -122,6 +125,7 @@ class Logic:
             self._opened_now = win_handler
             win_handler.incorrect_tokens_update.connect(self._authorize)
             win_handler._update_state()
+        self._opened_now.network_error_occurred.connect(self._on_network_error_occurred)
 
 
 if __name__ == '__main__':
