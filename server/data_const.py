@@ -109,6 +109,11 @@ class APIAnswers:
     def invalid_data_error(param: str, endpoint: str, message: str = '') -> str:
         return f'The endpoint {endpoint} received the invalid param {param}: {message}'
 
+    @staticmethod
+    def database_write_error(param: str, endpoint: str, message: str = '', database_error: str = '') -> str:
+        return (f'The endpoint {endpoint} received invalid data in param {param} and cannot write to DB.'
+                f'{message}. Database error: {database_error}.')
+
 
 class Config:
     """

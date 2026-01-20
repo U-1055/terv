@@ -132,7 +132,7 @@ class Authenticator:
         Вызывает ValueError, если авторизация не удалась.
         """
 
-        results = self._repository.get_users((login, )).content
+        results = self._repository.get_users_by_username((login, )).content
 
         if results:
             result = results[0]

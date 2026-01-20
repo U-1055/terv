@@ -66,12 +66,11 @@ def test_no_register(requester, set_config):
 })
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
-    [['sth_login', 'sth_password1', 'sth_email']]
+    [['sth_login1', 'sth_password1', 'sth_email15']]
 )
 def test_expired_access_token(requester, set_config, login: str, password: str, email: str):
-    response = requester.register(login, password, email)  # Регистрируем
-    status_code = response.status_code
-
+    register_response = requester.register(login, password, email)  # Регистрируем
+    status_code = register_response.status_code
     response = requester.authorize(login, password)  # Получаем access-токен
     auth_status_code = response.status_code
     auth_data = response.json().get(ds_const.content)
@@ -87,7 +86,7 @@ def test_expired_access_token(requester, set_config, login: str, password: str, 
     get_content = response.json().get(DataStruct.content)
 
     set_config
-    assert status_code == 200, f'Status code {status_code} must be 200'
+    assert status_code == 200, f'Status code {status_code} must be 200. Response: {register_response.json()} Request: {register_response.request}'
     assert auth_status_code == 200, f'Status code {auth_status_code} must be 200'
     assert access_token, 'No access token in response to request to endpoint /auth/login'
     assert get_request_status_code == 401, f'Status code {get_request_status_code} must be 401. Response: {response}'

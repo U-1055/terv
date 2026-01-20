@@ -14,7 +14,8 @@ from server.storage.server_model import Model
 from server.data_const import DataStruct, Config
 from common.base import CommonStruct, check_password, ErrorCodes as ErCodes
 from server.utils.data_checkers import check_email
-from server.utils.api_utils import form_response
+from server.utils.api_utils import form_response, prepare_limit_offset
+import server.api.crud_handlers as handlers
 # ToDo: заголовок с Authorization на Authorization Bearer
 
 logging.basicConfig(level=logging.WARN)
@@ -91,8 +92,8 @@ def register():
         authenticator.register(login, email, password)
         return form_response(200, 'OK', {})
     except ValueError:
-        by_login = repo.get_users((login, ))
-        if by_login:  # Если есть пользователь с таким же логинов
+        by_login = repo.get_users_by_username((login, ))
+        if by_login.content:  # Если есть пользователь с таким же логинов
             return form_response(400, 
                                  APIAn.invalid_data_error(
                                      common_struct.login,
@@ -101,8 +102,8 @@ def register():
                                  ),
                                  error_id=ErCodes.existing_login.value
                                  )
-        by_email = repo.get_users(email=email)
-        if by_email:  # Если есть пользователь с таким же email'ом
+        by_email = repo.get_users_by_email(emails=email)
+        if by_email.content:  # Если есть пользователь с таким же email'ом
             return form_response(400,
                                  APIAn.invalid_data_error(
                                      common_struct.login,
@@ -162,86 +163,83 @@ def auth_recall():
 
 @app.route('/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def personal_tasks():
-    """server://personal_tasks?user&from_date&until_date"""
-    params = request.json
     auth = request.headers.get('Authorization')
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
         return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    response = None  # Только чтобы не ругалась IDE на возможное отсутствие объявления
+
+    if request.method == 'GET':
+        response = handlers.get_wf_tasks(request, repo)
+    elif request.method == 'POST':
+        response = handlers.add_wf_tasks(request, repo)
+    elif request.method == 'PUT':
+        response = handlers.update_wf_tasks(request, repo)
+    elif request.method == 'DELETE':
+        response = handlers.update_wf_tasks(request, repo)
+
+    return response
+
+
+@app.route('/personal_tasks/search', methods=['POST'])
+def personal_tasks_search():
+    """Запрос для поиска по параметрам."""
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+    return handlers.search_wf_tasks(request, repo)
 
 
 @app.route('/users', methods=['GET', 'PUT', 'DELETE'])
 def users():
     auth = request.headers.get('Authorization')
-    logins = request.args.get(common_struct.logins)
 
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
         return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
-    if not logins:  # Если передан только access
-        try:
-            logins = [authenticator.get_login(auth)]
-        except ValueError:
-            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+    response = None
 
-    users = repo.get_users(logins)
+    if request.method == 'GET':
+        response = handlers.get_users(request, repo, authenticator)
+    elif request.method == 'PUT':
+        response = handlers.update_users(request, repo)
+    elif request.method == 'DELETE':
+        response = handlers.update_users(request, repo)
 
-    return form_response(200, 'OK', content=users.content)
+    return response
 
 
-@app.route('/wf_tasks')
+@app.route('/wf_tasks', methods=['GET', 'PUT', 'POST', 'DELETE'])
 def wf_tasks():
     """
-    Ресурс задач РП. Запроса вида: server://wf_tasks/id
+    Ресурс задач РП. Запроса вида: server://wf_tasks
     """
 
     auth = request.headers.get('Authorization')
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
         return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
-    ids = request.args.getlist(common_struct.wf_tasks_ids)
-    limit = request.args.get(common_struct.limit)
-    offset = request.args.get(common_struct.offset)
+    response = None
 
-    if limit and (not limit.isdigit() or int(limit) < 0):
-        return form_response(400,
-                             APIAn.invalid_data_error(CommonStruct.limit, request.endpoint, f'Incorrect limit'),
-                             error_id=ErCodes.incorrect_limit.value
-                             )
-    if offset and (not offset.isdigit() or int(offset) < 0):
-        return form_response(400,
-                             APIAn.invalid_data_error(CommonStruct.offset, request.endpoint, 'Incorrect offset'),
-                             error_id=ErCodes.incorrect_offset.value
-                             )
-    if limit:
-        limit = int(limit)
-    else:
-        limit = None
-    if offset:
-        offset = int(offset)
-    else:
-        offset = None
+    if request.method == 'GET':
+        response = handlers.get_wf_tasks(request, repo)
+    elif request.method == 'POST':
+        response = handlers.add_wf_tasks(request, repo)
+    elif request.method == 'PUT':
+        response = handlers.update_wf_tasks(request, repo)
+    elif request.method == 'DELETE':
+        response = handlers.update_wf_tasks(request, repo)
 
-    for id_ in ids:
-        if not id_.isdigit():
-            return form_response(400,
-                                 APIAn.invalid_data_error(
-                                     CommonStruct.wf_tasks_ids,
-                                     request.endpoint,
-                                     f'Incorrect id: {id_}',
-                                 ),
-                                 error_id=ErCodes.incorrect_id
-                                 )
-    ids = [int(id_) for id_ in ids]
+    return response
 
-    tasks = repo.get_wf_tasks(ids, limit, offset)
-    if not tasks.records_left:
-        tasks.records_left = 0
-    if not tasks.last_record_num:
-        tasks.last_record_num = 0
 
-    return form_response(200, 'OK', content=tasks.content,
-                             last_rec_num=tasks.last_record_num,
-                             records_left=tasks.records_left)
+@app.route('/wf_tasks/search', methods=['POST'])
+def wf_tasks_search():
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return handlers.search_wf_tasks(request, repo)
 
 
 def run():

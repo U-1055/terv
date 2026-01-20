@@ -294,6 +294,9 @@ class ServerResponse:
             self.records_left = None
             self.last_record_num = None
 
+    def __str__(self):
+        return str(self.__dict__)
+
 
 class Response:
     """

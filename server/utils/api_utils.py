@@ -1,8 +1,9 @@
-from flask import Response, jsonify
+from flask import Response, jsonify, Request
 
 import typing as tp
 
 from common.base import CommonStruct, ErrorCodes
+from server.data_const import APIAnswers as APIAn
 
 
 def form_response(http_code: int,
@@ -38,3 +39,29 @@ def form_response(http_code: int,
     result.status_code = http_code
     return result
 
+
+def prepare_limit_offset(limit: str, offset: str, request: Request) -> Response | None:
+    """Обрабатывает параметры limit и offset. Возвращает ответ API, если есть ошибка, None - если нет ошибки."""
+    if limit and (not limit.isdigit() or int(limit) < 0):
+        return form_response(400,
+                             APIAn.invalid_data_error(CommonStruct.limit, request.endpoint, f'Incorrect limit'),
+                             error_id=ErrorCodes.incorrect_limit.value
+                             )
+    if offset and (not offset.isdigit() or int(offset) < 0):
+        return form_response(400,
+                             APIAn.invalid_data_error(CommonStruct.offset, request.endpoint, 'Incorrect offset'),
+                             error_id=ErrorCodes.incorrect_offset.value
+                             )
+
+
+def check_list_is_digit(list_: list[str]) -> bool:
+    """Проверяет, все ли элементы списка могут быть приведены к типу int."""
+    for el in list_:
+        if not el.isdigit():
+            return False
+    return True
+
+
+def list_to_int(list_: list[str]) -> list[int]:
+    """Приводит все элементы списка к типу int."""
+    return [int(el) for el in list_]

@@ -56,14 +56,21 @@ class DataRepository:
         with self._session_maker() as session, session.begin():
             session.execute(update(base_model).where(base_model.id.in_(model['id'] for model in models)), models)
 
-    def get_users(self, usernames: tuple[str, ...] = None, email: str = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0) -> 'RepoResponse':
+    def get_users_by_username(self, usernames: tuple[str, ...] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0) -> 'RepoResponse':
 
         query = select(cm.User)
         if usernames:
             query = query.where(cm.User.username.in_(usernames))
-        if email:
-            query = query.where(cm.User.email == email)
 
+        return self._execute_select(query, limit, offset, require_last_rec_num)
+
+    def get_users_by_email(self, emails: tuple[str, ...] = None, require_last_rec_num: bool = False,
+                               limit: int = None, offset: int = 0) -> 'RepoResponse':
+        query = select(cm.User).where(cm.User.email.in_(emails))
+        return self._execute_select(query, limit, offset, require_last_rec_num)
+
+    def get_users_by_id(self, ids: tuple[int], limit: int = None, offset: int = 0, require_last_rec_num: bool = False):
+        query = select(cm.User).where(cm.User.id.in_(ids))
         return self._execute_select(query, limit, offset, require_last_rec_num)
 
     def get_workflows(self,
@@ -90,12 +97,21 @@ class DataRepository:
 
         return self._execute_select(query, limit, offset, require_last_rec_num)
 
-    def get_wf_tasks(self, wf_tasks_ids: list[int], limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoResponse':
+    def get_wf_tasks_by_id(self, wf_tasks_ids: list[int], limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoResponse':
         query = select(cm.WFTask)
         if wf_tasks_ids:
             query = query.where(cm.WFTask.id.in_(wf_tasks_ids))
 
         return self._execute_select(query, limit, offset, require_last_num)
+
+    def update_wf_tasks(self, models: list[cm.WFTask]):
+        self._execute_update(models, cm.WFTask)
+
+    def delete_wf_tasks_by_id(self, ids: list[int]):
+        self._execute_delete(ids, cm.WFTask)
+
+    def update_personal_tasks(self, models: list[cm.WFTask]):
+        self._execute_update(models, cm.WFTask)
 
     def delete_workflows(self, workflows_ids: tuple[int]):
         self._execute_delete(workflows_ids, cm.Workflow)
@@ -104,6 +120,9 @@ class DataRepository:
         self._execute_update(models, cm.User)
 
     def add_users(self, models: tuple[dict, ...]):
+        self._execute_insert(models, cm.User)
+
+    def add_wf_tasks(self, models: tuple[dict, ...]):
         self._execute_insert(models, cm.User)
 
     def delete_users(self, ids: tuple[int, ...]):
@@ -152,8 +171,8 @@ class DataRepository:
 class RepoResponse:
     """Ответ DataRepository."""
     content: list
-    last_record_num: int = None
-    records_left: int = None
+    last_record_num: int = 0
+    records_left: int = 0
 
 
 if __name__ == '__main__':

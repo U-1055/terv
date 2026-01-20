@@ -11,6 +11,7 @@ from test.server_test.utils.test_database.base import DatabaseManager
 from common.base import CommonStruct
 from test.server_test.utils.requester import TestRequester
 from client.src.requester.requester import Requester
+from client.src.requester.errors import LoginAlreadyExists
 
 
 TEST_CONFIG_PATH = 'TEST_CONFIG_PATH'  # Параметры фикстур
@@ -90,6 +91,23 @@ def config_limit_offset_test_db(request: pytest.FixtureRequest):
 @pytest.fixture(scope='function')
 def launch_test_server():
     launch()
+
+
+@pytest.fixture()
+def register(request: pytest.FixtureRequest, requester):
+    """
+    Регистрирует пользователя. Принимает параметры (через f_data): login - логин пользователя, password - пароль,
+    email - email. Если пользователь уже существует - обрабатывает ошибку Requester'а.
+    """
+    params = request.node.get_closest_marker('f_data').args[0]
+    login = params.get(LOGIN)
+    password = params.get(PASSWORD)
+    email = params.get(EMAIL)
+
+    try:
+        requester.register(login, password, email)
+    except LoginAlreadyExists:
+        pass
 
 
 @pytest.fixture()
