@@ -131,6 +131,12 @@ class DataRepository:
     def add_workflows(self, models: tuple[dict, ...]):
         self._execute_insert(models, cm.Workflow)
 
+    def add_personal_tasks(self, models: tuple[dict, ...]):
+        self._execute_insert(models, cm.PersonalTask)
+
+    def delete_personal_tasks(self, ids: tuple[int]):
+        self._execute_delete(ids, cm.PersonalTask)
+
     def get_task_permissions(self, task_id: int, role_id: int) -> tuple[str]:
         query = (select(roles.WFRoleTask.permissions).
                  where(roles.WFRoleTask.task_id == task_id).

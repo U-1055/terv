@@ -1,42 +1,29 @@
 """Функции для обработки разных видов запросов."""
-import logging
-
 from flask import Request, Response
 import sqlalchemy.exc as err
+
+import logging
+import typing as tp
 
 from server.data_const import DataStruct, APIAnswers as APIAn
 from common.base import CommonStruct, ErrorCodes
 from server.database.repository import DataRepository
-from server.utils.api_utils import form_response, prepare_limit_offset, check_list_is_digit, list_to_int
+import server.utils.api_utils as utl
 from server.auth.auth_module import Authenticator
 
 
-def get_wf_tasks(request: Request, repo: DataRepository):
+@utl.get_request
+def get_wf_tasks(request: Request, repo: DataRepository, limit: int = None, offset: int = None):
     """
     Возвращает задачи РП. Вид запроса:
     api/wf_tasks/ids,name,description,project_id,creator_id,entrusted_id,executor_id
 
     """
     ids = request.args.getlist(CommonStruct.wf_tasks_ids)
-    limit = request.args.get(CommonStruct.limit)
-    offset = request.args.get(CommonStruct.offset)
-
-    result = prepare_limit_offset(limit, offset, request)
-    if result:
-        return result
-
-    if limit:
-        limit = int(limit)
-    else:
-        limit = None
-    if offset:
-        offset = int(offset)
-    else:
-        offset = None
 
     for id_ in ids:
         if not id_.isdigit():
-            return form_response(400,
+            return utl.form_response(400,
                                  APIAn.invalid_data_error(
                                      CommonStruct.wf_tasks_ids,
                                      request.endpoint,
@@ -47,7 +34,7 @@ def get_wf_tasks(request: Request, repo: DataRepository):
     ids = [int(id_) for id_ in ids]
     tasks = repo.get_wf_tasks_by_id(ids, limit, offset)
 
-    return form_response(200, 'OK', content=tasks.content,
+    return utl.form_response(200, 'OK', content=tasks.content,
                          last_rec_num=tasks.last_record_num,
                          records_left=tasks.records_left)
 
@@ -86,13 +73,13 @@ def add_wf_tasks(request: Request, repo: DataRepository) -> Response:
     try:
         repo.add_wf_tasks(tasks)
     except err.IntegrityError as e:
-        return form_response(400, APIAn.database_write_error(
+        return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.wf_tasks, request.endpoint,
             'Database error occurred',
             str(e)
         ))
 
-    return form_response(200, 'OK')
+    return utl.form_response(200, 'OK')
 
 
 def update_wf_tasks(request: Request, repo: DataRepository) -> Response:
@@ -105,100 +92,86 @@ def update_wf_tasks(request: Request, repo: DataRepository) -> Response:
         repo.update_wf_tasks(tasks)
     except err.IntegrityError as e:
         logging.warning(f'DB-error occurred during updating WFTasks: {e}')
-        return form_response(400, APIAn.database_write_error(
+        return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.wf_tasks, request.endpoint,
             'Database error occurred',
             str(e)
         ))
 
-    return form_response(200, 'OK')
+    return utl.form_response(200, 'OK')
 
 
 def delete_wf_tasks(request: Request, repo: DataRepository):
     """Удаляет задачи РП по их id."""
     ids = request.args.getlist(CommonStruct.ids)
-    if not check_list_is_digit(ids):
-        return form_response(400, APIAn.invalid_data_error(
+    if not utl.check_list_is_digit(ids):
+        return utl.form_response(400, APIAn.invalid_data_error(
             CommonStruct.ids, request.endpoint, 'One of params is not integer'))
-    ids = list_to_int(ids)
+    ids = utl.list_to_int(ids)
 
     try:
         repo.delete_wf_tasks_by_id(ids)
     except err.IntegrityError as e:
         logging.warning(f'DB-error occurred during deleting WFTasks: {e}')
-        return form_response(400, APIAn.database_write_error(
+        return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.ids, request.endpoint,
             'Database error occurred',
             str(e)
         ))
 
-    return form_response(200, 'OK')
+    return utl.form_response(200, 'OK')
 
 
 def delete_users(request: Request, repo: DataRepository):
     ids = request.args.getlist(CommonStruct.ids)
-    if not check_list_is_digit(ids):
-        return form_response(400, APIAn.invalid_data_error(
+    if not utl.check_list_is_digit(ids):
+        return utl.form_response(400, APIAn.invalid_data_error(
             CommonStruct.ids, request.endpoint, 'One of params is not integer'))
 
     try:
         repo.delete_users(ids)
     except err.IntegrityError as e:
         logging.warning(f'DB-error occurred during deleting Users: {e}')
-        return form_response(400, APIAn.database_write_error(
+        return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.ids, request.endpoint,
             'Database error occurred',
             str(e)
         ))
 
-    return form_response(200, 'OK')
+    return utl.form_response(200, 'OK')
 
 
-def get_users(request: Request, repo: DataRepository, authenticator: Authenticator):
+@utl.get_request
+def get_users(request: Request, repo: DataRepository, authenticator: Authenticator, limit: int = None, offset: int = None):
 
     params = request.args
     ids = params.getlist(CommonStruct.ids)
-    limit = params.get(CommonStruct.limit)
-    offset = params.get(CommonStruct.offset)
     require_last_num = params.get(CommonStruct.require_last_num)
-
-    result = prepare_limit_offset(limit, offset, request)
-    if result:
-        return result
-
-    if limit:
-        limit = int(limit)
-    else:
-        limit = None
-    if offset:
-        offset = int(offset)
-    else:
-        offset = None
 
     if not ids:  # Если передан только access
         try:
             access_token = request.headers.get('Authorization')
             usernames = [authenticator.get_login(access_token)]
             result = repo.get_users_by_username(usernames, limit=limit, offset=offset)
-            return form_response(200, 'OK', content=result.content)
+            return utl.form_response(200, 'OK', content=result.content)
 
         except ValueError:
-            return form_response(401, 'Expired access token', error_id=ErrorCodes.invalid_access.value)
+            return utl.form_response(401, 'Expired access token', error_id=ErrorCodes.invalid_access.value)
 
-    if not check_list_is_digit(ids):
-        return form_response(400, APIAn.invalid_data_error(CommonStruct.ids, 'One of ids is not integer.'))
-    ids = list_to_int(ids)
+    if not utl.check_list_is_digit(ids):
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, 'One of ids is not integer.'))
+    ids = utl.list_to_int(ids)
 
     try:
         result = repo.get_users_by_id(ids, limit=limit, offset=offset)
         if limit or offset or require_last_num:
-            return form_response(200, 'OK', content=result.content, last_rec_num=result.last_record_num,
-                                 records_left=result.records_left)
+            return utl.form_response(200, 'OK', content=result.content, last_rec_num=result.last_record_num,
+                                     records_left=result.records_left)
         else:
-            return form_response(200, 'OK', content=result.content)
+            return utl.form_response(200, 'OK', content=result.content)
     except err.IntegrityError as e:
         logging.warning(f'DB-error during receiving Users: {e}')
-        return form_response(400, APIAn.database_write_error(
+        return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.ids, request.endpoint,
             'Database error occurred',
             str(e)
@@ -217,51 +190,37 @@ def update_users(request: Request, repo: DataRepository):
         repo.update_users(users)
     except err.IntegrityError as e:
         logging.warning(f'DB-error occurred during updating Users: {e}')
-        return form_response(400, APIAn.database_write_error(
+        return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.users, request.endpoint,
             'Database error occurred',
             str(e)
         ))
 
-    return form_response(200, 'OK')
+    return utl.form_response(200, 'OK')
 
 
-def get_personal_tasks(request: Request, repo: DataRepository):
+@utl.get_request
+def get_personal_tasks(request: Request, repo: DataRepository, limit: int = None, offset: int = None):
     """Получает личные задачи по их ID."""
 
     params = request.args
     ids = params.getlist(CommonStruct.ids)
-    limit = params.get(CommonStruct.limit)
-    offset = params.get(CommonStruct.offset)
     require_last_num = params.get(CommonStruct.require_last_num)
 
-    result = prepare_limit_offset(limit, offset, request)
-    if result:
-        return result
-
-    if limit:
-        limit = int(limit)
-    else:
-        limit = None
-    if offset:
-        offset = int(offset)
-    else:
-        offset = None
-
-    if not check_list_is_digit(ids):
-        return form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
-                                                           'One of ids is not integer'))
-    ids = list_to_int(ids)
+    if not utl.check_list_is_digit(ids):
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
+                                                               'One of ids is not integer'))
+    ids = utl.list_to_int(ids)
     try:
         result = repo.get_wf_tasks_by_id(ids, limit, offset)
         if limit or offset or require_last_num:  # Проверка запроса лимита или offset-а
-            return form_response(200, 'OK', last_rec_num=result.last_record_num,
-                                 records_left=result.records_left)
+            return utl.form_response(200, 'OK', last_rec_num=result.last_record_num,
+                                     records_left=result.records_left)
         else:
-            return form_response(200, 'OK', content=result.content)
+            return utl.form_response(200, 'OK', content=result.content)
     except err.IntegrityError as e:
         logging.warning(f'DB-error occurred during receiving PersonalTasks: {e}')
-        return form_response(400, APIAn.database_write_error(
+        return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.wf_tasks, request.endpoint,
             'Database error occurred',
             str(e)
@@ -269,12 +228,48 @@ def get_personal_tasks(request: Request, repo: DataRepository):
 
 
 def add_personal_tasks(request: Request, repo: DataRepository):
-    pass
+    """
+    Добавляет модели личных задач в базу. Принимает в теле список сериализованных моделей задач с указанными NOT NULL
+    полями и без полей id.
+    """
+    personal_tasks = request.json.getlist(CommonStruct.personal_tasks)
+    try:
+        repo.add_personal_tasks(personal_tasks)
+        return utl.form_success_response()
+    except err.IntegrityError as e:
+        logging.warning(f'DB-error occurred during creating PersonalTasks: {e}')
+        return utl.form_response(400, APIAn.database_write_error(
+            CommonStruct.wf_tasks, request.endpoint,
+            'Database error occurred',
+            str(e)
+        ))
 
 
 def update_personal_tasks(request: Request, repo: DataRepository):
-    pass
+    """Обновляет модели личных задач. Принимает в теле список сериализованных моделей личных задач PersonalTask."""
+    personal_tasks = request.json.getlist(CommonStruct.personal_tasks)
+    try:
+        repo.update_personal_tasks(personal_tasks)
+        return utl.form_success_response()
+    except err.IntegrityError as e:
+        logging.warning(f'DB-error occurred during updating PersonalTasks: {e}')
+        return utl.form_response(400, APIAn.database_write_error(
+            CommonStruct.wf_tasks, request.endpoint,
+            'Database error occurred',
+            str(e)
+        ))
 
 
 def delete_personal_tasks(request: Request, repo: DataRepository):
-    pass
+    """Удаляет модели личных задач. Принимает в параметре список ID удаляемых моделей."""
+    ids = request.args.getlist(CommonStruct.ids)
+    try:
+        repo.delete_personal_tasks(ids)
+        return utl.form_success_response()
+    except err.IntegrityError as e:
+        logging.warning(f'DB-error occurred during updating PersonalTasks: {e}')
+        return utl.form_response(400, APIAn.database_write_error(
+            CommonStruct.wf_tasks, request.endpoint,
+            'Database error occurred',
+            str(e)
+        ))

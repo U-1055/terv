@@ -1,3 +1,6 @@
+import logging
+
+import flask
 from flask import Response, jsonify, Request
 
 import typing as tp
@@ -40,18 +43,34 @@ def form_response(http_code: int,
     return result
 
 
-def prepare_limit_offset(limit: str, offset: str, request: Request) -> Response | None:
-    """Обрабатывает параметры limit и offset. Возвращает ответ API, если есть ошибка, None - если нет ошибки."""
-    if limit and (not limit.isdigit() or int(limit) < 0):
-        return form_response(400,
-                             APIAn.invalid_data_error(CommonStruct.limit, request.endpoint, f'Incorrect limit'),
-                             error_id=ErrorCodes.incorrect_limit.value
-                             )
-    if offset and (not offset.isdigit() or int(offset) < 0):
-        return form_response(400,
-                             APIAn.invalid_data_error(CommonStruct.offset, request.endpoint, 'Incorrect offset'),
-                             error_id=ErrorCodes.incorrect_offset.value
-                             )
+def form_invalid_limit_response(endpoint: str):
+    return form_response(400,
+                         APIAn.invalid_data_error(CommonStruct.limit, endpoint, f'Incorrect limit'),
+                         error_id=ErrorCodes.incorrect_limit.value
+                         )
+
+
+def form_invalid_offset_response(endpoint: str) -> flask.Response:
+    return form_response(400,
+                         APIAn.invalid_data_error(CommonStruct.limit, endpoint, f'Incorrect limit'),
+                         error_id=ErrorCodes.incorrect_limit.value
+                         )
+
+
+def form_success_response() -> flask.Response:
+    return form_response(200, 'OK')
+
+
+def prepare_pagination_param(param: str) -> int:
+    """
+    Валидирует и приводит к требуемому виду параметры пагинации (limit и offset).
+    Оба параметра: числа, >=0.
+    """
+    if param:
+        param = int(param)
+
+    else:
+        pass
 
 
 def check_list_is_digit(list_: list[str]) -> bool:
@@ -65,3 +84,48 @@ def check_list_is_digit(list_: list[str]) -> bool:
 def list_to_int(list_: list[str]) -> list[int]:
     """Приводит все элементы списка к типу int."""
     return [int(el) for el in list_]
+
+
+def exceptions_handler(func: tp.Callable):
+    """Обработчик исключений."""
+
+    def prepare(request: flask.Request):
+        try:
+            return func(request)
+        except Exception as e:
+            logging.critical(f'Unknown error was excepted during preparing request: {request}.')
+            return form_response(500, 'Unknown server error', error_id=ErrorCodes.server_error.value)
+
+    return prepare
+
+
+def get_request(func: tp.Callable):
+    """
+    Обработчик для функций, обрабатывающих GET-запросы к ресурсам. Валидирует параметры пагинации (limit и offset).
+    """
+
+    def prepare(request: flask.Request, *args):
+        limit = request.args.get(CommonStruct.limit)
+        offset = request.args.get(CommonStruct.offset)
+        if limit:
+            try:
+                limit = int(limit)
+            except ValueError:
+                return form_invalid_limit_response(request.endpoint)
+        else:
+            limit = None
+
+        if offset:
+            try:
+                offset = int(offset)
+            except ValueError:
+                return form_invalid_offset_response(request.endpoint)
+        else:
+            offset = None
+        return func(request, *args, limit=limit, offset=offset)
+
+
+
+
+    return prepare
+

@@ -14,7 +14,7 @@ from server.storage.server_model import Model
 from server.data_const import DataStruct, Config
 from common.base import CommonStruct, check_password, ErrorCodes as ErCodes
 from server.utils.data_checkers import check_email
-from server.utils.api_utils import form_response, prepare_limit_offset
+from server.utils.api_utils import form_response, exceptions_handler
 import server.api.crud_handlers as handlers
 # ToDo: заголовок с Authorization на Authorization Bearer
 
@@ -44,6 +44,7 @@ authenticator = Authenticator(
 )
 
 
+@exceptions_handler
 @app.route('/register', methods=['POST'])
 def register():
     login, password, email = request.json.get(common_struct.login), request.json.get(
@@ -114,6 +115,7 @@ def register():
         return form_response(500, 'Unknown error during registration', error_id=ErCodes.server_error.value)  # Все параметры уникальны, но регистрация не удалась
 
 
+@exceptions_handler
 @app.route('/auth/login', methods=['POST'])
 def auth_login():
     login, password = request.json.get(common_struct.login), request.json.get(common_struct.password)
@@ -132,6 +134,7 @@ def auth_login():
         return form_response(400, APIAn.unknown_credentials_message, error_id=ErCodes.invalid_credentials.value)
 
 
+@exceptions_handler
 @app.route('/auth/refresh', methods=['POST'])
 def auth_refresh():
     refresh_token = request.json.get(common_struct.refresh_token)
@@ -145,6 +148,7 @@ def auth_refresh():
                                                            'Invalid refresh'), error_id=ErCodes.invalid_refresh.value)
 
 
+@exceptions_handler
 @app.route('/auth/recall', methods=['POST'])
 def auth_recall():
     """Отзывает переданные токены."""
@@ -161,6 +165,7 @@ def auth_recall():
     return form_response(200, 'OK')
 
 
+@exceptions_handler
 @app.route('/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def personal_tasks():
     auth = request.headers.get('Authorization')
@@ -181,6 +186,7 @@ def personal_tasks():
     return response
 
 
+@exceptions_handler
 @app.route('/personal_tasks/search', methods=['POST'])
 def personal_tasks_search():
     """Запрос для поиска по параметрам."""
@@ -190,6 +196,7 @@ def personal_tasks_search():
     return handlers.search_wf_tasks(request, repo)
 
 
+@exceptions_handler
 @app.route('/users', methods=['GET', 'PUT', 'DELETE'])
 def users():
     auth = request.headers.get('Authorization')
@@ -209,6 +216,7 @@ def users():
     return response
 
 
+@exceptions_handler
 @app.route('/wf_tasks', methods=['GET', 'PUT', 'POST', 'DELETE'])
 def wf_tasks():
     """
@@ -233,6 +241,7 @@ def wf_tasks():
     return response
 
 
+@exceptions_handler
 @app.route('/wf_tasks/search', methods=['POST'])
 def wf_tasks_search():
     auth = request.headers.get('Authorization')
