@@ -6,19 +6,25 @@ from dataclasses import dataclass
 
 import server.database.models.common_models as cm
 import server.database.models.roles as roles
+from common.base import DBFields
 
 
 class DataRepository:
 
     """
-    Репозиторий базы данных. В ответах на запросы получения данных возвращает объект RepoResponse.
-    RepoResponse.content - список сериализованных моделей, полученных в ответе.
-    RepoResponse.last_record_num - номер последней модели (если в запрос передан limit, offset или require_last_rec_num,
+    Репозиторий базы данных. В ответах на запросы получения данных возвращает объект RepoSelectResponse.
+    RepoSelectResponse.content - список сериализованных моделей, полученных в ответе.
+    RepoSelectResponse.last_record_num - номер последней модели (если в запрос передан limit, offset или require_last_rec_num,
     иначе - None)
     """
 
-    def __init__(self, session_maker: sessionmaker):
+    def __init__(self, session_maker: sessionmaker, launch_validation: bool = True):
         self._session_maker = session_maker
+        if launch_validation:
+            self._validate()
+
+    def _validate(self):
+        pass
 
     def _get_permissions(self, query: Select) -> tuple[str]:
         with self._session_maker() as session, session.begin():
@@ -28,11 +34,17 @@ class DataRepository:
 
         return permissions
 
-    def _execute_select(self, query: Select, limit: int = None, offset: int = None, require_last_rec_num: bool = False) -> 'RepoResponse':
+    def _execute_select(self, query: Select, limit: int = None, offset: int = None, require_last_rec_num: bool = False,
+                        serialize: bool = True) -> 'RepoSelectResponse':
         with self._session_maker() as session, session.begin():
 
             result = session.execute(query.limit(limit).offset(offset)).scalars().all()
-            response = RepoResponse(content=[model.serialize() for model in result])
+            if serialize:
+                content = [model.serialize() for model in result]
+            else:
+                content = [model for model in result]
+
+            response = RepoSelectResponse(content=content)
             if limit or offset or require_last_rec_num:  # Поиск номера последней таблицы
                 results_num = len(response.content)
                 last_rec_num = results_num + offset
@@ -48,38 +60,47 @@ class DataRepository:
         with self._session_maker() as session, session.begin():
             session.execute(delete(base_model).where(base_model.id.in_(ids)))
 
-    def _execute_insert(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
+    def _execute_insert(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]) -> 'RepoInsertResponse':
         with self._session_maker() as session, session.begin():
-            session.add_all([base_model(**model) for model in models])
+            db_models = [base_model(**model) for model in models]
+            session.add_all(db_models)
+            session.flush()
+            return RepoInsertResponse(ids=tuple(int(db_model.id) for db_model in db_models))
 
     def _execute_update(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
+        """Перезаписывает указанные модели с введёнными данными"""
         with self._session_maker() as session, session.begin():
-            session.execute(update(base_model).where(base_model.id.in_(model['id'] for model in models)), models)
+            model_ids = [model[DBFields.id] for model in models]
+            updates = {base_model: models}
+            session.bulk_update_mappings(base_model, updates)
 
-    def get_users_by_username(self, usernames: tuple[str, ...] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0) -> 'RepoResponse':
+    def get_users_by_username(self, usernames: tuple[str, ...] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0,
+                              serialize: bool = True) -> 'RepoSelectResponse':
 
         query = select(cm.User)
         if usernames:
             query = query.where(cm.User.username.in_(usernames))
 
-        return self._execute_select(query, limit, offset, require_last_rec_num)
+        return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
     def get_users_by_email(self, emails: tuple[str, ...] = None, require_last_rec_num: bool = False,
-                               limit: int = None, offset: int = 0) -> 'RepoResponse':
+                               limit: int = None, offset: int = 0) -> 'RepoSelectResponse':
         query = select(cm.User).where(cm.User.email.in_(emails))
         return self._execute_select(query, limit, offset, require_last_rec_num)
 
-    def get_users_by_id(self, ids: tuple[int], limit: int = None, offset: int = 0, require_last_rec_num: bool = False):
+    def get_users_by_id(self, ids: tuple[int], limit: int = None, offset: int = 0, require_last_rec_num: bool = False,
+                        serialize: bool = True):
         query = select(cm.User).where(cm.User.id.in_(ids))
-        return self._execute_select(query, limit, offset, require_last_rec_num)
+        return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
     def get_workflows(self,
                       workflow_ids: tuple[int] = None,
                       name: str = None,
                       require_last_rec_num: bool = False,
                       limit: int = None,
-                      offset: int = 0
-                      ) -> 'RepoResponse':
+                      offset: int = 0,
+                      serialize: bool = True
+                      ) -> 'RepoSelectResponse':
         """
         Возвращает рабочие пространства (Workflows).
         :param workflow_ids:
@@ -95,13 +116,36 @@ class DataRepository:
         if name:
             query = query.where(cm.Workflow.name.contains(name))
 
-        return self._execute_select(query, limit, offset, require_last_rec_num)
+        return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
-    def get_wf_tasks_by_id(self, wf_tasks_ids: list[int], limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoResponse':
+    def get_wf_tasks_by_id(self, wf_tasks_ids: list[int], limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoSelectResponse':
         query = select(cm.WFTask)
         if wf_tasks_ids:
             query = query.where(cm.WFTask.id.in_(wf_tasks_ids))
 
+        return self._execute_select(query, limit, offset, require_last_num)
+
+    def get_role_by_user_id(self, workflow_id: int, user_id: int):
+        """Получает роль пользователя в проекте."""
+        query = (select(roles.WFRole).where(roles.WFRole.workflow_id == workflow_id).
+                 where(roles.WFRole.users.any(cm.User.id == user_id)))
+        return self._execute_select(query)
+
+    def get_workflow_default_role_id(self, workflow_id: int) -> int:
+        """Получает ID роли РП по умолчанию."""
+        query = select(cm.Workflow).where(cm.Workflow.id == workflow_id)
+        result = self._execute_select(query)
+        role_id = result.content[0].get(DBFields.id)
+
+        return role_id
+
+    def get_roles_by_id(self,
+                        ids: tuple[int],
+                        limit: int = None,
+                        offset: int = None,
+                        require_last_num: bool = False) -> 'RepoSelectResponse':
+        """Получает роль РП (WFRole) по её ID."""
+        query = select(roles.WFRole).where(roles.WFRole.id.in_(ids))
         return self._execute_select(query, limit, offset, require_last_num)
 
     def update_wf_tasks(self, models: list[cm.WFTask]):
@@ -119,20 +163,20 @@ class DataRepository:
     def update_users(self, models: tuple[dict, ...]):
         self._execute_update(models, cm.User)
 
-    def add_users(self, models: tuple[dict, ...]):
-        self._execute_insert(models, cm.User)
+    def add_users(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.User)
 
-    def add_wf_tasks(self, models: tuple[dict, ...]):
-        self._execute_insert(models, cm.User)
+    def add_wf_tasks(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.User)
 
     def delete_users(self, ids: tuple[int, ...]):
         self._execute_delete(ids, cm.User)
 
-    def add_workflows(self, models: tuple[dict, ...]):
-        self._execute_insert(models, cm.Workflow)
+    def add_workflows(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.Workflow)
 
-    def add_personal_tasks(self, models: tuple[dict, ...]):
-        self._execute_insert(models, cm.PersonalTask)
+    def add_personal_tasks(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.PersonalTask)
 
     def delete_personal_tasks(self, ids: tuple[int]):
         self._execute_delete(ids, cm.PersonalTask)
@@ -172,13 +216,33 @@ class DataRepository:
                  )
         return self._get_permissions(query)
 
+    def get_role_by_id_workflow(self, id_: int, workflow_id: int) -> 'RepoSelectResponse':
+        query = select(roles.WFRole).where(roles.WFRole.id == id_).where(roles.WFRole.workflow_id == workflow_id)
+        return self._execute_select(query)
+
+    def update_workflows(self, models: list[dict]):
+        self._execute_update(models, cm.Workflow)
+
+    def add_wf_roles(self, models: list[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, roles.WFRole)
+
 
 @dataclass
-class RepoResponse:
-    """Ответ DataRepository."""
+class RepoSelectResponse:
+    """Ответ DataRepository на запрос по получению данных."""
     content: list
     last_record_num: int = 0
     records_left: int = 0
+
+    def __str__(self):
+        return (f'RepoInsertResponse: last_records_num = {self.last_record_num}, records_left = {self.records_left}\n'
+                f' content = [{[f'{record}\n' for record in self.content]}]')
+
+
+@dataclass
+class RepoInsertResponse:
+    """Ответ DataRepository на запрос по добавлению данных."""
+    ids: tuple[int, ...] = ()
 
 
 if __name__ == '__main__':

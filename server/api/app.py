@@ -7,11 +7,11 @@ from sqlalchemy.orm.session import Session, sessionmaker
 from pathlib import Path
 
 from server.data_const import APIAnswers as APIAn
-from server.auth.auth_module import Authenticator
+from server.auth.auth_module import Authenticator, Authorizer
 from server.database.models.db_utils import launch_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
-from server.data_const import DataStruct, Config
+from server.data_const import DataStruct, Config, Permissions
 from common.base import CommonStruct, check_password, ErrorCodes as ErCodes
 from server.utils.data_checkers import check_email
 from server.utils.api_utils import form_response, exceptions_handler
@@ -41,6 +41,11 @@ authenticator = Authenticator(
     ds_const.jwt_alg,
     config.access_token_lifetime,
     config.refresh_token_lifetime
+)
+authorizer = Authorizer(
+    repo,
+    ds_const,
+    Permissions
 )
 
 
@@ -249,6 +254,23 @@ def wf_tasks_search():
         return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
     return handlers.search_wf_tasks(request, repo)
+
+
+@exceptions_handler
+@app.route('/workflow/<int:workflow_id>/users', methods=['PATCH', 'DELETE'])
+def workflow_users():
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    response = None
+
+    if request.method == 'PATCH':
+        response = handlers.add_users_to_workflow(request)
+    if request.method == 'DELETE':
+        response = handlers.add_users_to_workflow(request)
+
+    return response
 
 
 def run():

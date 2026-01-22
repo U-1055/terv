@@ -4,7 +4,6 @@ from sqlalchemy import ForeignKey, Table, Column, Integer, String
 
 from server.database.models.base import Base
 import server.database.models.common_models as cm
-from server.data_const import DBStruct
 
 
 class WFRole(Base):
@@ -14,10 +13,13 @@ class WFRole(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
     name: Mapped[str] = mapped_column(String[30])
-    color: Mapped[str] = mapped_column(String[30])
+    color: Mapped[str] = mapped_column(String[30], default='#FFFFFF')
 
     permissions: Mapped[list['Permission']] = relationship(secondary='wf_role_permission', back_populates='roles')
     users: Mapped[list[cm.User]] = relationship(secondary='user_wf_role', back_populates='roles')
+
+    fields = ['workflow_id', 'name', 'color']
+    many_links = ['users', 'permissions']
 
 
 class Permission(Base):

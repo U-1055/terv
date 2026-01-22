@@ -151,3 +151,4 @@ def client_requester(request: pytest.FixtureRequest) -> Requester:
     request_limit = params.get(REQUEST_LIMIT)
     timeout = params.get(TIMEOUT)
     return Requester('http://localhost:5000', request_limit=request_limit, timeout=timeout)
+
