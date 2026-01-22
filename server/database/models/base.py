@@ -30,3 +30,5 @@ if __name__ == '__main__':
     from server.database.models.db_utils import init_db
     from server.database.models.roles import *
     init_db('sqlite:///../database')
+
+

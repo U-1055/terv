@@ -56,6 +56,8 @@ class DataStruct:
 class DBStruct:
     """Поля из БД."""
     default_description = 'Описание отсутствует'
+    default_role = 'Пользователь'
+    creator_role = 'Владелец'
 
 
 # Конфиг по умолчанию

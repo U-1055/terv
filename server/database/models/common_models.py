@@ -60,7 +60,7 @@ class User(Base):
         'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
         'assigned_to_user_tasks', 'assigned_by_user_tasks', 'responsibility_tasks', 'created_personal_tasks',
         'created_wf_documents', 'created_wf_daily_events', 'created_wf_many_days_events', 'notified_daily_events',
-        'notified_many_days_events', 'work_directions', 'personal_daily_events', 'personal_many_days_events'
+        'notified_many_days_events', 'work_directions', 'personal_daily_events', 'personal_many_days_events', 'roles'
                   ]
 
 
@@ -71,6 +71,7 @@ class Workflow(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
+    default_role_id: Mapped[int] = mapped_column(nullable=True)
     name: Mapped[str] = mapped_column(String[30])
     description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
 
@@ -81,6 +82,10 @@ class Workflow(Base):
     work_directions: Mapped[list['WFWorkDirection']] = relationship('WFWorkDirection', back_populates='workflow')
     documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='workflow')
     base_categories: Mapped[list['WFBaseCategory']] = relationship('WFBaseCategory', back_populates='workflow')
+
+    fields = ['creator_id', 'default_role_id', 'name', 'description', 'id']
+    one_links = ['creator']
+    many_links = ['tasks', 'projects', 'users', 'work_directions', 'documents', 'base_categories']
 
 
 class Project(Base):

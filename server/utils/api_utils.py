@@ -2,6 +2,7 @@ import logging
 
 import flask
 from flask import Response, jsonify, Request
+from sqlalchemy.exc import SQLAlchemyError
 
 import typing as tp
 
@@ -57,8 +58,18 @@ def form_invalid_offset_response(endpoint: str) -> flask.Response:
                          )
 
 
-def form_success_response() -> flask.Response:
-    return form_response(200, 'OK')
+def form_success_response(content: tp.Any = None) -> flask.Response:
+    return form_response(200, 'OK', content)
+
+
+def form_expired_access_response():
+    return form_response(401, 'Expired access token', error_id=ErrorCodes.invalid_access.value)
+
+
+def form_forbidden_response(resource: str, endpoint: str, role: str, permission: str):
+    """Формирует ответ API об отсутствии доступа к ресурсу."""
+    return form_response(403, f'Users with role {role} have not permission {permission} to execute'
+                              f'operation with resource {resource}.')
 
 
 def prepare_pagination_param(param: str) -> int:
@@ -124,8 +135,17 @@ def get_request(func: tp.Callable):
             offset = None
         return func(request, *args, limit=limit, offset=offset)
 
+    return prepare
 
 
+def db_exceptions_handler(func: tp.Callable):
+    """Передаёт вызывающей стороне все исключения БД, вызванные в декорированной функции."""
+
+    def prepare(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except SQLAlchemyError as e:
+            raise e
 
     return prepare
 
