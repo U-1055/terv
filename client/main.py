@@ -1,11 +1,18 @@
 """
 Точка входа
 """
+import os
+import threading
 
+import psutil
 from PySide6.QtWidgets import QApplication
 
 from pathlib import Path
+import datetime
+import logging
+import time
 
+from common_utils.log_utils.memory_logger import check_memory
 from client.src.src.main_logic import Logic
 from client.src.requester.requester import Requester
 from client.src.gui.main_view import MainWindow, setup_gui
@@ -23,7 +30,11 @@ def launch(model_class, model_params: tuple, view_class, view_params: tuple, pre
     setup_gui(root, app)
 
 
-def run_main_config():
+def run_main_config(check_ram: bool = False):
+    if check_ram:
+        thread = threading.Thread(target=check_memory, args=[Path('../log/memory_client.txt')], daemon=True)
+        thread.start()
+
     launch(
         Model, (Path('data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst()),
         MainWindow, (),
@@ -32,5 +43,5 @@ def run_main_config():
 
 
 if __name__ == '__main__':
-    run_main_config()
+    run_main_config(True)
 

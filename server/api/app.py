@@ -1,11 +1,13 @@
 import logging
 import os
+import threading
 
 from flask import Flask, request
 from sqlalchemy.orm.session import Session, sessionmaker
 
 from pathlib import Path
 
+from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
 from server.database.models.db_utils import launch_db
@@ -277,11 +279,15 @@ def run():
     app.run()
 
 
-def launch():
+def launch(check_ram: bool = False):
     import threading
+    if check_ram:
+        thread = threading.Thread(target=check_memory, args=[Path('../../log/memory_server.txt')], daemon=True)
+        thread.start()
+
     thread = threading.Thread(target=run)
     thread.start()
 
 
 if __name__ == '__main__':
-    launch()
+    launch(True)
