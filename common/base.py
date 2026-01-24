@@ -1,5 +1,6 @@
 """Общие константы, используемые и клиентом и сервером. (Названия параметров, элементов ответа, требования к данным)."""
 import enum
+import datetime
 
 
 class CommonStruct:
@@ -36,10 +37,18 @@ class CommonStruct:
 
     max_password_length = 50
     min_password_length = 10
+    'YYYY-MM-DDTHH: MM:SS.mmmmmm'
+    date_format = '%Y-%m-%d'
+    time_format = '%H:%M:%S'
+    datetime_format = f'{date_format}T{time_format}'
 
 
 class DBFields:
     """Названия полей таблиц БД."""
+    # Base's fields
+    created_at = 'created_at'
+    updated_at = 'updated_at'
+
     # User's fields
     id = 'id'
     username = 'username'
@@ -184,6 +193,14 @@ def check_password(password: str) -> bool:
     is_other_symbols = any([not char.isdigit() and not char.isalpha() for char in password])
 
     return CommonStruct.min_password_length <= len(password) <= CommonStruct.max_password_length and is_chars and is_digits and is_other_symbols
+
+
+def get_datetime_now() -> datetime.datetime:
+    """Получает текущее время в формате CommonStruct.datetime_format."""
+    datetime_now = datetime.datetime.now()
+    formatted_dt = datetime_now.strftime(CommonStruct.datetime_format)
+    result = datetime.datetime.strptime(formatted_dt, CommonStruct.datetime_format)
+    return result
 
 
 if __name__ == '__main__':

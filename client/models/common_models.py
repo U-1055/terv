@@ -21,9 +21,9 @@ class User(Base):
     linked_workflows: list[int] 
 
     # Задачи
-    created_wf_tasks: list[int] # Созданные задачи workflow
+    created_wf_tasks: list[int]  # Созданные задачи workflow
     assigned_to_user_tasks: list[int]  # Порученные пользователЮ
-    assigned_by_user_tasks: list[int] # Порученные пользователЕМ
+    assigned_by_user_tasks: list[int]  # Порученные пользователЕМ
     responsibility_tasks: list[int]  # Задачи, где пользователь назначен ответственным
 
     created_personal_tasks: list[int] | None # Личные задачи

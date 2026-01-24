@@ -1,12 +1,19 @@
+import datetime
+
 from sqlalchemy.orm.session import Session, sessionmaker, Select, Query
 from sqlalchemy.sql import select, insert, update, delete, func
+from sqlalchemy.types import DATETIME, DATE, TIME
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+from sqlalchemy.orm import Mapped
 
 import typing as tp
 from dataclasses import dataclass
 
 import server.database.models.common_models as cm
 import server.database.models.roles as roles
-from common.base import DBFields
+from common.base import DBFields, get_datetime_now, CommonStruct
+from server.database.schemes.base import schemes_models
+from server.data_const import DataStruct
 
 
 class DataRepository:
@@ -40,7 +47,12 @@ class DataRepository:
 
             result = session.execute(query.limit(limit).offset(offset)).scalars().all()
             if serialize:
-                content = [model.serialize() for model in result]
+                models_list = [model for model in result]
+                if models_list:  # Сериализуем
+                    scheme = schemes_models.get(type(models_list[0]))  # Получаем схему
+                    content = [scheme.dump(obj=model) for model in result]
+                else:
+                    content = []
             else:
                 content = [model for model in result]
 
@@ -62,17 +74,29 @@ class DataRepository:
 
     def _execute_insert(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]) -> 'RepoInsertResponse':
         with self._session_maker() as session, session.begin():
+            schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
+            models = [schema.load(model, session=session) for model in models]
+
             db_models = [base_model(**model) for model in models]
             session.add_all(db_models)
             session.flush()
             return RepoInsertResponse(ids=tuple(int(db_model.id) for db_model in db_models))
 
     def _execute_update(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
-        """Перезаписывает указанные модели с введёнными данными"""
+        """
+        Перезаписывает указанные модели с введёнными данными. Автоматически десериализует модели, переданные в
+        relationship-полях.
+        """
         with self._session_maker() as session, session.begin():
-            model_ids = [model[DBFields.id] for model in models]
-            updates = {base_model: models}
-            session.bulk_update_mappings(base_model, updates)
+            schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
+            db_models = []
+            for model in models:  # Сериализация + обновление даты в updated_at
+                for field in model:
+                    if field == DBFields.updated_at:
+                        model[field] = get_datetime_now()
+                db_models.append(schema.load(model, session=session))
+
+            session.bulk_update_mappings(base_model, db_models)
 
     def get_users_by_username(self, usernames: tuple[str, ...] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0,
                               serialize: bool = True) -> 'RepoSelectResponse':
@@ -118,7 +142,7 @@ class DataRepository:
 
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
-    def get_wf_tasks_by_id(self, wf_tasks_ids: list[int], limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoSelectResponse':
+    def get_wf_tasks_by_id(self, wf_tasks_ids: list[int] = None, limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoSelectResponse':
         query = select(cm.WFTask)
         if wf_tasks_ids:
             query = query.where(cm.WFTask.id.in_(wf_tasks_ids))
@@ -208,6 +232,13 @@ class DataRepository:
                  where(roles.WFRoleDailyEvent.role_id == role_id)
                  )
         return self._get_permissions(query)
+
+    def get_personal_tasks_by_id(self, ids: tuple[int, ...] | list[int] = None, limit: int = None, offset: int = None,
+                                 require_last_num: bool = False, serialize: bool = True):
+        query = select(cm.PersonalTask)
+        if ids:
+            query = query.where(cm.PersonalTask.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     def get_many_days_event_permissions(self, many_days_event_id: int, role_id: int) -> tuple[str]:
         query = (select(roles.WFRoleManyDaysEvent.permissions).

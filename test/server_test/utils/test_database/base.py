@@ -15,15 +15,15 @@ class DatabaseManager:
     def __init__(self, path: str):
         self._database_path = path
         engine = init_db(path)
-        self._session_maker = sessionmaker(bind=engine)
+        self.session_maker = sessionmaker(bind=engine)
 
     def set_authentication_test_config(self):
-        with self._session_maker() as session, session.begin():
+        with self.session_maker() as session, session.begin():
             session.execute(delete(cm.User))
 
     def set_limit_offset_test_config(self, login: str, password: str, email: str, tasks_num: int):
         """Устанавливает конфиг для теста обработки limit&offset"""
-        with self._session_maker() as session, session.begin():
+        with self.session_maker() as session, session.begin():
             creator = cm.User(username='lo', hashed_password='ps', email='email1')
             session.add(creator)
 
@@ -33,7 +33,7 @@ class DatabaseManager:
             user = cm.User(username=login, hashed_password=hash_password(password), email=email)
             session.add(user)
 
-        with self._session_maker() as session, session.begin():
+        with self.session_maker() as session, session.begin():
             workflow = session.execute(select(cm.Workflow).where(cm.Workflow.name == 'wf1')).scalars().one()
             user = session.execute(select(cm.User).where(cm.User.username == login)).scalars().one()
             creator = session.execute(select(cm.User).where(cm.User.username == 'lo')).scalars().one()
@@ -52,8 +52,48 @@ class DatabaseManager:
 
             session.add_all(tasks)
 
+    def set_repository_test_config(self, login: str, workflow_name: str, tasks_num: int):
+        """
+        Создаёт конфиг БД для теста репозитория: двух пользователей (User) (один с username=login),
+        одно РП (Workflow(name=workflow_name)), tasks_num задач РП (WFTask).
+        """
+        with self.session_maker() as session, session.begin():
+            creator = cm.User(username='lo', hashed_password='2', email='N')
+            session.add(creator)
+            workflow = cm.Workflow(name=workflow_name, creator=creator, description='Test WF')
+            session.add(workflow)
+            creator.linked_workflows = [workflow]
+
+            user = cm.User(username=login, hashed_password='2', email='M', linked_workflows=[workflow])
+            session.add(user)
+            for i in range(tasks_num):
+                wf_task = cm.WFTask(name=f'Task_{i}',
+                                    plan_deadline=datetime.datetime.now(),
+                                    creator=creator,
+                                    entrusted=creator,
+                                    executors=[user],
+                                    workflow=workflow,
+                                    description=''
+                                    )
+                session.add(wf_task)
+
+    def set_workflow_service_test_config(self, users_num: int):
+        """
+        Устанавливает конфиг для теста сервиса Workflow. (1 пользователь - создатель Workflow, 1 Workflow,
+        users_num пользователей).
+        """
+        with self.session_maker() as session, session.begin():
+            creator = cm.User(username='creator', hashed_password='s', email='ss')
+            session.add(creator)
+            workflow = cm.Workflow(name='wf_1', creator=creator)
+            session.add(workflow)
+            creator.linked_workflows = [workflow]
+            for i in range(users_num):
+                user = cm.User(username=f'user_{i}', hashed_password='s', email=f'em{i}')
+                session.add(user)
+
 
 if __name__ == '__main__':
 
     db_manager = DatabaseManager('sqlite:///database')
-    db_manager.set_limit_offset_test_config('log', 'pass', 'em', 15)
+    db_manager.set_workflow_service_test_config(15)

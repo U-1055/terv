@@ -12,9 +12,6 @@ logging.basicConfig(level=logging.WARN)
 
 class DataStruct:
 
-    date_format = '%d.%m.%Y'
-    time_format = '%H:%M:%S'
-    datetime_format = f'{date_format}-{time_format}'
     blacklist = 'blacklist'
     secret = 'secret'
     jwt_alg = 'HS256'

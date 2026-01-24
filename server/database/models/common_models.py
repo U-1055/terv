@@ -22,7 +22,6 @@ class User(Base):
     linked_workflows: Mapped[list['Workflow']] = relationship(secondary='workflow_user', back_populates='users')
     linked_projects: Mapped[list['Project']] = relationship(secondary='project_user', back_populates='users')
 
-
     # Задачи
     created_wf_tasks: Mapped[list['WFTask']] = relationship('WFTask', foreign_keys='WFTask.creator_id',
                                                             back_populates='creator')  # Созданные задачи workflow
@@ -54,15 +53,6 @@ class User(Base):
     personal_daily_events: Mapped[list['PersonalDailyEvent']] = relationship('PersonalDailyEvent', back_populates='owner')
     personal_many_days_events: Mapped[list['PersonalManyDaysEvent']] = relationship('PersonalManyDaysEvent', back_populates='owner')
 
-    fields: list = ['id', 'username', 'email', 'hashed_password']
-    one_links: list = []
-    many_links: list = [
-        'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
-        'assigned_to_user_tasks', 'assigned_by_user_tasks', 'responsibility_tasks', 'created_personal_tasks',
-        'created_wf_documents', 'created_wf_daily_events', 'created_wf_many_days_events', 'notified_daily_events',
-        'notified_many_days_events', 'work_directions', 'personal_daily_events', 'personal_many_days_events', 'roles'
-                  ]
-
 
 class Workflow(Base):
     """Рабочее пространство."""
@@ -82,10 +72,6 @@ class Workflow(Base):
     work_directions: Mapped[list['WFWorkDirection']] = relationship('WFWorkDirection', back_populates='workflow')
     documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='workflow')
     base_categories: Mapped[list['WFBaseCategory']] = relationship('WFBaseCategory', back_populates='workflow')
-
-    fields = ['creator_id', 'default_role_id', 'name', 'description', 'id']
-    one_links = ['creator']
-    many_links = ['tasks', 'projects', 'users', 'work_directions', 'documents', 'base_categories']
 
 
 class Project(Base):
@@ -196,11 +182,11 @@ class PersonalTask(Base):
     name: Mapped[str] = mapped_column(String[30])
     description: Mapped[str] = mapped_column(String[1000])
     plan_deadline: Mapped[datetime.datetime] = mapped_column(nullable=False)
-    fact_deadline: Mapped[datetime.datetime] = mapped_column()
-    plan_time: Mapped[datetime.datetime] = mapped_column()
-    fact_time: Mapped[datetime.datetime] = mapped_column()
-    plan_start_work_date: Mapped[datetime.datetime] = mapped_column()
-    fact_start_work_date: Mapped[datetime.datetime] = mapped_column()
+    fact_deadline: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    plan_time: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    fact_time: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    plan_start_work_date: Mapped[datetime.datetime] = mapped_column(nullable=True)
+    fact_start_work_date: Mapped[datetime.datetime] = mapped_column(nullable=True)
 
     owner: Mapped[User] = relationship(User, back_populates='created_personal_tasks')
     work_direction: Mapped['PersonalWorkDirection'] = relationship('PersonalWorkDirection', back_populates='tasks')
