@@ -10,7 +10,7 @@ class BaseSchema(SQLAlchemyAutoSchema):
         sqla_session: Session = Session
 
 
-class UserSchema(BaseSchema):
+class UserSchema(BaseSchema):  # ToDo: как возвращать хэш пароля?
     class Meta:
         model = cm.User
         include_relationships = True

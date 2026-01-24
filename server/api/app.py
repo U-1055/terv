@@ -188,7 +188,7 @@ def personal_tasks():
     elif request.method == 'PUT':
         response = handlers.update_wf_tasks(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.update_wf_tasks(request, repo)
+        response = handlers.delete_wf_tasks(request, repo)
 
     return response
 
@@ -218,7 +218,7 @@ def users():
     elif request.method == 'PUT':
         response = handlers.update_users(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.update_users(request, repo)
+        response = handlers.delete_users(request, repo)
 
     return response
 
@@ -243,7 +243,7 @@ def wf_tasks():
     elif request.method == 'PUT':
         response = handlers.update_wf_tasks(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.update_wf_tasks(request, repo)
+        response = handlers.delete_wf_tasks(request, repo)
 
     return response
 
@@ -270,7 +270,7 @@ def workflow_users():
     if request.method == 'PATCH':
         response = handlers.add_users_to_workflow(request)
     if request.method == 'DELETE':
-        response = handlers.add_users_to_workflow(request)
+        response = handlers.delete_users_from_workflow(request)
 
     return response
 

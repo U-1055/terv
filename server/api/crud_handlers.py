@@ -1,4 +1,5 @@
 """Функции для обработки разных видов запросов."""
+import flask
 from flask import Request, Response
 import sqlalchemy.exc as err
 
@@ -10,14 +11,14 @@ from common.base import CommonStruct, ErrorCodes
 from server.database.repository import DataRepository
 import server.utils.api_utils as utl
 from server.auth.auth_module import Authenticator
+import server.services.services as services
 
 
 @utl.get_request
-def get_wf_tasks(request: Request, repo: DataRepository, limit: int = None, offset: int = None):
+def get_wf_tasks(request: Request, repo: DataRepository, limit: int = None, offset: int = None):  # ToDo: авторизация
     """
     Возвращает задачи РП. Вид запроса:
     api/wf_tasks/ids,name,description,project_id,creator_id,entrusted_id,executor_id
-
     """
     ids = request.args.getlist(CommonStruct.wf_tasks_ids)
 
@@ -71,15 +72,14 @@ def add_wf_tasks(request: Request, repo: DataRepository) -> Response:
     """
     tasks = request.json.get(CommonStruct.wf_tasks)
     try:
-        repo.add_wf_tasks(tasks)
+        result = repo.add_wf_tasks(tasks)
+        return utl.form_response(200, 'OK', content=result.ids)
     except err.IntegrityError as e:
         return utl.form_response(400, APIAn.database_write_error(
             CommonStruct.wf_tasks, request.endpoint,
             'Database error occurred',
             str(e)
         ))
-
-    return utl.form_response(200, 'OK')
 
 
 def update_wf_tasks(request: Request, repo: DataRepository) -> Response:
@@ -234,8 +234,8 @@ def add_personal_tasks(request: Request, repo: DataRepository):
     """
     personal_tasks = request.json.getlist(CommonStruct.personal_tasks)
     try:
-        repo.add_personal_tasks(personal_tasks)
-        return utl.form_success_response()
+        result = repo.add_personal_tasks(personal_tasks)
+        return utl.form_success_response(content=result.ids)
     except err.IntegrityError as e:
         logging.warning(f'DB-error occurred during creating PersonalTasks: {e}')
         return utl.form_response(400, APIAn.database_write_error(
@@ -273,3 +273,55 @@ def delete_personal_tasks(request: Request, repo: DataRepository):
             'Database error occurred',
             str(e)
         ))
+
+
+def add_users_to_workflow(request: flask.Request):
+    """Добавляет пользователей в ПП. Структура запроса: api/endpoint&workflow_id,user_ids."""
+    ids = request.args.getlist(CommonStruct.ids)
+    workflow_id = request.args.get(CommonStruct.workflow_id)
+
+    if workflow_id.isdigit():
+        workflow_id = int(workflow_id)
+    else:
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workflow_id, request.endpoint,
+                                                               'Parameter must be digit'))
+
+    if utl.check_list_is_digit(ids):
+        ids = utl.list_to_int(ids)
+    else:
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids,
+                                                               request.endpoint, 'All of values must be digits'))
+
+    try:
+        services.WorkflowService.add_users(ids, workflow_id)
+    except ValueError as e:
+        logging.warning(f'Error during adding users to workflow: {e}')
+        return utl.form_response(400, "Invalid params in request's params")  # ToDo: разобраться с обработкой ошибок (например, ввести исключения сервисного слоя)
+    return utl.form_success_response()
+
+
+def delete_users_from_workflow(request: flask.Request):
+    """Удаляет пользователей из ПП. Структура запроса: api/endpoint&workflow_id,user_ids."""
+    ids = request.args.getlist(CommonStruct.ids)
+    workflow_id = request.args.get(CommonStruct.workflow_id)
+
+    if workflow_id.isdigit():
+        workflow_id = int(workflow_id)
+    else:
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workflow_id, request.endpoint,
+                                                               'Parameter must be digit'))
+
+    if utl.check_list_is_digit(ids):
+        ids = utl.list_to_int(ids)
+    else:
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids,
+                                                               request.endpoint, 'All of values must be digits'))
+    try:
+        services.WorkflowService.delete_users(workflow_id, ids)
+    except ValueError as e:
+        logging.warning(f'Error during deleting users to workflow: {e}')
+        return utl.form_response(400,
+                                 "Invalid params in request's params")
+    return utl.form_success_response()
+
+
