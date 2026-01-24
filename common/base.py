@@ -41,6 +41,8 @@ class CommonStruct:
     date_format = '%Y-%m-%d'
     time_format = '%H:%M:%S'
     datetime_format = f'{date_format}T{time_format}'
+    max_name_length = 30  # Максимальная длина названий объектов
+    max_description_length = 1000  # Максимальная длина описаний объектов
 
 
 class DBFields:

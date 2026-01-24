@@ -63,7 +63,7 @@ class Workflow(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
     default_role_id: Mapped[int] = mapped_column(nullable=True)
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
     projects: Mapped[list['Project']] = relationship('Project', back_populates='workflow')
     tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='workflow')
@@ -81,7 +81,7 @@ class Project(Base):
     workflow_id: Mapped[int] = mapped_column(ForeignKey(Workflow.id))
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
     workflow: Mapped[Workflow] = relationship(Workflow, back_populates='projects')
     users: Mapped[list[User]] = relationship(secondary='project_user', back_populates='linked_projects')
@@ -226,7 +226,7 @@ class PersonalDailyEvent(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     date: Mapped[datetime.date] = mapped_column()
     time_start: Mapped[datetime.time] = mapped_column()
     time_end: Mapped[datetime.time] = mapped_column()
@@ -241,7 +241,7 @@ class PersonalManyDaysEvent(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     datetime_start: Mapped[datetime.datetime] = mapped_column()
     datetime_end: Mapped[datetime.datetime] = mapped_column()
 
@@ -257,7 +257,7 @@ class WFDailyEvent(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     date: Mapped[datetime.date] = mapped_column()
     time_start: Mapped[datetime.time] = mapped_column()
     time_end: Mapped[datetime.time] = mapped_column()
@@ -275,7 +275,7 @@ class WFManyDaysEvent(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[500], default=DBStruct.default_description)
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     datetime_start: Mapped[datetime.datetime] = mapped_column()
     datetime_end: Mapped[datetime.datetime] = mapped_column()
 
@@ -291,7 +291,7 @@ class WFBaseCategory(Base):
     workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
     parent_category_id: Mapped[int] = mapped_column(ForeignKey('wf_base_category.id'), nullable=True)
     name: Mapped[str] = mapped_column(String[30])
-    description: Mapped[str] = mapped_column(String[250], default=DBStruct.default_description)
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
     parent_category: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='child_categories', remote_side='WFBaseCategory.id')
     child_categories: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='parent_category')

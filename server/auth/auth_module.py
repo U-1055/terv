@@ -1,9 +1,9 @@
-import os
-
 from sqlalchemy.exc import IntegrityError
 
 import datetime
 import logging
+import enum
+import os
 import shelve
 import jwt
 from bcrypt import checkpw, hashpw, gensalt
@@ -11,7 +11,8 @@ from bcrypt import checkpw, hashpw, gensalt
 from server.storage.server_model import Model
 from server.database.repository import DataRepository
 from server.data_const import DataStruct, Permissions
-from common.base import DBFields
+from common.base import DBFields, CommonStruct
+from server.database.models.base import Base
 
 
 def hash_password(password: str) -> str:
@@ -163,16 +164,16 @@ class Authenticator:
 
 class Authorizer:
     """Проверяет роль пользователя."""
-    def __init__(self, repository: DataRepository, data_const: DataStruct = DataStruct(), permissions: Permissions = Permissions):
+    def __init__(self, repository: DataRepository, data_const: DataStruct = DataStruct(), permissions: enum.Enum = Permissions):
         self._repo = repository
         self._data_const = data_const
         self._permissions = permissions
 
-    def check_permissions(self, user_role_id: int, object_id: int, object_type: str, permission: str) -> bool:
+    def check_permissions(self, user_id: int, objects: list[dict], object_type: str, permission: str) -> bool:
         """
         Проверяет доступ пользователя к ресурсу.
-        :param user_role_id: id роли пользователя в РП.
-        :param object_id: id объекта, к которому получает доступ пользователь.
+        :param user_id: ID пользователя, который делает запрос.
+        :param objects: сериализованные модели, к которым нужно получить доступ.
         :param object_type: тип объекта (задача, проект, документ, однодневное мероприятие, многодневное мероприятие).
         :param permission: получаемый доступ.
         :return: наличие доступа
@@ -180,21 +181,31 @@ class Authorizer:
 
         if permission not in self._permissions:
             raise ValueError(f'Unknown permission: {permission}')
+        workflows_ids = []
+        for object_ in objects:
+            id_ = object_.get(DBFields.workflow_id)
+            if not id_:
+                raise ValueError(f'The serialized model have not field "workflow_id". Model: {object_}')
 
-        if object_type == self._data_const.task:
-            permissions = self._repo.get_task_permissions(object_id, user_role_id)
-        elif object_type == self._data_const.project:
-            permissions = self._repo.get_project_permissions(object_id, user_role_id)
-        elif object_type == self._data_const.document:
-            permissions = self._repo.get_document_permissions(object_id, user_role_id)
-        elif object_type == self._data_const.daily_event:
-            permissions = self._repo.get_daily_event_permissions(object_id, user_role_id)
-        elif object_type == self._data_const.many_days_event:
-            permissions = self._repo.get_task_permissions(object_id, user_role_id)
-        else:
-            raise ValueError(f'Unknown object type: {object_type}')
-
-        return permission in permissions
+        for id_ in workflows_ids:  # Временная схема
+            role_id = self._repo.get_role_by_user_id(id_, user_id).content
+            if not role_id:
+                return False  # Нет роли - значит пользователя нет в РП
+            for object_ in objects:
+                object_id = object_.get(DBFields.id)
+                if object_type == self._data_const.task:
+                    permissions = self._repo.get_task_permissions(object_id, role_id)
+                elif object_type == self._data_const.project:
+                    permissions = self._repo.get_project_permissions(object_id, role_id)
+                elif object_type == self._data_const.document:
+                    permissions = self._repo.get_document_permissions(object_id, role_id)
+                elif object_type == self._data_const.daily_event:
+                    permissions = self._repo.get_daily_event_permissions(object_id, role_id)
+                elif object_type == self._data_const.many_days_event:
+                    permissions = self._repo.get_task_permissions(object_id, role_id)
+                else:
+                    raise ValueError(f'Unknown object type: {object_type}')
+                return permission in permissions
 
 
 if __name__ == '__main__':

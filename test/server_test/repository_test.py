@@ -101,7 +101,7 @@ def test_deserializing_links(repository: DataRepository):
 )
 def test_creating_personal_tasks(repository: DataRepository, name: str, description: str, user: dict):
     """Проверяет создание моделей. (Конкретно: PersonalTask)."""
-    task = {DBFields.name: name, DBFields.description: description, DBFields.plan_deadline: get_datetime_now(), DBFields.owner: user}
+    task = {DBFields.name: name, DBFields.description: description, DBFields.plan_deadline: get_datetime_now(), DBFields.owner: user, DBFields.owner_id: user.get(DBFields.id)}
     request = repository.add_personal_tasks([task])
     task_id = request.ids[0]
     request = repository.get_personal_tasks_by_id([task_id])

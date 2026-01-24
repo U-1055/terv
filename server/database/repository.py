@@ -75,12 +75,12 @@ class DataRepository:
     def _execute_insert(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]) -> 'RepoInsertResponse':
         with self._session_maker() as session, session.begin():
             schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
+            schema.sqla_session = session
             models = [schema.load(model, session=session) for model in models]
 
-            db_models = [base_model(**model) for model in models]
-            session.add_all(db_models)
+            session.add_all(models)
             session.flush()
-            return RepoInsertResponse(ids=tuple(int(db_model.id) for db_model in db_models))
+            return RepoInsertResponse(ids=tuple(int(db_model.id) for db_model in models))
 
     def _execute_update(self, models: tuple[dict, ...], base_model: tp.Type[cm.Base]):
         """
@@ -89,14 +89,14 @@ class DataRepository:
         """
         with self._session_maker() as session, session.begin():
             schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
-            db_models = []
+
             for model in models:  # Сериализация + обновление даты в updated_at
                 for field in model:
                     if field == DBFields.updated_at:
                         model[field] = get_datetime_now()
-                db_models.append(schema.load(model, session=session))
+                model = schema.load(model, session=session)
+                session.merge(model)
 
-            session.bulk_update_mappings(base_model, db_models)
 
     def get_users_by_username(self, usernames: tuple[str, ...] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0,
                               serialize: bool = True) -> 'RepoSelectResponse':
@@ -141,6 +141,9 @@ class DataRepository:
             query = query.where(cm.Workflow.name.contains(name))
 
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
+
+    def update_wf_roles(self, models: tuple[dict, ...] | list[dict]):
+        self._execute_update(models, roles.WFRole)
 
     def get_wf_tasks_by_id(self, wf_tasks_ids: list[int] = None, limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoSelectResponse':
         query = select(cm.WFTask)
