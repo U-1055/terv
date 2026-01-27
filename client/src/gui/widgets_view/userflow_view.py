@@ -6,6 +6,7 @@ from PySide6.QtCore import Signal
 
 from client.src.gui.widgets_view.base_view import BaseView
 from client.src.ui.ui_userflow_task_widget import Ui_Form as UserFlowTaskWidget
+from client.src.ui.ui_userflow_notes_window import Ui_Form as UserFlowNotesWidget
 from client.src.gui.sub_widgets.widgets import UserFlowTask
 
 
@@ -33,6 +34,26 @@ class TaskWidgetView(BaseView):
     @property
     def tasks(self) -> tuple[str, ...]:
         return '', ''
+
+
+class NotesWidgetView(BaseView):
+
+    def __init__(self):
+        super().__init__()
+        self._view = UserFlowNotesWidget()
+        self._view.setupUi(self)
+
+    def set_notes(self, text: str):
+        self._view.textEdit.setText(text)
+
+    def notes(self) -> str:
+        return self._view.textEdit.toPlainText()
+
+
+class ScheduleWidgetView(BaseView):
+
+    def __init__(self):
+        super().__init__()
 
 
 if __name__ == '__main__':

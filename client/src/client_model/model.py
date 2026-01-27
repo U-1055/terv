@@ -10,6 +10,7 @@
     userflow_widgets: {
         <widget_name>: {'x': int, 'y': int, 'x_size': int, 'y_size': int}
     }
+    note: <Текст локальной заметки>
 
     access_token: <access_token>
 
@@ -34,6 +35,14 @@ class Model:
         self._storage = storage
         self._data_root = data_root
         self._ds_const = data_struct_const
+
+    def set_note(self, text: str):
+        with shelve.open(self._storage, 'w') as storage:
+            storage[self._ds_const.note] = text
+
+    def get_note(self) -> str:
+        with shelve.open(self._storage) as storage:
+            return storage.get(self._ds_const.note)
 
     def set_access_token(self, token_: str):
         with shelve.open(self._storage, 'w') as storage:
@@ -92,5 +101,5 @@ class Model:
 
 if __name__ == '__main__':
     model = Model(Path('..\\..\\data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst())
-    model.put_widget_settings(DataStructConst.tasks_widget, 1, 1, 2, 3)
-    print(model.get_widget_settings(DataStructConst.tasks_widget))
+    model.set_note('Default note')
+    print(model.get_note())

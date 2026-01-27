@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 
 from PySide6.QtCore import QTimer
@@ -9,8 +10,9 @@ from client.src.src.handlers.window_handlers.base import BaseWindowHandler, Main
 from client.src.base import DataStructConst
 from client.src.gui.widgets_view.base_view import BaseView
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import TaskViewHandler
-from client.src.gui.windows.windows import UserFlowWindow
-from client.src.gui.widgets_view.userflow_view import TaskWidgetView
+from client.src.gui.windows.userflow_window import UserFlowWindow
+from client.src.gui.widgets_view.userflow_view import TaskWidgetView, ScheduleWidgetView, NotesWidgetView
+from client.src.src.handlers.widgets_view_handlers.userflow_handlers import NotesViewHandler, ScheduleViewHandler
 from client.models.common_models import User, PersonalTask
 
 from client.utils.data_tools import make_unique_dict_names
@@ -29,6 +31,8 @@ class UserFlowWindowHandler(BaseWindowHandler):
         super().__init__(window, main_view, requester, model)
         self._window, self._main_view, self._requester, self._model, self._data_const = window, main_view, requester, model, data_const
         self._task_view_handler: TaskViewHandler = None
+        self._notes_view_handler: NotesWidgetView = None
+        self._schedule_view_handler: ScheduleWidgetView = None
         self._user: User = None
         self._timer = QTimer()
 
@@ -51,11 +55,29 @@ class UserFlowWindowHandler(BaseWindowHandler):
 
         for widget_type in self._data_const.names_widgets:
             result = self._model.get_widget_settings(widget_type)
-            if widget_type == self._data_const.tasks_widget:
-                widget_view = self._window.place_task_widget()
-                self._set_task_handler(widget_view)
+            if result:
+                x, y, x_size, y_size = (result.get(self._data_const.x), result.get(self._data_const.y),
+                                        result.get(self._data_const.x_size), result.get(self._data_const.y_size))
+            else:
+                x = y = x_size = y_size = None
 
-    def _set_task_handler(self, view: TaskWidgetView) -> TaskViewHandler:
+            if widget_type == self._data_const.tasks_widget:
+                widget_view = self._window.place_task_widget(x, y, x_size, y_size)
+                self._set_task_handler(widget_view)
+                logging.debug('Tasks widget placed.')
+            if widget_type == self._data_const.notes_widget:
+                widget_view = self._window.place_notes_widget(x, y, x_size, y_size)
+                note = self._model.get_note()
+                widget_view.set_notes(note)
+                handler = NotesViewHandler(widget_view)
+                logging.debug('Notes widget placed')
+            if widget_type == self._data_const.schedule_widget:
+                widget_view = self._window.place_schedule_widget()
+                handler = ScheduleViewHandler(widget_view)
+                logging.debug('Schedule widget placed')
+
+
+    def _set_task_handler(self, view: TaskWidgetView):
         """Настраивает обработчик задач."""
         access_token = self._model.get_access_token()
         self._task_view_handler = TaskViewHandler(view, {'namer': int})
@@ -63,17 +85,9 @@ class UserFlowWindowHandler(BaseWindowHandler):
         if self._user:
             tasks: asyncio.Future = self._requester.get_personal_tasks(self._user.id, access_token)
             tasks.add_done_callback(lambda future: self._prepare_request(future, self._set_tasks))
-            return self._task_view_handler
         else:
             request: asyncio.Future = self._requester.get_user_info(access_token)
             request.add_done_callback(lambda future: self._prepare_request(future, lambda: self._set_task_handler(view)))
 
-
-def close(self):
-    pass
-
-
-class UserTasksWindowHandler(BaseWindowHandler):
-    pass
 
 

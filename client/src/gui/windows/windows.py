@@ -53,23 +53,5 @@ class CalendarWindow(BaseWindow):
         logging.debug('CalendarWindow closed')
 
 
-class UserFlowWindow(BaseWindow):
-
-    def __init__(self):
-        super().__init__()
-        self._main_layout = QHBoxLayout()
-        self.setLayout(self._main_layout)
-        logging.debug('UserFlowWindow initialized')
-
-    def place_task_widget(self) -> TaskWidgetView:
-        widget = TaskWidgetView()
-        self._main_layout.addWidget(widget)
-        return widget
-
-    def close(self):
-        super().close()
-        logging.debug('UserFlowWindow closed')
-
-
 if __name__ == '__main__':
     pass

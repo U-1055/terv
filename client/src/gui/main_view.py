@@ -4,7 +4,8 @@ from PySide6.QtCore import Signal, Qt
 import logging
 
 from client.src.ui.ui_main_window import Ui_Form
-from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow, UserFlowWindow
+from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
+from client.src.gui.windows.userflow_window import UserFlowWindow
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.windows.auth_window import PopUpAuthWindow, AuthView, RegisterView
 from client.src.base import GUIStyles, GuiLabels
@@ -91,6 +92,9 @@ class MainWindow(QMainWindow):
         window = PopUpAuthWindow(GUIStyles.normal_style, GUIStyles.error_style, GuiLabels())
         self._auth_window = window
         return window
+
+    def show_widgets_menu(self):
+        pass  # ToDo: меню настройки виджетов ПП
 
     def open_personal_tasks_window(self) -> BaseWindow:
         return self._open_window(PersonalTasksWindow)
