@@ -1,4 +1,3 @@
-from client.src.gui.widgets_view.userflow_view import TaskWidgetView
 from common.base import CommonStruct
 
 
@@ -19,14 +18,16 @@ class DataStructConst:
     schedule_widget = 'schedule_widget'
     memory_widget = 'memory_widget'
     notes_widget = 'notes_widget'
+    note = 'note'
 
-    names_widgets = {  # Типы виджетов и их имена
-        tasks_widget: TaskWidgetView
-    }
+    names_widgets = [tasks_widget, notes_widget, memory_widget]
 
     x, y = 'x', 'y'
     x_size = 'x_size'
     y_size = 'y_size'
+
+    max_x_size = 3
+    max_y_size = 3
 
     max_requests = 10  # Максимальное число хранимых запросов в реквестере
     max_request_id = max_requests * 10  # Максимальное ID запроса
@@ -38,7 +39,14 @@ class GuiLabels:
     password = 'Пароль'
     login = 'Логин'
     register = 'Зарегистрироваться'
+    apply = 'Применить'
     email = 'Email'
+    userflow_settings = 'Настройки пространства'
+    label_userflow_settings = 'Выберите виджеты, которые хотите разместить в пространстве'
+
+    tasks_widget = 'Задачи на сегодня'
+    notes_widget = 'Заметки'
+    memory_widget = 'Напоминания'
 
     incorrect_credentials = 'Неверный логин или пароль'
     incorrect_login = f'Логин должен быть длиной от {CommonStruct.min_login_length} до {CommonStruct.max_login_length} символов'
@@ -57,13 +65,19 @@ class GuiLabels:
     error_occurred = 'Произошла ошибка'
 
 
-
 class GUIStyles:
 
     normal_style = ''
     error_style = ''
 
 
+widgets_labels = {  # Соответствие названий виджетов надписям на них
+    DataStructConst.tasks_widget: GuiLabels.tasks_widget,
+    DataStructConst.notes_widget: GuiLabels.notes_widget,
+    DataStructConst.memory_widget: GuiLabels.memory_widget
+}
+
+labels_widgets = {widgets_labels[key]: key for key in widgets_labels}  # Соответствие надписей на виджетах их названиям
 
 
 

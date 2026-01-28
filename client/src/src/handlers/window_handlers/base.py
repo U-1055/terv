@@ -87,3 +87,6 @@ class BaseWindowHandler(QObject):
         self._window.close()
         self.closed.emit()
 
+    def flush(self):
+        pass
+
