@@ -97,7 +97,6 @@ class DataRepository:
                 model = schema.load(model, session=session)
                 session.merge(model)
 
-
     def get_users_by_username(self, usernames: tuple[str, ...] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0,
                               serialize: bool = True) -> 'RepoSelectResponse':
 
@@ -141,6 +140,14 @@ class DataRepository:
             query = query.where(cm.Workflow.name.contains(name))
 
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
+
+    def get_user_hashed_password(self, login: str) -> str | None:
+        """Возвращает хэш пароля пользователь с заданным логином. Если такого пользователя нет - возвращает None."""
+        with self._session_maker() as session, session.begin():
+            query = select(cm.User).where(cm.User.username == login)
+            result = session.execute(query).scalars().all()
+            if result:
+                return result[0].hashed_password
 
     def update_wf_roles(self, models: tuple[dict, ...] | list[dict]):
         self._execute_update(models, roles.WFRole)
@@ -280,4 +287,10 @@ class RepoInsertResponse:
 
 
 if __name__ == '__main__':
-    pass
+    from server.database.models.db_utils import launch_db
+    engine = launch_db('database')
+    s_maker = sessionmaker(engine)
+    repo = DataRepository(s_maker)
+    repo.add_personal_tasks({})
+
+

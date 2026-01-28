@@ -50,6 +50,18 @@ authorizer = Authorizer(
     Permissions
 )
 
+EXCLUDED_ENDPOINTS = ['register', 'auth_login', 'auth_refresh', 'auth_recall']
+
+
+@app.before_request
+def check_auth():
+    if request.endpoint in EXCLUDED_ENDPOINTS:
+        return
+
+    auth = request.headers.get('Authorization')
+    if not authenticator.check_token_valid(auth, DataStruct.access_token):
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
 
 @exceptions_handler
 @app.route('/register', methods=['POST'])
@@ -259,7 +271,7 @@ def wf_tasks_search():
 
 
 @exceptions_handler
-@app.route('/workflow/<int:workflow_id>/users', methods=['PATCH', 'DELETE'])
+@app.route('/workflow/<int:workflow_id>/users', methods=['POST', 'DELETE'])
 def workflow_users():
     auth = request.headers.get('Authorization')
     if not authenticator.check_token_valid(auth, DataStruct.access_token):
@@ -267,7 +279,7 @@ def workflow_users():
 
     response = None
 
-    if request.method == 'PATCH':
+    if request.method == 'POST':
         response = handlers.add_users_to_workflow(request)
     if request.method == 'DELETE':
         response = handlers.delete_users_from_workflow(request)

@@ -133,24 +133,19 @@ class Authenticator:
         Вызывает ValueError, если авторизация не удалась.
         """
 
-        results = self._repository.get_users_by_username((login, )).content
+        hashed_password = self._repository.get_user_hashed_password(login)
 
-        if results:
-            result = results[0]
-        else:
+        if not hashed_password:
             raise ValueError
 
-        if result.get(DBFields.username) == login:
-            try:
-                if not checkpw(bytes(password, encoding='utf-8'), bytes(result[DBFields.hashed_password], encoding='utf-8')):
-                    raise ValueError
-                access_token = self._create_token(login, self._access_token_lifetime)
-                refresh_token = self._create_token(login, self._refresh_token_lifetime)
-                return {self.access_name: access_token, self.refresh_name: refresh_token}
-            except ValueError as e:
-                logging.debug(f'INVALID PASSWORD: saved_hash: {result[DBFields.hashed_password]}; received_hash: {bytes(password, encoding='utf-8')}')
+        try:
+            if not checkpw(bytes(password, encoding='utf-8'), bytes(hashed_password, encoding='utf-8')):
                 raise ValueError
-        else:
+            access_token = self._create_token(login, self._access_token_lifetime)
+            refresh_token = self._create_token(login, self._refresh_token_lifetime)
+            return {self.access_name: access_token, self.refresh_name: refresh_token}
+        except ValueError as e:
+            logging.debug(f'INVALID PASSWORD: saved_hash: {hashed_password}; received_hash: {bytes(password, encoding='utf-8')}')
             raise ValueError
 
     @property
