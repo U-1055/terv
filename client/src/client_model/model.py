@@ -95,11 +95,11 @@ class Model:
         """Удаляет настройки виджета."""
         with shelve.open(self._storage, 'w') as storage:
             dict_ = storage[self._ds_const.userflow_widgets]
-            dict_.pop(wdg_type)
+            if wdg_type in dict_:
+                dict_.pop(wdg_type)
             storage[self._ds_const.userflow_widgets] = dict_
 
 
 if __name__ == '__main__':
     model = Model(Path('..\\..\\data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst())
-    model.set_note('Default note')
-    print(model.get_note())
+    model.put_widget_settings(DataStructConst.tasks_widget, 1, 0, 2, 1)

@@ -111,7 +111,7 @@ class WidgetSettingsMenu(QDialog):
         for i in range(self._view.count()):
             item = self._view.item(i)
             if item.text() in widgets:
-                self._view.setCurrentItem(item)
+                item.setSelected(True)
 
     def set_widgets(self, widgets: list[str]):
         self._view.addItems(widgets)

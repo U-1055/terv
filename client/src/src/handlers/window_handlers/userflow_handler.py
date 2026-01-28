@@ -7,11 +7,11 @@ from PySide6.QtCore import QTimer
 import typing as tp
 
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler, MainWindow, Requester, Model, BaseWindow
-from client.src.base import DataStructConst
+from client.src.base import DataStructConst, widgets_labels, labels_widgets
 from client.src.gui.widgets_view.base_view import BaseView
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import TaskViewHandler
 from client.src.gui.windows.userflow_window import UserFlowWindow
-from client.src.gui.widgets_view.userflow_view import TaskWidgetView, ScheduleWidgetView, NotesWidgetView
+from client.src.gui.widgets_view.userflow_view import TaskWidgetView, ScheduleWidgetView, NotesWidgetView, WidgetSettingsMenu
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import NotesViewHandler, ScheduleViewHandler
 from client.models.common_models import User, PersonalTask
 
@@ -34,7 +34,34 @@ class UserFlowWindowHandler(BaseWindowHandler):
         self._notes_view_handler: NotesWidgetView = None
         self._schedule_view_handler: ScheduleWidgetView = None
         self._user: User = None
+
+        self._window.btn_set_widgets_pressed.connect(self._on_btn_set_widgets_pressed)
+
         self._timer = QTimer()
+
+    def _on_btn_set_widgets_pressed(self):
+        selected_widgets = []
+        for widget in DataStructConst.names_widgets:  # Выбираем виджеты, у которых есть настройки
+            if self._model.get_widget_settings(widget):
+                selected_widgets.append(widgets_labels.get(widget))
+
+        widgets = [widgets_labels.get(widget) for widget in DataStructConst.names_widgets]
+
+        settings_window = WidgetSettingsMenu(widgets, selected_widgets)
+        settings_window.set.connect(self._set_widgets_settings)
+        self._main_view.show_modal_window(settings_window)
+
+    def _set_widgets_settings(self, widgets: tuple[str, ...]):
+        """Устанавливает настройки виджетов (Изменяет список отображаемых виджетов)."""
+        widgets = [labels_widgets[widget] for widget in widgets]  # Надписи виджетов переводим в их названия
+        for widget in DataStructConst.names_widgets:
+            if widget not in widgets:
+                self._model.delete_widget_settings(widget)
+
+        for widget in widgets:
+            self._model.put_widget_settings(widget, 0, 0, 1, 1)
+
+        self._place_settable_widgets()  # Обновляем конфигурацию
 
     def _set_user(self, user_info: tuple[dict]):
         self._user = User(**user_info[0])
@@ -49,17 +76,18 @@ class UserFlowWindowHandler(BaseWindowHandler):
         tasks_list = make_unique_dict_names(dicts)
         self._task_view_handler.tasks = tasks_list
 
-    def _update_state(self):
-        request: asyncio.Future = self._requester.get_user_info(self._model.get_access_token())
-        request.add_done_callback(lambda future: self._prepare_request(future, self._set_user))
+    def _place_settable_widgets(self):
+        self._window.delete_notes_widget()
+        self._window.delete_tasks_widget()
+        self._window.delete_memory_widget()
 
         for widget_type in self._data_const.names_widgets:
             result = self._model.get_widget_settings(widget_type)
-            if result:
-                x, y, x_size, y_size = (result.get(self._data_const.x), result.get(self._data_const.y),
-                                        result.get(self._data_const.x_size), result.get(self._data_const.y_size))
-            else:
-                x = y = x_size = y_size = None
+            if not result:
+                continue
+
+            x, y, x_size, y_size = (result.get(self._data_const.x), result.get(self._data_const.y),
+                                    result.get(self._data_const.x_size), result.get(self._data_const.y_size))
 
             if widget_type == self._data_const.tasks_widget:
                 widget_view = self._window.place_task_widget(x, y, x_size, y_size)
@@ -76,6 +104,11 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 handler = ScheduleViewHandler(widget_view)
                 logging.debug('Schedule widget placed')
 
+    def update_state(self):
+        request: asyncio.Future = self._requester.get_user_info(self._model.get_access_token())
+        request.add_done_callback(lambda future: self._prepare_request(future, self._set_user))
+
+        self._place_settable_widgets()
 
     def _set_task_handler(self, view: TaskWidgetView):
         """Настраивает обработчик задач."""
@@ -88,6 +121,4 @@ class UserFlowWindowHandler(BaseWindowHandler):
         else:
             request: asyncio.Future = self._requester.get_user_info(access_token)
             request.add_done_callback(lambda future: self._prepare_request(future, lambda: self._set_task_handler(view)))
-
-
 
