@@ -4,7 +4,7 @@ from PySide6.QtCore import Signal
 import datetime
 
 from client.src.src.handlers.widgets_view_handlers.base import BaseViewHandler
-from client.src.gui.widgets_view.userflow_view import TaskWidgetView, NotesWidgetView, ScheduleWidgetView
+from client.src.gui.widgets_view.userflow_view import TaskWidgetView, NotesWidgetView, ScheduleWidgetView, ReminderWidgetView
 
 
 class TaskViewHandler(BaseViewHandler):
@@ -57,6 +57,40 @@ class NotesViewHandler(BaseViewHandler):
 
     def notes(self) -> str:
          return self._view.notes()
+
+
+class ReminderViewHandler(BaseViewHandler):
+
+    reminder_completed = Signal(str)  # Вызывается при закрытии напоминания. Возвращает название напоминания
+    reminder_added = Signal(str)  # Вызывается при добавлении напоминания. Возвращает название напоминания
+    reminder_edited = Signal(str, str)  # Вызывается при редактировании напоминания. Первая строка - старое название, вторая - новое
+
+    def __init__(self, view: ReminderWidgetView):
+        super().__init__(view)
+        self._view = view
+        self._view.reminder_added.connect(lambda name: self._on_remainder_added(name))
+        self._view.reminder_completed.connect(lambda name: self._on_reminder_completed(name))
+        self._view.reminder_edited.connect(lambda last_name, current_name: self._on_reminder_edited(last_name, current_name))
+
+    def _on_remainder_added(self, label: str):
+        self.reminder_added.emit(label)
+
+    def _on_reminder_completed(self, label: str):
+        self.reminder_completed.emit(label)
+
+    def _on_reminder_edited(self, last_name: str, current_name: str):
+        self.reminder_edited.emit(last_name, current_name)
+
+    def set_reminders(self, labels: tuple[str, ...] | list[str]):
+        self._view.set_reminders(labels)
+
+    def add_reminder(self, label: str):
+        self._view.add_reminder(label)
+        self.reminder_added.emit(label)
+
+    def delete_reminder(self, label: str):
+        self._view.delete_reminder(label)
+        self.reminder_completed.emit(label)
 
 
 class ScheduleViewHandler(BaseViewHandler):

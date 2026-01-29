@@ -4,9 +4,11 @@ from PySide6.QtCore import Signal
 import logging
 
 from client.src.base import GuiLabels, DataStructConst
-from client.src.gui.widgets_view.userflow_view import TaskWidgetView, NotesWidgetView, ScheduleWidgetView, MemoryWidgetView, BaseUserFlowWidget
+from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, NotesWidgetView, ScheduleWidgetView, 
+                                                       BaseUserFlowWidget, ReminderWidgetView)
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.aligns import AlignBottom, AlignRight
+from client.utils.qt_utils import filled_rows_count, filled_columns_count
 
 
 class UserFlowWindow(BaseWindow):
@@ -21,7 +23,7 @@ class UserFlowWindow(BaseWindow):
         super().__init__()
         self._tasks_widget: TaskWidgetView | None = None
         self._notes_widget: NotesWidgetView | None = None
-        self._memory_widget: MemoryWidgetView | None = None
+        self._reminder_widget: ReminderWidgetView | None = None
 
         self._main_layout = QHBoxLayout()
         self._widgets_layout = QGridLayout()
@@ -55,7 +57,17 @@ class UserFlowWindow(BaseWindow):
 
     def _place_settable_widget(self, widget: BaseUserFlowWidget, x: int, y: int, x_size: int, y_size: int):
         if not x and not y:
-            self._widgets_layout.addWidget(widget)
+            x = filled_columns_count(self._widgets_layout) + 1
+            y = filled_rows_count(self._widgets_layout)
+            if y > DataStructConst.max_y_size:
+                y = 0
+
+            if x > DataStructConst.max_x_size:
+                x = 0   # Случай, когда y превышает max_y_size не рассматривается,
+                y += 1  # поскольку в программе пока не может быть столько виджетов ПП
+            logging.debug(f'Coordinates for widget {widget.name} computed: x: {x}; y: {y}')
+
+            self._widgets_layout.addWidget(widget, y, x)
         else:
             self._widgets_layout.addWidget(widget, y, x, y_size, x_size)
 
@@ -96,7 +108,7 @@ class UserFlowWindow(BaseWindow):
         self._place_settable_widget(self._notes_widget, x, y, x_size, y_size)
         return self._notes_widget
 
-    def place_memory_widget(self, x: int = 0, y: int = 0, x_size: int = 1, y_size: int = 1) -> MemoryWidgetView:
+    def place_reminder_widget(self, x: int = 0, y: int = 0, x_size: int = 1, y_size: int = 1) -> ReminderWidgetView:
         """
         Размещает виджет напоминаний.
         :param x: столбец.
@@ -106,20 +118,20 @@ class UserFlowWindow(BaseWindow):
         """
 
         x, y, x_size, y_size = self._prepare_params(x, y, x_size, y_size)
-        logging.debug(f'Memory widget placed with coords: (x: {x}, y: {y}, x_size: {x_size}, y_size: {y_size})')
-        self._memory_widget = MemoryWidgetView()
-        self._place_settable_widget(self._memory_widget, x, y, x_size, y_size)
-        return self._memory_widget
+        logging.debug(f'reminder widget placed with coords: (x: {x}, y: {y}, x_size: {x_size}, y_size: {y_size})')
+        self._reminder_widget = ReminderWidgetView()
+        self._place_settable_widget(self._reminder_widget, x, y, x_size, y_size)
+        return self._reminder_widget
 
     def delete_notes_widget(self):
         if self._notes_widget:
             self._notes_widget.hide()
             self._notes_widget = None
 
-    def delete_memory_widget(self):
-        if self._memory_widget:
-            self._memory_widget.hide()
-            self._memory_widget = None
+    def delete_reminder_widget(self):
+        if self._reminder_widget:
+            self._reminder_widget.hide()
+            self._reminder_widget = None
 
     def delete_tasks_widget(self):
         if self._tasks_widget:

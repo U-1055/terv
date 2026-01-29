@@ -115,8 +115,8 @@ def setup_gui(root: MainWindow, app: QApplication):
     screen_width = screen.geometry().width()
     screen_height = screen.geometry().height()
 
-    root_width = int(screen_width * 0.5)
-    root_height = int(screen_height * 0.6)
+    root_width = int(screen_width * 0.65)
+    root_height = int(screen_height * 0.7)
     padx = (screen_width - root_width) // 2
     pady = (screen_height - root_height) // 2
 
@@ -130,7 +130,6 @@ def setup_gui(root: MainWindow, app: QApplication):
 if __name__ == '__main__':
     from client.src.src.main_logic import Logic
     from client.src.requester.requester import Requester
-    from threading import Thread
 
     app = QApplication()
     root = MainWindow()
