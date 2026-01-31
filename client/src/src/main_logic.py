@@ -42,6 +42,9 @@ class Logic:
 
         self._win_handlers = TimeoutList(timeout, self._close_outdated_window, 15)
 
+        current_style = self._model.get_style()
+        self._view.set_style(current_style)
+
         self._view.btn_open_userflow_pressed.connect(self._open_userflow)
         self._view.btn_open_personal_tasks_window_pressed.connect(self._open_personal_tasks_window)
         self._view.btn_update_pressed.connect(self._update_state)

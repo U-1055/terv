@@ -1,3 +1,5 @@
+from PySide6.QtGui import QFont
+
 from common.base import CommonStruct
 
 
@@ -16,21 +18,34 @@ class DataStructConst:
 
     tasks_widget = 'tasks_widget'
     schedule_widget = 'schedule_widget'
-    memory_widget = 'memory_widget'
+    reminder_widget = 'reminder_widget'
     notes_widget = 'notes_widget'
     note = 'note'
+    reminders = 'reminders'
 
-    names_widgets = [tasks_widget, notes_widget, memory_widget]
+    names_widgets = [tasks_widget, notes_widget, reminder_widget]
 
     x, y = 'x', 'y'
     x_size = 'x_size'
     y_size = 'y_size'
+
+    max_reminder_length = 40  # Максимальная длина напоминания (символы)
 
     max_x_size = 3
     max_y_size = 3
 
     max_requests = 10  # Максимальное число хранимых запросов в реквестере
     max_request_id = max_requests * 10  # Максимальное ID запроса
+
+    char_plus = '+'
+
+
+class ObjectNames:
+    """Имена объектов, использующиеся в QSS-стилях."""
+
+    small_btn_add = 'small_btn_add'
+    small_btn_complete = 'small_btn_complete'
+    btn_show_details = 'btn_show_details'
 
 
 class GuiLabels:
@@ -46,7 +61,10 @@ class GuiLabels:
 
     tasks_widget = 'Задачи на сегодня'
     notes_widget = 'Заметки'
-    memory_widget = 'Напоминания'
+    reminder_widget = 'Напоминания'
+    schedule_widget = 'Расписание'
+
+    new_reminder = 'Новое напоминание'
 
     incorrect_credentials = 'Неверный логин или пароль'
     incorrect_login = f'Логин должен быть длиной от {CommonStruct.min_login_length} до {CommonStruct.max_login_length} символов'
@@ -63,18 +81,24 @@ class GuiLabels:
 
     op_complete = 'Операция выполнена'
     error_occurred = 'Произошла ошибка'
+    default_time_separator = '-'
+    lasting_label = 'Длительность: '
+    start_end_label = 'Время: '
 
 
 class GUIStyles:
 
     normal_style = ''
     error_style = ''
+    base_font = QFont('Arial', 10, 2, False)
+    bold_font = QFont('Arial', 10, 2, False)
+    bold_font.setBold(True)
 
 
 widgets_labels = {  # Соответствие названий виджетов надписям на них
     DataStructConst.tasks_widget: GuiLabels.tasks_widget,
     DataStructConst.notes_widget: GuiLabels.notes_widget,
-    DataStructConst.memory_widget: GuiLabels.memory_widget
+    DataStructConst.reminder_widget: GuiLabels.reminder_widget
 }
 
 labels_widgets = {widgets_labels[key]: key for key in widgets_labels}  # Соответствие надписей на виджетах их названиям

@@ -5,6 +5,7 @@ import datetime
 
 from client.src.src.handlers.widgets_view_handlers.base import BaseViewHandler
 from client.src.gui.widgets_view.userflow_view import TaskWidgetView, NotesWidgetView, ScheduleWidgetView, ReminderWidgetView
+from client.src.base import DataStructConst
 
 
 class TaskViewHandler(BaseViewHandler):
@@ -65,9 +66,10 @@ class ReminderViewHandler(BaseViewHandler):
     reminder_added = Signal(str)  # Вызывается при добавлении напоминания. Возвращает название напоминания
     reminder_edited = Signal(str, str)  # Вызывается при редактировании напоминания. Первая строка - старое название, вторая - новое
 
-    def __init__(self, view: ReminderWidgetView):
+    def __init__(self, view: ReminderWidgetView, max_reminder_length: int = DataStructConst.max_reminder_length):
         super().__init__(view)
         self._view = view
+        self._view.set_max_reminder_length(max_reminder_length)
         self._view.reminder_added.connect(lambda name: self._on_remainder_added(name))
         self._view.reminder_completed.connect(lambda name: self._on_reminder_completed(name))
         self._view.reminder_edited.connect(lambda last_name, current_name: self._on_reminder_edited(last_name, current_name))
@@ -91,6 +93,12 @@ class ReminderViewHandler(BaseViewHandler):
     def delete_reminder(self, label: str):
         self._view.delete_reminder(label)
         self.reminder_completed.emit(label)
+
+    def set_max_reminder_length(self, length: int):
+        self._view.set_max_reminder_length(length)
+
+    def max_reminder_length(self) -> int:
+        return self._view.max_reminder_length()
 
 
 class ScheduleViewHandler(BaseViewHandler):

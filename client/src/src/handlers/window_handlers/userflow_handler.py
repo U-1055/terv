@@ -119,6 +119,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 reminders = self._model.get_reminders()
                 widget_view = self._window.place_reminder_widget(x, y, x_size, y_size)
                 handler = ReminderViewHandler(widget_view)
+                handler.set_max_reminder_length(DataStructConst.max_reminder_length)
                 handler.set_reminders(reminders)
                 handler.reminder_completed.connect(self._on_reminder_completed)
                 handler.reminder_added.connect(self._on_reminder_added)
