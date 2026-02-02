@@ -26,6 +26,7 @@ class CommonStruct:
     creator_id = 'creator_id'
     executor_id = 'executor_id'
     workflow_id = 'workflow_id'
+    date = 'date'
 
     wf_daily_events = 'wf_daily_events'
     wf_many_days_events = 'wf_many_days_events'

@@ -1,4 +1,6 @@
 import asyncio
+import dataclasses
+import datetime
 import logging
 import time
 
@@ -15,8 +17,8 @@ from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, ScheduleW
                                                        WidgetSettingsMenu, ReminderWidgetView)
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import (NotesViewHandler, ScheduleViewHandler,
                                                                              ReminderViewHandler)
-from client.models.common_models import User, PersonalTask
-
+from client.src.requester.requester import Response
+import client.models.common_models as cm
 from client.utils.data_tools import make_unique_dict_names
 
 
@@ -32,11 +34,10 @@ class UserFlowWindowHandler(BaseWindowHandler):
     ):
         super().__init__(window, main_view, requester, model)
         self._window, self._main_view, self._requester, self._model, self._data_const = window, main_view, requester, model, data_const
+        self._data_model: 'UserFlowDataModel' = UserFlowDataModel()
         self._task_view_handler: TaskViewHandler = None
         self._notes_view_handler: NotesWidgetView = None
         self._schedule_view_handler: ScheduleWidgetView = None
-        self._user: User = None
-
         self._window.btn_set_widgets_pressed.connect(self._on_btn_set_widgets_pressed)
 
         self._timer = QTimer()
@@ -76,7 +77,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
         self._place_settable_widgets()  # Обновляем конфигурацию
 
     def _set_user(self, user_info: tuple[dict]):
-        self._user = User(**user_info[0])
+        self._data_model.user = cm.User(**user_info[0])
 
     def _set_tasks(self, tasks: tuple[dict, ...]):
         if not self._task_view_handler:
@@ -84,7 +85,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
 
         dicts = []
         for task in tasks:
-            dicts.append({task[PersonalTask.name]: task[PersonalTask.id]})
+            dicts.append({task[cm.PersonalTask.name]: task[cm.PersonalTask.id]})
         tasks_list = make_unique_dict_names(dicts)
         self._task_view_handler.tasks = tasks_list
 
@@ -92,6 +93,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
         self._window.delete_notes_widget()
         self._window.delete_tasks_widget()
         self._window.delete_reminder_widget()
+        self._window.delete_schedule_widget()
 
         for widget_type in self._data_const.names_widgets:
             result = self._model.get_widget_settings(widget_type)
@@ -116,6 +118,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 handler = ScheduleViewHandler(widget_view)
                 logging.debug('Schedule widget placed')
             if widget_type == self._data_const.reminder_widget:
+
                 reminders = self._model.get_reminders()
                 widget_view = self._window.place_reminder_widget(x, y, x_size, y_size)
                 handler = ReminderViewHandler(widget_view)
@@ -126,20 +129,81 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 handler.reminder_edited.connect(self._on_reminder_edited)
                 logging.debug('Reminder widget placed')
 
-    def update_state(self):
+    def _get_user_info(self):
         request: asyncio.Future = self._requester.get_user_info(self._model.get_access_token())
         request.add_done_callback(lambda future: self._prepare_request(future, self._set_user))
 
+    def update_state(self):
+        self._get_user_info()
         self._place_settable_widgets()
 
-    def _set_task_handler(self, view: TaskWidgetView):  # ToDo: логика запросов
+    def _set_personal_daily_events(self, events: tuple[dict, ...] ):
+        self._data_model.personal_daily_events = [cm.PersonalDailyEvent(**event) for event in events]
+
+    def _set_personal_many_days_events(self, events: tuple[dict, ...]):
+        self._data_model.personal_many_days_events = [cm.PersonalManyDaysEvent(**event) for event in events]
+
+    def _set_wf_many_days_events(self, events: tuple[dict, ...]):
+        self._data_model.wf_many_days_events = [cm.WFManyDaysEvent(**event) for event in events]
+
+    def _set_wf_daily_events(self, events: tuple[dict, ...]):
+        self._data_model.wf_daily_events = [cm.WFDailyEvent(**event) for event in events]
+
+    def _set_schedule_widget(self, widget: ScheduleWidgetView):
+        events = [*self._data_model.wf_daily_events, *self._data_model.personal_daily_events,
+                  *self._data_model.wf_many_days_events, *self._data_model.personal_many_days_events]
+
+    def _get_schedule_widget_data(self, view: ScheduleWidgetView):
+        """Настраивает виджет расписания."""
+        access_token = self._model.get_access_token()
+
+        if self._data_model.user:
+            personal_daily_events: asyncio.Future = self._requester.get_personal_daily_events(self._data_model.user.id,
+                                                                                              access_token)
+            personal_daily_events.add_done_callback(lambda future: self._prepare_request(future, self._set_personal_daily_events))
+
+            personal_many_days_events: asyncio.Future = self._requester.get_personal_daily_events()
+            personal_many_days_events.add_done_callback(
+                lambda future: self._prepare_request(future, self._set_personal_many_days_events))
+
+            wf_daily_events: asyncio.Future = self._requester.get_wf_daily_events_by_users(self._data_model.user.id,
+                                                                                           self._data_model.user.notified_daily_events,
+                                                                                           access_token,
+                                                                                           datetime.date.today(),
+                                                                                           )
+            wf_daily_events.add_done_callback(lambda future: self._prepare_request(future, self._set_wf_daily_events))
+            wf_many_days_events: asyncio.Future = self._requester.get_wf_many_days_events_by_user(
+                self._data_model.user.id,
+                self._data_model.user.notified_many_days_events,
+                access_token,
+                datetime.date.today(),
+                    )
+            wf_many_days_events.add_done_callback(lambda future: self._prepare_request(future, self._set_wf_daily_events))
+
+        else:
+            self._get_user_info()
+
+    def _set_task_handler(self, view: TaskWidgetView):
         """Настраивает обработчик задач."""
         access_token = self._model.get_access_token()
 
-        if self._user:
+        if self._data_model.user:
             tasks: asyncio.Future = self._requester.get_personal_tasks(self._user.id, access_token)
             tasks.add_done_callback(lambda future: self._prepare_request(future, self._set_tasks))
         else:
             request: asyncio.Future = self._requester.get_user_info(access_token)
             request.add_done_callback(lambda future: self._prepare_request(future, lambda: self._set_task_handler(view)))
+
+
+@dataclasses.dataclass
+class UserFlowDataModel:
+    """Датакласс для асинхронного взаимодействия с данными из UserFlowHandler."""
+
+    tasks: list[cm.WFTask] = ()
+    user: cm.User | None = None
+    personal_daily_events: list[cm.PersonalDailyEvent] = ()
+    personal_many_days_events: list[cm.PersonalManyDaysEvent] = ()
+    wf_daily_events: list[cm.WFDailyEvent] = ()
+    wf_many_days_events: list[cm.WFManyDaysEvent] = ()
+
 

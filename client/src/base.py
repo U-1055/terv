@@ -23,7 +23,7 @@ class DataStructConst:
     note = 'note'
     reminders = 'reminders'
 
-    names_widgets = [tasks_widget, notes_widget, reminder_widget]
+    names_widgets = [tasks_widget, notes_widget, reminder_widget, schedule_widget]
 
     x, y = 'x', 'y'
     x_size = 'x_size'
@@ -98,7 +98,8 @@ class GUIStyles:
 widgets_labels = {  # Соответствие названий виджетов надписям на них
     DataStructConst.tasks_widget: GuiLabels.tasks_widget,
     DataStructConst.notes_widget: GuiLabels.notes_widget,
-    DataStructConst.reminder_widget: GuiLabels.reminder_widget
+    DataStructConst.reminder_widget: GuiLabels.reminder_widget,
+    DataStructConst.schedule_widget: GuiLabels.schedule_widget
 }
 
 labels_widgets = {widgets_labels[key]: key for key in widgets_labels}  # Соответствие надписей на виджетах их названиям

@@ -291,13 +291,6 @@ def wfl_daily_events(workflow_id: int):
 
 
 @exceptions_handler
-@app.route('/users/<int:user_id>/wf_many_days_events', methods=['GET'])
-
-def get_users_wf_many_days_events():
-    pass
-
-
-@exceptions_handler
 @app.route('/workflows/<int:workflow_id>/wf_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
 def wf_many_days_events(workflow_id: int):
     response = None
@@ -330,7 +323,7 @@ def get_users_wf_daily_events():
 
 @exceptions_handler
 @app.route('/personal_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def personal_daily_events():  # С фильтрацией по user_id
+def personal_daily_events():  # С фильтрацией по user_id и дате
     pass
 
 

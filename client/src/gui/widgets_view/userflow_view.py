@@ -156,10 +156,10 @@ class ScheduleWidgetView(BaseView):
         h_padding = text_width + self._base_padding * 1.5  # Отступ для виджета (на всякий случай умножаем на 1.5, чтобы был чуть больше)
         event.setWindowOpacity(1)
         widget = scene.addWidget(event)  # Настройка виджета
-        widget.setOpacity(1)
+        widget.setOpacity(1)  # ToDo: прозрачность виджета и настройка размера + позиционирование
         widget.setFlag(widget.GraphicsItemFlag.ItemIsPanel)
         width, height = widget.size().width(), widget.size().height()
-        v_padding = sub_steps * self._sub_step
+        v_padding = sub_steps * self._sub_step + height
 
         widget.setPos(h_padding, v_padding)  # Сам виджет
 

@@ -126,6 +126,44 @@ class WorkflowService(BaseService):
         return workflow_id
 
 
+class WFDailyEventService(BaseService):
+    """Сервис однодневного события РП."""
+
+    @staticmethod
+    @db_exceptions_handler
+    def add(wf_daily_events: tuple[dict, ...], workflow_id: int):
+        pass
+
+    @staticmethod
+    @db_exceptions_handler
+    def update(wf_daily_events: tuple[dict, ...], workflow_id: int):
+        pass
+
+    @staticmethod
+    @db_exceptions_handler
+    def delete(wf_daily_events_ids: tuple[int, ...]):
+        pass
+
+
+class WFManyDaysEventService(BaseService):
+    """Сервис многодневного события РП."""
+
+    @staticmethod
+    @db_exceptions_handler
+    def add(wf_many_days_events: tuple[dict, ...], workflow_id: int):
+        pass
+
+    @staticmethod
+    @db_exceptions_handler
+    def update(wf_many_days_events: tuple[dict, ...], workflow_id: int):
+        pass
+
+    @staticmethod
+    @db_exceptions_handler
+    def delete(wf_many_days_events_ids: tuple[int, ...]):
+        pass
+
+
 class ProjectService(BaseService):
     pass
 

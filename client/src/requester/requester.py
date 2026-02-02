@@ -237,7 +237,7 @@ class Requester:
 
     @synchronized_request
     async def get_wf_daily_events_by_users(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
-                                           limit: int = None, offset: int = 0):
+                                           date: datetime.date = None, limit: int = None, offset: int = 0):
         try:
             path = f'{self._server}/users/{user_id}/wf_daily_events'
             request = Request(path, Request.GET, headers={'Authorization': access_token},
@@ -247,6 +247,9 @@ class Requester:
                                   CommonStruct.ids: wf_daily_events_ids
                               }
                               )
+            if date:
+                request.query_params.update({CommonStruct.date: date})
+
             response = await self._make_request(request)
             return response
         except err.APIError as e:
@@ -254,7 +257,7 @@ class Requester:
 
     @synchronized_request
     async def get_wf_many_days_events_by_user(self, user_id: int, wf_many_days_events_ids: list[int], access_token: str,
-                                              limit: int = None, offset: int = None):
+                                              date: datetime.date = None, limit: int = None, offset: int = None):
         try:
             path = f'{self._server}/users/{user_id}/wf_daily_events'
             request = Request(path, Request.GET, headers={'Authorization': access_token},
@@ -264,13 +267,17 @@ class Requester:
                                   CommonStruct.ids: wf_many_days_events_ids
                               }
                               )
+            if date:
+                request.query_params.update({CommonStruct.date: date})
+
             response = await self._make_request(request)
             return response
         except err.APIError as e:
             raise e
 
     @synchronized_request
-    async def get_personal_many_days_events(self, user_id: int, access_token: str, limit: int = None, offset: int = None):
+    async def get_personal_many_days_events(self, user_id: int, access_token: str, date: datetime.date = None,
+                                            limit: int = None, offset: int = None):
         try:
             path = f'{self._server}/personal_many_days_events'
             request = Request(path, Request.GET, headers={'Authorization': access_token},
@@ -281,6 +288,8 @@ class Requester:
                                   CommonStruct.ids: []
                               }
                               )
+            if date:
+                request.query_params.update({CommonStruct.date: date})
             response = await self._make_request(request)
             return response
 
@@ -289,7 +298,7 @@ class Requester:
 
     @synchronized_request
     async def get_personal_daily_events(self, user_id: int, access_token: str, limit: int = None,
-                                            offset: int = None):
+                                        date: datetime.date = None, offset: int = None):
         try:
             path = f'{self._server}/personal_daily_events'
             request = Request(path, Request.GET, headers={'Authorization': access_token},
@@ -300,6 +309,8 @@ class Requester:
                                   CommonStruct.ids: []
                               }
                               )
+            if date:
+                request.query_params.update({CommonStruct.date: date})
             response = await self._make_request(request)
             return response
 
