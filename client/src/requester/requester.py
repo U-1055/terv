@@ -1,4 +1,5 @@
 """Слой API."""
+import concurrent.futures
 import datetime
 import logging
 
@@ -21,7 +22,7 @@ def run_loop(loop: asyncio.AbstractEventLoop):
     loop.run_forever()
 
 
-def synchronized_request(func):
+def synchronized_request(func) -> tp.Callable[..., concurrent.futures.Future]:
     def prepare(*args) -> asyncio.Future:
         try:
             loop = asyncio.get_running_loop()
@@ -231,6 +232,77 @@ class Requester:
             response = await self._choose_request_type(request, limit)
 
             return response
+        except err.APIError as e:
+            raise e
+
+    @synchronized_request
+    async def get_wf_daily_events_by_users(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
+                                           limit: int = None, offset: int = 0):
+        try:
+            path = f'{self._server}/users/{user_id}/wf_daily_events'
+            request = Request(path, Request.GET, headers={'Authorization': access_token},
+                              query_params={
+                                  CommonStruct.limit: limit,
+                                  CommonStruct.offset: offset,
+                                  CommonStruct.ids: wf_daily_events_ids
+                              }
+                              )
+            response = await self._make_request(request)
+            return response
+        except err.APIError as e:
+            raise e
+
+    @synchronized_request
+    async def get_wf_many_days_events_by_user(self, user_id: int, wf_many_days_events_ids: list[int], access_token: str,
+                                              limit: int = None, offset: int = None):
+        try:
+            path = f'{self._server}/users/{user_id}/wf_daily_events'
+            request = Request(path, Request.GET, headers={'Authorization': access_token},
+                              query_params={
+                                  CommonStruct.limit: limit,
+                                  CommonStruct.offset: offset,
+                                  CommonStruct.ids: wf_many_days_events_ids
+                              }
+                              )
+            response = await self._make_request(request)
+            return response
+        except err.APIError as e:
+            raise e
+
+    @synchronized_request
+    async def get_personal_many_days_events(self, user_id: int, access_token: str, limit: int = None, offset: int = None):
+        try:
+            path = f'{self._server}/personal_many_days_events'
+            request = Request(path, Request.GET, headers={'Authorization': access_token},
+                              query_params={
+                                  CommonStruct.limit: limit,
+                                  CommonStruct.offset: offset,
+                                  CommonStruct.user_id: user_id,
+                                  CommonStruct.ids: []
+                              }
+                              )
+            response = await self._make_request(request)
+            return response
+
+        except err.APIError as e:
+            raise e
+
+    @synchronized_request
+    async def get_personal_daily_events(self, user_id: int, access_token: str, limit: int = None,
+                                            offset: int = None):
+        try:
+            path = f'{self._server}/personal_daily_events'
+            request = Request(path, Request.GET, headers={'Authorization': access_token},
+                              query_params={
+                                  CommonStruct.limit: limit,
+                                  CommonStruct.offset: offset,
+                                  CommonStruct.user_id: user_id,
+                                  CommonStruct.ids: []
+                              }
+                              )
+            response = await self._make_request(request)
+            return response
+
         except err.APIError as e:
             raise e
 

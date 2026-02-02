@@ -27,6 +27,12 @@ class CommonStruct:
     executor_id = 'executor_id'
     workflow_id = 'workflow_id'
 
+    wf_daily_events = 'wf_daily_events'
+    wf_many_days_events = 'wf_many_days_events'
+    personal_daily_events = 'personal_daily_events'
+    personal_many_days_events = 'personal_many_days_events'
+    user_id = 'user_id'
+
     limit = 'limit'
     offset = 'offset'
     last_rec_num = 'last_rec_num'

@@ -112,12 +112,16 @@ def exceptions_handler(func: tp.Callable):
 
 def get_request(func: tp.Callable):
     """
-    Обработчик для функций, обрабатывающих GET-запросы к ресурсам. Валидирует параметры пагинации (limit и offset).
+    Обработчик для функций, обрабатывающих GET-запросы к ресурсам. Валидирует параметры пагинации (limit,
+    offset, require_last_num) и передаёт их в декорируемую функцию. Если происходит ошибка при валидации, возвращает
+    соответствующий ответ API.
     """
 
     def prepare(request: flask.Request, *args):
         limit = request.args.get(CommonStruct.limit)
         offset = request.args.get(CommonStruct.offset)
+        require_last_num = request.args.get(CommonStruct.require_last_num)
+
         if limit:
             try:
                 limit = int(limit)
@@ -133,7 +137,11 @@ def get_request(func: tp.Callable):
                 return form_invalid_offset_response(request.endpoint)
         else:
             offset = None
-        return func(request, *args, limit=limit, offset=offset)
+
+        if require_last_num and require_last_num != '0':
+            require_last_num = True
+
+        return func(request, *args, limit=limit, offset=offset, require_last_num=require_last_num)
 
     return prepare
 

@@ -250,6 +250,70 @@ class DataRepository:
             query = query.where(cm.PersonalTask.id.in_(ids))
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
+    def get_wf_daily_events_by_id(self, ids: tuple[int, ...] | list[int] = None, limit: int = None, offset: int = None,
+                                  require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.WFDailyEvent)
+        if ids:
+            query = query.where(cm.WFDailyEvent.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    def add_wf_daily_events(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.WFDailyEvent)
+
+    def delete_wf_daily_events(self, ids: tuple[int, ...] | list[int]):
+        self._execute_delete(ids, cm.WFDailyEvent)
+
+    def update_wf_daily_events(self, models: tuple[dict, ...]):
+        self._execute_update(models, cm.WFDailyEvent)
+
+    def get_wf_many_days_events_by_id(self, ids: tuple[int, ...] | list[int] = None, limit: int = None, offset: int = None,
+                                  require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.WFManyDaysEvent)
+        if ids:
+            query = query.where(cm.WFManyDaysEvent.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    def add_wf_many_days_events(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.WFManyDaysEvent)
+
+    def delete_wf_many_days_events(self, ids: tuple[int, ...] | list[int]):
+        self._execute_delete(ids, cm.WFManyDaysEvent)
+
+    def update_wf_many_days_events(self, models: tuple[dict, ...]):
+        self._execute_update(models, cm.WFManyDaysEvent)
+
+    def get_personal_daily_events_by_id(self, ids: tuple[int, ...] | list[int] = None, limit: int = None, offset: int = None,
+                                  require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.PersonalTask)
+        if ids:
+            query = query.where(cm.PersonalDailyEvent.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    def add_personal_daily_events(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.PersonalDailyEvent)
+
+    def delete_personal_daily_events(self, ids: tuple[int, ...] | list[int]):
+        self._execute_delete(ids, cm.PersonalDailyEvent)
+
+    def update_personal_daily_events(self, models: tuple[dict, ...]):
+        self._execute_update(models, cm.PersonalDailyEvent)
+
+    def get_personal_many_days_events_by_id(self, ids: tuple[int, ...] | list[int] = None, limit: int = None, offset: int = None,
+                                  require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.PersonalManyDaysEvent)
+        if ids:
+            query = query.where(cm.PersonalManyDaysEvent.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    def add_personal_many_days_events(self, models: tuple[dict, ...]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.PersonalManyDaysEvent)
+
+    def delete_personal_many_days_events(self, ids: tuple[int, ...] | list[int]):
+        self._execute_delete(ids, cm.PersonalDailyEvent)
+
+    def update_personal_many_days_events(self, models: tuple[dict, ...]):
+        self._execute_update(models, cm.PersonalManyDaysEvent)
+
     def get_many_days_event_permissions(self, many_days_event_id: int, role_id: int) -> tuple[str]:
         query = (select(roles.WFRoleManyDaysEvent.permissions).
                  where(roles.WFRoleManyDaysEvent.many_days_event_id == many_days_event_id).

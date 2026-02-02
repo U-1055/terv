@@ -14,7 +14,7 @@ from server.database.models.db_utils import launch_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
-from common.base import CommonStruct, check_password, ErrorCodes as ErCodes
+from common.base import CommonStruct, check_password, ErrorCodes as ErCodes, DBFields
 from server.utils.data_checkers import check_email
 from server.utils.api_utils import form_response, exceptions_handler
 import server.api.crud_handlers as handlers
@@ -171,9 +171,6 @@ def auth_refresh():
 @app.route('/auth/recall', methods=['POST'])
 def auth_recall():
     """Отзывает переданные токены."""
-    auth = request.headers.get('Authorization')
-    if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
     params = request.json
     tokens = params.get(common_struct.tokens)
@@ -187,9 +184,6 @@ def auth_recall():
 @exceptions_handler
 @app.route('/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def personal_tasks():
-    auth = request.headers.get('Authorization')
-    if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
     response = None  # Только чтобы не ругалась IDE на возможное отсутствие объявления
 
@@ -218,10 +212,6 @@ def personal_tasks_search():
 @exceptions_handler
 @app.route('/users', methods=['GET', 'PUT', 'DELETE'])
 def users():
-    auth = request.headers.get('Authorization')
-
-    if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
     response = None
 
@@ -241,10 +231,6 @@ def wf_tasks():
     """
     Ресурс задач РП. Запроса вида: server://wf_tasks
     """
-
-    auth = request.headers.get('Authorization')
-    if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
     response = None
 
@@ -271,20 +257,87 @@ def wf_tasks_search():
 
 
 @exceptions_handler
-@app.route('/workflow/<int:workflow_id>/users', methods=['POST', 'DELETE'])
-def workflow_users():
-    auth = request.headers.get('Authorization')
-    if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
-
+@app.route('/workflow/<int:workflow_id>/users', methods=['DELETE', 'POST', 'GET'])
+def workflow_users(workflow_id: int):  # ToDo: протестировать
     response = None
 
     if request.method == 'POST':
-        response = handlers.add_users_to_workflow(request)
+        response = handlers.add_users_to_workflow(request, repo)
     if request.method == 'DELETE':
-        response = handlers.delete_users_from_workflow(request)
+        response = handlers.delete_users_from_workflow(request, repo)
+    if request.method == 'GET':
+        request.args.update({DBFields.workflow_id: workflow_id})
+        response = handlers.get_users(request, repo, authenticator)
+
 
     return response
+
+
+@exceptions_handler
+@app.route('/workflows/<int:workflow_id>/wf_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def wfl_daily_events(workflow_id: int):
+    response = None
+
+    if request.method == 'GET':
+        response = handlers.get_wf_daily_events(request, repo)
+    if request.method == 'POST':
+        response = handlers.add_wf_daily_events(request, workflow_id, repo)
+    if request.method == 'PUT':
+        response = handlers.update_wf_daily_events(request, workflow_id, repo)
+    if request.method == 'DELETE':
+        response = handlers.delete_wf_daily_events(request, workflow_id, repo)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/users/<int:user_id>/wf_many_days_events', methods=['GET'])
+
+def get_users_wf_many_days_events():
+    pass
+
+
+@exceptions_handler
+@app.route('/workflows/<int:workflow_id>/wf_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def wf_many_days_events(workflow_id: int):
+    response = None
+
+    if request.method == 'GET':  # ToDo: дописать методы crud_handlers
+        response = handlers.get_wf_daily_events(request, repo)
+    if request.method == 'POST':
+        response = handlers.add_wf_daily_events(request, workflow_id, repo)
+    if request.method == 'PUT':
+        response = handlers.update_wf_daily_events(request, workflow_id, repo)
+    if request.method == 'DELETE':
+        response = handlers.delete_wf_daily_events(request, workflow_id, repo)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/users/<int:user_id>/wf_many_days_events', methods=['GET'])
+def get_users_wf_many_days_events():
+    """Метод для получения многодневных событий, в которых участвует пользователь."""
+    pass
+
+
+@exceptions_handler
+@app.route('/users/<int:user_id>/wf_daily_events', methods=['GET'])
+def get_users_wf_daily_events():
+    """Метод для получения однодневных событий, в которых участвует пользователь."""
+    pass
+
+
+@exceptions_handler
+@app.route('/personal_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def personal_daily_events():  # С фильтрацией по user_id
+    pass
+
+
+@exceptions_handler
+@app.route('/personal_many_days_events', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def personal_many_days_events():
+    pass
 
 
 def run():
