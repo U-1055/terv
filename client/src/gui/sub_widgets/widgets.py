@@ -84,9 +84,9 @@ class QEventWidget(QWidget):
     :param start_end_label: надпись, показываемая перед временем начала и окончания события.
     """
 
-    def __init__(self, parent: QWidget, title: str, time_start: str, time_end: str, lasting: str,
+    def __init__(self, title: str, time_start: str, time_end: str, lasting: str,
                  wdg_description: QStructuredText = None, time_separator: str = GuiLabels.default_time_separator,
-                 lasting_label: str = '', start_end_label: str = '', btn_show_details_label: str = ''):
+                 lasting_label: str = '', start_end_label: str = '', btn_show_details_label: str = '', parent: QWidget = None):
         super().__init__(parent=parent)
 
         self._parent = parent

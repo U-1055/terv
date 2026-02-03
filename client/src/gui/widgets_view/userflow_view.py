@@ -4,10 +4,10 @@
 import datetime
 import time
 
-from PySide6.QtCore import Signal, Qt, QSize, QTimer
+from PySide6.QtCore import Signal, Qt, QSize, QTimer, QObject
 from PySide6.QtWidgets import (QVBoxLayout, QListWidget, QDialog, QHBoxLayout, QPushButton, QAbstractItemView, QLabel,
-                               QScrollArea, QWidget, QGraphicsScene)
-from PySide6.QtGui import QFontMetrics
+                               QScrollArea, QWidget, QGraphicsScene, QSizePolicy)
+from PySide6.QtGui import QFontMetrics, QBrush, QPen, QColor
 
 import logging
 import typing as tp
@@ -15,7 +15,7 @@ import typing as tp
 from client.src.gui.widgets_view.base_view import BaseView
 from client.src.ui.ui_userflow_task_widget import Ui_Form as UserFlowTaskWidget
 from client.src.ui.ui_userflow_notes_widget import Ui_Form as UserFlowNotesWidget
-from client.src.ui.ui_schedule_widget import Ui_Form as UserFlowScheduleWidget
+from client.src.ui.ui_userflow_schedule_widget import Ui_Form as UserFlowScheduleWidget
 from client.src.gui.sub_widgets.widgets import UserFlowTask, Reminder, QEventWidget
 from client.src.base import GuiLabels, DataStructConst, ObjectNames
 from client.src.gui.sub_widgets.common_widgets import QStructuredText
@@ -90,12 +90,16 @@ class ScheduleWidgetView(BaseView):
         self._view.graphicsView.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._view.graphicsView.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
+
+        self._event_parent = QObject()
         self._graphics_size: QSize | None = None
         self._hour_step: int | None = None
         self._sub_step: int | None = None
         self._label_padding: int | None = None
         self._base_padding: int | None = None
         self._events: list[QEventWidget] = []
+        self._current_event: QEventWidget | None = None
 
         self._set_marking()  # С задержкой, т.к. иначе виджет не успевает отрисоваться и будет некорректный размер
         QTimer.singleShot(50, self._reset_scene)  # Перерисовка сцены после окончательной отрисовки виджета (когда будут определены реальные размеры)
@@ -115,7 +119,7 @@ class ScheduleWidgetView(BaseView):
         padding = text_width + self._base_padding
 
         for i in range(24):
-            line_height = i * self._hour_step + 0.5 * text_height  # 0.5 * text_height, чтобы линия оказывалась посередине надписи
+            line_height = i * self._hour_step // 1 + 0.5 * text_height  # 0.5 * text_height, чтобы линия оказывалась посередине надписи
             scene.addLine(padding, line_height, self._graphics_size.width(), line_height)
 
             lbl_height = line_height - 0.75 * text_height  # ToDo: проверить коэффициент 0.75 в разных конфигурациях окон
@@ -140,28 +144,31 @@ class ScheduleWidgetView(BaseView):
     def _get_fact_size(self):
         """Устанавливает фактический размер виджета."""
         self._graphics_size = self._view.graphicsView.size()
-        self._hour_step = self._graphics_size.height() // 24  # Отступ линии часа
-        self._sub_step = self._hour_step // 4  # Отступ линии 15-ти минут
+        self._hour_step = self._graphics_size.height() / 24  # Отступ линии часа  (Для повышения точности считаются без округления, округляются уже на месте)
+        self._sub_step = self._hour_step / 4  # Отступ линии 15-ти минут
         self._base_padding = self._graphics_size.width() // 20  # Малый отступ (для добавления малой величины к координате)
         # Число 20 выбрано просто так (При делении на него получается достаточно малая величина)
 
     def _place_wdg_event(self, event: QEventWidget):
         self._get_fact_size()
 
-        sub_steps = parse_time(event.time_start(), 15)  # 15 минут в интервале
+        padding_steps = parse_time(event.time_start(), 15)  # 15 минут в интервале
+        height_steps = parse_time(event.time_end(), 15) - padding_steps  # Высота виджета в 15-ти минутных интервалах
+
         scene = self._view.graphicsView.scene()
         text_width, text_height = self.get_scene_font_metrics(scene)
         text_width *= 5  # 5 - длина надписи в формате HH:MM
+        first_line_padding = text_height * 0.5  # Отступ первой линии (соответствующей времени 00:00)
+        v_padding = padding_steps * self._sub_step // 1 + first_line_padding
 
         h_padding = text_width + self._base_padding * 1.5  # Отступ для виджета (на всякий случай умножаем на 1.5, чтобы был чуть больше)
         event.setWindowOpacity(1)
-        widget = scene.addWidget(event)  # Настройка виджета
-        widget.setOpacity(1)  # ToDo: прозрачность виджета и настройка размера + позиционирование
-        widget.setFlag(widget.GraphicsItemFlag.ItemIsPanel)
-        width, height = widget.size().width(), widget.size().height()
-        v_padding = sub_steps * self._sub_step + height
 
-        widget.setPos(h_padding, v_padding)  # Сам виджет
+        rect = scene.addRect(h_padding, v_padding, self._graphics_size.width() - h_padding,
+                             height_steps)  # Настройка виджета
+
+        rect.setFlag(rect.GraphicsItemFlag.ItemIsPanel)
+        self._current_event = None
 
     def add_event(self, title: str, time_start: str, time_end: str, lasting: str,
                   wdg_description: dict = None, time_separator: str = GuiLabels.default_time_separator,
@@ -179,9 +186,9 @@ class ScheduleWidgetView(BaseView):
         :param time_separator: разделитель между временем начала и временем конца.
         :param btn_show_details_label: надпись на кнопке подробностей.
         """
-        event = QEventWidget(self, title, time_start, time_end, lasting, wdg_description, time_separator, lasting_label,
+        event = QEventWidget(title, time_start, time_end, lasting, wdg_description, time_separator, lasting_label,
                        start_end_label,
-                       btn_show_details_label)
+                       btn_show_details_label, parent=self)
         self.add_custom_event(event)
 
     def add_custom_event(self, event: QEventWidget):
@@ -189,8 +196,8 @@ class ScheduleWidgetView(BaseView):
         Добавляет событие
         :param event: экземпляр QEventWidget.
         """
-        if event.parent() != self:
-            event.setParent(self)
+        if not self._current_event:
+            self._current_event = event
         if event not in self._events:
             self._events.append(event)
         self._get_fact_size()
@@ -201,6 +208,9 @@ class ScheduleWidgetView(BaseView):
 
     def clear(self):
         """Удаляет все события."""
+        for event in self._events:
+            event.hide()
+            self._events.remove(event)
 
     def resizeEvent(self, event, /):  # При изменении размеров размер виджета пересчитывается
         last_params = self._graphics_size
@@ -349,3 +359,4 @@ if __name__ == '__main__':
     widget = ScheduleWidgetView()
     widget.add_event('Name', '14:15', '14:45', '45 мин.')
     setup_gui(widget)
+

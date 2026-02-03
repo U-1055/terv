@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QMainWindow, QApplication, QWidget, QHBoxLayout
+from PySide6.QtWidgets import QMainWindow, QApplication, QWidget, QHBoxLayout, QLabel
 
 
 class Window(QMainWindow):
@@ -10,6 +10,7 @@ class Window(QMainWindow):
 
         container = QWidget()
         container.setLayout(layout)
+        layout.setSizeConstraint(QHBoxLayout.SizeConstraint.SetMaximumSize)
 
         self.setCentralWidget(container)
 
@@ -35,4 +36,4 @@ def setup_gui(widget: QWidget, app: QApplication = QApplication()):
 
 
 if __name__ == '__main__':
-    setup_gui(QWidget())
+    setup_gui(QLabel(''.join(['. ' for i in range(100000)]), wordWrap=True))
