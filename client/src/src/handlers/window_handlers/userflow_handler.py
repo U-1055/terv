@@ -9,7 +9,7 @@ from PySide6.QtCore import QTimer
 import typing as tp
 
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler, MainWindow, Requester, Model, BaseWindow
-from client.src.base import DataStructConst, widgets_labels, labels_widgets
+from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels
 from client.src.gui.widgets_view.base_view import BaseView
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import TaskViewHandler
 from client.src.gui.windows.userflow_window import UserFlowWindow
@@ -52,7 +52,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
 
         settings_window = WidgetSettingsMenu(widgets, selected_widgets)
         settings_window.set.connect(self._set_widgets_settings)
-        self._main_view.show_modal_window(settings_window)
+        self._main_view.show_dialog_window(settings_window, title=GuiLabels.widgets_settings_window, modality=False)
 
     def _on_reminder_edited(self, last_name: str, current_name: str):
         self._model.delete_reminder(last_name)

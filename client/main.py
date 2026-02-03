@@ -39,4 +39,3 @@ def run_main_config(check_ram: bool = False):
 
 if __name__ == '__main__':
     run_main_config(True)
-

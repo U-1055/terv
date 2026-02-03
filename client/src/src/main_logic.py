@@ -62,13 +62,19 @@ class Logic:
     def _on_network_error_occurred(self):
         self._view.show_message(self._labels.error_occurred, self._labels.network_error)
 
+    def _close(self):
+        """Закрывает приложение."""
+        self._opened_now.update_data()
+        self._view.close()
+
     def _authorize(self):
         logging.debug('Opening authorize window')
         main_auth_window = self._view.open_auth_window()
         self._auth_window_handler = MainAuthWindowHandler(main_auth_window, self._view, self._requester, self._model)
         self._auth_window_handler.auth_complete.connect(self._on_auth_complete)
         self._auth_window_handler.registration_complete.connect(self._on_registration_complete)
-        self._view.show_modal_window(main_auth_window)
+        self._view.show_dialog_window(main_auth_window, title=GuiLabels.registration_window, frameless=True)
+        main_auth_window.btn_exit_pressed.connect(self._close)
 
     def _update_current_window(self):
         if self._opened_now:

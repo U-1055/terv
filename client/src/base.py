@@ -46,10 +46,12 @@ class ObjectNames:
     small_btn_add = 'small_btn_add'
     small_btn_complete = 'small_btn_complete'
     btn_show_details = 'btn_show_details'
+    btn_exit = 'btn_exit'
 
 
 class GuiLabels:
 
+    exit = 'Выйти'
     authorize = 'Войти'
     password = 'Пароль'
     login = 'Логин'
@@ -65,6 +67,10 @@ class GuiLabels:
     schedule_widget = 'Расписание'
 
     new_reminder = 'Новое напоминание'
+
+    default_dialog_window_title = 'terv'
+    registration_window = 'Регистрация'
+    widgets_settings_window = 'Настройки виджетов ПП'
 
     incorrect_credentials = 'Неверный логин или пароль'
     incorrect_login = f'Логин должен быть длиной от {CommonStruct.min_login_length} до {CommonStruct.max_login_length} символов'
