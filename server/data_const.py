@@ -35,6 +35,7 @@ class DataStruct:
 
     login = 'login'
     email = 'email'
+    user_id = 'user_id'
     hashed_password = 'hashed_password'
     username = 'username'
 

@@ -10,7 +10,7 @@ from pathlib import Path
 from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
-from server.database.models.db_utils import launch_db
+from server.database.models.db_utils import launch_db, init_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
@@ -26,7 +26,7 @@ logging.debug('Module app.py is running')
 app = Flask(__name__)
 config = Config('../config.json')
 database_path = config.database_path
-engine = launch_db(database_path)
+engine = init_db(database_path)
 
 logging.debug(f'Module app.py is running. Environment: {config.env}')
 
@@ -268,7 +268,6 @@ def workflow_users(workflow_id: int):  # ToDo: протестировать
     if request.method == 'GET':
         request.args.update({DBFields.workflow_id: workflow_id})
         response = handlers.get_users(request, repo, authenticator)
-
 
     return response
 

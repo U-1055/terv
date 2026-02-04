@@ -8,7 +8,7 @@ import typing as tp
 from client.src.gui.windows.windows import BaseWindow
 from client.models.base import Base
 from client.src.gui.main_view import MainWindow
-from client.src.requester.requester import Requester
+from client.src.requester.requester import Requester, Request
 from client.src.client_model.model import Model
 import client.src.requester.errors as err
 from common.base import CommonStruct
@@ -38,22 +38,22 @@ class BaseWindowHandler(QObject):
         """Обновляет access и refresh токены по refresh-токену."""
 
         refresh_token = self._model.get_refresh_token()
-        tokens: asyncio.Future = self._requester.update_tokens(refresh_token)
-        tokens.add_done_callback(lambda future: self._prepare_request(future, self._set_new_tokens))
+        tokens = self._requester.update_tokens(refresh_token)
+        tokens.finished.connect(lambda response: self._prepare_request(response, self._set_new_tokens))
 
     def _send_error(self, title: str, message: str):
         self.error_occurred.emit(title, message)
 
-    def _prepare_request(self, future: asyncio.Future, prepare_data_func: tp.Callable = None):
+    def _prepare_request(self, request: Request, prepare_data_func: tp.Callable = None):
         """
         Обрабатывает асинхронный запрос. Отправляет Response.content в prepare_data_dunc.
         Если данных не получено - выводит ошибку. Если access-токен недействителен, обновляет его по refresh-токену.
         Если refresh-токен недействителен, испускает сигнал incorrect_tokens_update
-        :param future: Future-объект asyncio.
+        :param request: объект запроса Request.
         :param prepare_data_func: функция, куда будет передан результат Future future.result().
         """
         try:
-            result = future.result()
+            result = request.result()
             content = result.content
             if prepare_data_func:
                 if result:

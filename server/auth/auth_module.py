@@ -39,11 +39,11 @@ class Authenticator:
         self._refresh_token_lifetime = refresh_token_lifetime
         self._data_struct = data_struct
 
-    def _create_token(self, login: str, lifetime: datetime.timedelta) -> str:
+    def _create_token(self, login: str, user_id: int, lifetime: datetime.timedelta) -> str:
         secret = self._model.get_secret()
         token_ = jwt.encode(
             payload={
-                'sub': login,
+                'sub': {DataStruct.login: login, DataStruct.user_id: user_id},
                 'exp': datetime.datetime.now(tz=datetime.timezone.utc) + lifetime,  # Время истечения токена
                 'iat': datetime.datetime.now(tz=datetime.timezone.utc)  # Время создания токена
             },
@@ -89,7 +89,19 @@ class Authenticator:
         if self.check_token_valid(token_, self._data_struct.access_token):
             secret = self._model.get_secret()
             payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
-            return payload.get('sub')
+            return payload.get('sub').get(DataStruct.login)
+        else:
+            raise ValueError
+
+    def get_user_id(self, token_: str) -> int:
+        """
+        Возвращает user_id из access-токена. Вызывает ValueError, если токен недействителен или произошла ошибка при
+        декодировании.
+        """
+        if self.check_token_valid(token_, self._data_struct.access_token):
+            secret = self._model.get_secret()
+            payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
+            return payload.get('sub').get(DataStruct.user_id)
         else:
             raise ValueError
 
@@ -103,11 +115,14 @@ class Authenticator:
         if self.check_token_valid(refresh_token, self._data_struct.refresh_token):
             secret = self._model.get_secret()
             payload = jwt.decode(refresh_token, key=secret, algorithms=[self._jwt_alg])
-            login = payload.get('sub')
+            sub = payload.get('sub')
+            login = sub.get(DataStruct.login)
+            user_id = sub.get(DataStruct.user_id)
+
             if not login:
                 raise ValueError('Invalid token: no login')
-            access_token = self._create_token(login, self._access_token_lifetime)
-            new_refresh_token = self._create_token(login, self._refresh_token_lifetime)
+            access_token = self._create_token(login, user_id, self._access_token_lifetime)
+            new_refresh_token = self._create_token(login, user_id, self._refresh_token_lifetime)
 
             self._model.add_token_to_blacklist(refresh_token)
 
@@ -133,16 +148,18 @@ class Authenticator:
         Вызывает ValueError, если авторизация не удалась.
         """
 
-        hashed_password = self._repository.get_user_hashed_password(login)
+        user_data = self._repository.get_users_by_username((login, ))
 
-        if not hashed_password:
+        if not user_data or not user_data.content:
             raise ValueError
+        hashed_password = self._repository.get_user_hashed_password(login)
+        user_id = user_data.content[0].get(DBFields.id)
 
         try:
             if not checkpw(bytes(password, encoding='utf-8'), bytes(hashed_password, encoding='utf-8')):
                 raise ValueError
-            access_token = self._create_token(login, self._access_token_lifetime)
-            refresh_token = self._create_token(login, self._refresh_token_lifetime)
+            access_token = self._create_token(login, user_id, self._access_token_lifetime)
+            refresh_token = self._create_token(login, user_id, self._refresh_token_lifetime)
             return {self.access_name: access_token, self.refresh_name: refresh_token}
         except ValueError as e:
             logging.debug(f'INVALID PASSWORD: saved_hash: {hashed_password}; received_hash: {bytes(password, encoding='utf-8')}')
