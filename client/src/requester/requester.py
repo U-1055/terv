@@ -1,10 +1,12 @@
 """Слой API."""
+from __future__ import annotations
+
+from PySide6.QtCore import QObject, Signal
+import httpx
+
 import concurrent.futures
 import datetime
 import logging
-
-import httpx
-
 import json
 import time
 import typing as tp
@@ -22,8 +24,8 @@ def run_loop(loop: asyncio.AbstractEventLoop):
     loop.run_forever()
 
 
-def synchronized_request(func) -> tp.Callable[..., concurrent.futures.Future]:
-    def prepare(*args) -> asyncio.Future:
+def synchronized_request(func) -> tp.Callable[..., Request]:  # ToDo: разобраться с аннотациями и переписать тесты реквестера
+    def prepare(*args) -> Request:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -33,7 +35,8 @@ def synchronized_request(func) -> tp.Callable[..., concurrent.futures.Future]:
             time.sleep(0.1)
 
         future = asyncio.run_coroutine_threadsafe(func(*args), loop)
-        return future
+        request = Request(future, loop)
+        return request
 
     return prepare
 
@@ -57,15 +60,16 @@ class Requester:
         self._request_limit = request_limit
         if self._request_limit is None:  # / 1000, т.к. TimeoutList принимает в секундах, а нам приходят миллисекунды
             self._request_limit = 100
-        self._requests: TimeoutList[Request] = TimeoutList(self._timeout // 1000, max_length=100)
+        self._requests: TimeoutList[InternalRequest] = TimeoutList(self._timeout // 1000, max_length=100)
 
-    def _prepare_response(self, response: 'ServerResponse', request: 'Request'):
+    @staticmethod
+    def _prepare_response(response: ServerResponse, request: InternalRequest):
         """Обрабатывает ответ: вызывает исключения, если запрос неудачный, передаёт ответ дальше, если успешный"""
         error_code = response.error_id
         message = response.message
 
         if error_code != ErrorCodes.ok.value:  # Вызов исключения по коду
-            logging.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. Request:'
+            logging.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. InternalRequest:'
                             f'{request}. Response: {response}.')
             exc = err.exceptions_error_ids.get(error_code)
             raise exc(message, request=request)
@@ -74,6 +78,7 @@ class Requester:
         """Установить новый timeout (в мс)."""
         self._timeout = timeout
         self._requests.set_timeout(self._timeout // 1000)
+
 
     @property
     def timeout(self) -> int:
@@ -86,7 +91,12 @@ class Requester:
     def request_limit(self) -> int:
         return self._request_limit
 
-    async def _choose_request_type(self, request: 'Request', limit: int | None) -> 'Response':
+    @staticmethod
+    def create_group(*requests) -> RequestsGroup:
+        """Возвращает группу запросов RequestsGroup."""
+        return RequestsGroup(*requests)
+
+    async def _choose_request_type(self, request: InternalRequest, limit: int | None) -> Response:
         try:
             if not limit:  # Если лимит не установлен
                 response = await self._prepare_requests_sequence(request, limit)
@@ -99,7 +109,7 @@ class Requester:
         except err.APIError as e:
             raise e
 
-    async def _prepare_requests_sequence(self, request: 'Request', limit: int | None):  # ToDo: а что делать, если в процессе отправки истечёт access?
+    async def _prepare_requests_sequence(self, request: InternalRequest, limit: int | None):  # ToDo: а что делать, если в процессе отправки истечёт access?
         """
         Посылает запросы на URL переданного запроса, меняя их offset до тех пор, пока не будут получены все записи
         или не будет достигнут limit.
@@ -132,7 +142,7 @@ class Requester:
         except err.APIError as e:
             raise e
 
-    async def _make_request(self, request: 'Request') -> 'Response':
+    async def _make_request(self, request: InternalRequest) -> Response:
 
         if self._requests and self._requests[-1].path == request.path and self._requests[-1].method == request.method: #  Запросы одинаковы
             diff = request.time - self._requests[-1].time  # Разница во времени отправки
@@ -142,14 +152,14 @@ class Requester:
         try:
             async with httpx.AsyncClient() as client:
 
-                if request.method == Request.GET:
+                if request.method == InternalRequest.GET:
                     result = await client.get(request.path, headers=request.headers, params=request.query_params)
-                elif request.method == Request.POST:
+                elif request.method == InternalRequest.POST:
                     result = await client.post(request.path, headers=request.headers, params=request.query_params,
                                                json=request.json)
-                elif request.method == Request.DELETE:
+                elif request.method == InternalRequest.DELETE:
                     result = await client.post(request.path, headers=request.headers, params=request.query_params)
-                elif request.method == Request.PUT:
+                elif request.method == InternalRequest.PUT:
                     result = await client.post(request.path, headers=request.headers, params=request.query_params,
                                                json=request.json)
                 else:
@@ -163,190 +173,155 @@ class Requester:
             return Response(request, server_response.content, server_response.records_left,
                             server_response.last_record_num)
         except err.APIError as e:  # Обработка ошибок API
-            logging.warning(f'Excepted error {e} during making request {Request}')
+            logging.warning(f'Excepted error {e} during making request {InternalRequest}')
             raise e
         except (httpx.ConnectError, httpx.ReadError, httpx.WriteError) as e:  # Обработка ошибок сети
-            logging.warning(f'Excepted network connection error {e} during making request {Request}')
+            logging.warning(f'Excepted network connection error {e} during making request {InternalRequest}')
             raise err.get_network_error(e, request)
 
+    @synchronized_request
+    async def make_custom_request(self, request: InternalRequest) -> Response:
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
-    async def make_custom_request(self, request: 'Request') -> 'Response':
-        try:
-            response = await self._make_request(request)
-            return response
-        except err.APIError as e:
-            raise e
+    async def register(self, login: str, password: str, email: str) -> Response:
+        request = InternalRequest(f'{self._server}/register', InternalRequest.POST,
+                          json_={
+            self._struct.login: login,
+            self._struct.password: password,
+            self._struct.email: email
+        })
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
-    async def register(self, login: str, password: str, email: str) -> 'Response':
-        try:
-            request = Request(f'{self._server}/register', Request.POST,
-                              json_={
-                self._struct.login: login,
-                self._struct.password: password,
-                self._struct.email: email
-            })
-            response = await self._make_request(request)
-            return response
-        except err.APIError as e:
-            raise e
+    async def update_tokens(self, refresh_token: str) -> Response:
+        request = InternalRequest(f'{self._server}/auth/refresh', InternalRequest.POST,
+                          json_={self._struct.refresh_token: refresh_token})
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
-    async def update_tokens(self, refresh_token: str) -> 'Response':
-        try:
-            request = Request(f'{self._server}/auth/refresh', Request.POST,
-                              json_={self._struct.refresh_token: refresh_token})
-            response = await self._make_request(request)
-            return response
-        except err.APIError as e:
-            raise e
+    async def authorize(self, login: str, password: str) -> Response:
+
+        request = InternalRequest(f'{self._server}/auth/login', InternalRequest.POST,
+                          json_={self._struct.login: login, self._struct.password: password})
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
-    async def authorize(self, login: str, password: str) -> 'Response':
-        try:
-            request = Request(f'{self._server}/auth/login', Request.POST,
-                              json_={self._struct.login: login, self._struct.password: password})
-            response = await self._make_request(request)
-            return response
-        except err.APIError as e:
-            raise e
+    async def get_user_info(self, access_token: str) -> Response:
+        request = InternalRequest(f'{self._server}/users', InternalRequest.GET, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
 
-    @synchronized_request
-    async def get_user_info(self, access_token: str) -> 'Response':
-        try:
-            request = Request(f'{self._server}/users', Request.GET, headers={'Authorization': access_token})
-            response = await self._make_request(request)
-            return response
-        except err.APIError as e:
-            raise e
 
     @synchronized_request
     async def get_personal_tasks(self, user_id: int, access_token: str, task_ids: list[int] = None,
-                                 limit: int = None, offset: int = None) -> 'Response':
+                                 limit: int = None, offset: int = None) -> Response:
         """Получает личные задачи (конкретную или по user_id)."""
-        try:
-            path = f'{self._server}/personal_tasks'
-            request = Request(path, Request.GET, headers={'Authorization': access_token},
-                              query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
-            response = await self._choose_request_type(request, limit)
 
-            return response
-        except err.APIError as e:
-            raise e
+        path = f'{self._server}/personal_tasks'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                          query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+
+        return response
 
     @synchronized_request
     async def get_wf_daily_events_by_users(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
                                            date: datetime.date = None, limit: int = None, offset: int = 0):
-        try:
-            path = f'{self._server}/users/{user_id}/wf_daily_events'
-            request = Request(path, Request.GET, headers={'Authorization': access_token},
-                              query_params={
-                                  CommonStruct.limit: limit,
-                                  CommonStruct.offset: offset,
-                                  CommonStruct.ids: wf_daily_events_ids
-                              }
-                              )
-            if date:
-                request.query_params.update({CommonStruct.date: date})
 
-            response = await self._make_request(request)
-            return response
-        except err.APIError as e:
-            raise e
+        path = f'{self._server}/users/{user_id}/wf_daily_events'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                          query_params={
+                              CommonStruct.limit: limit,
+                              CommonStruct.offset: offset,
+                              CommonStruct.ids: wf_daily_events_ids
+                          }
+                          )
+        if date:
+            request.query_params.update({CommonStruct.date: date})
+
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
     async def get_wf_many_days_events_by_user(self, user_id: int, wf_many_days_events_ids: list[int], access_token: str,
                                               date: datetime.date = None, limit: int = None, offset: int = None):
-        try:
-            path = f'{self._server}/users/{user_id}/wf_daily_events'
-            request = Request(path, Request.GET, headers={'Authorization': access_token},
-                              query_params={
-                                  CommonStruct.limit: limit,
-                                  CommonStruct.offset: offset,
-                                  CommonStruct.ids: wf_many_days_events_ids
-                              }
-                              )
-            if date:
-                request.query_params.update({CommonStruct.date: date})
 
-            response = await self._make_request(request)
-            return response
-        except err.APIError as e:
-            raise e
+        path = f'{self._server}/users/{user_id}/wf_daily_events'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                          query_params={
+                              CommonStruct.limit: limit,
+                              CommonStruct.offset: offset,
+                              CommonStruct.ids: wf_many_days_events_ids
+                          }
+                          )
+        if date:
+            request.query_params.update({CommonStruct.date: date})
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
     async def get_personal_many_days_events(self, user_id: int, access_token: str, date: datetime.date = None,
                                             limit: int = None, offset: int = None):
-        try:
-            path = f'{self._server}/personal_many_days_events'
-            request = Request(path, Request.GET, headers={'Authorization': access_token},
-                              query_params={
-                                  CommonStruct.limit: limit,
-                                  CommonStruct.offset: offset,
-                                  CommonStruct.user_id: user_id,
-                                  CommonStruct.ids: []
-                              }
-                              )
-            if date:
-                request.query_params.update({CommonStruct.date: date})
-            response = await self._make_request(request)
-            return response
-
-        except err.APIError as e:
-            raise e
+        path = f'{self._server}/personal_many_days_events'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                          query_params={
+                              CommonStruct.limit: limit,
+                              CommonStruct.offset: offset,
+                              CommonStruct.user_id: user_id,
+                              CommonStruct.ids: []
+                          }
+                          )
+        if date:
+            request.query_params.update({CommonStruct.date: date})
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
     async def get_personal_daily_events(self, user_id: int, access_token: str, limit: int = None,
                                         date: datetime.date = None, offset: int = None):
-        try:
-            path = f'{self._server}/personal_daily_events'
-            request = Request(path, Request.GET, headers={'Authorization': access_token},
-                              query_params={
-                                  CommonStruct.limit: limit,
-                                  CommonStruct.offset: offset,
-                                  CommonStruct.user_id: user_id,
-                                  CommonStruct.ids: []
-                              }
-                              )
-            if date:
-                request.query_params.update({CommonStruct.date: date})
-            response = await self._make_request(request)
-            return response
-
-        except err.APIError as e:
-            raise e
+        path = f'{self._server}/personal_daily_events'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={
+                                      CommonStruct.limit: limit,
+                                      CommonStruct.offset: offset,
+                                      CommonStruct.user_id: user_id,
+                                      CommonStruct.ids: []
+                                      }
+                                  )
+        if date:
+            request.query_params.update({CommonStruct.date: date})
+        response = await self._make_request(request)
+        return response
 
     @synchronized_request
-    async def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> 'Response':
-        try:
-            path = f'{self._server}/wf_tasks'
-            request = Request(path, Request.GET, headers={'Authorization': access_token},
-                              query_params={
-                                  CommonStruct.limit: limit,
-                                  CommonStruct.offset: offset
-                              })
-            response = await self._choose_request_type(request, limit)
-            return response
-        except err.APIError as e:
-            raise e
+    async def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
+        path = f'{self._server}/wf_tasks'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                          query_params={
+                              CommonStruct.limit: limit,
+                              CommonStruct.offset: offset
+                          })
+        response = await self._choose_request_type(request, limit)
+        return response
 
     @synchronized_request
-    async def retry(self, access_token: str, request: 'Request') -> 'Response':
+    async def retry(self, access_token: str, request: InternalRequest) -> Response:
         """
         Повторяет один из предыдущих запросов, предварительно меняя его access_token на переданный.
         :param access_token: access токен.
         :param request: запрос.
         """
-        try:
-            if request.headers.get('Authorization'):
-                request.headers['Authorization'] = access_token
 
-            response = await self._make_request(request)
-            return response.content.get(self._struct.content)
+        if request.headers.get('Authorization'):
+            request.headers['Authorization'] = access_token
 
-        except err.APIError as e:
-            raise e
+        response = await self._make_request(request)
+        return response.content.get(self._struct.content)
 
 
 class ServerResponse:
@@ -384,14 +359,14 @@ class ServerResponse:
 class Response:
     """
     Ответ Requester'a.
-    :param request: запрос типа Request.
+    :param request: запрос типа InternalRequest.
     :param content: содержимое (поле content) ответа API.
     :param records_left: число оставшихся записей (для запросов, в ответ на которые возвращается список записей).
     :param last_record_num: номер последней полученной записи
            (для запросов, в ответ на которые возвращается список записей).
     """
 
-    def __init__(self, request: 'Request', content: tp.Any, records_left: int, last_record_num: int):
+    def __init__(self, request: InternalRequest, content: tp.Any, records_left: int, last_record_num: int):
         self.request = request
         self.content = content
         self.records_left = records_left
@@ -401,9 +376,9 @@ class Response:
         return str(self.__dict__)
 
 
-class Request:  # ToDo: переделать в датаклассы
+class InternalRequest:  # ToDo: переделать в датаклассы
     """
-    Запрос.
+    Запрос для использования внутри Requester'а.
 
     :var path: URL-адрес, на который идёт запрос.
     :var method: HTTP-метод запроса.
@@ -455,6 +430,76 @@ class Request:  # ToDo: переделать в датаклассы
         return str(self.__dict__)
 
 
+class Request(QObject):
+    """Запрос, передаваемый от Requester'а вызывающей стороне. Возвращаемый результат - объект Response."""
+
+    finished = Signal(tp.Any)  # Вызывается при завершении запроса. Передаёт экземпляр запроса
+
+    def __init__(self, future: asyncio.Future, loop: asyncio.AbstractEventLoop):
+        super().__init__()
+        self._future = future
+        self._loop = loop
+        self._finished = False
+        self._result: Response | None = None
+
+        self._future.add_done_callback(lambda future_: self._finish())
+
+    def _finish(self):
+        self._finished = True
+        self.finished.emit(self)
+
+    def is_finished(self) -> bool:
+        return self._finished
+
+    def result(self) -> Response:
+        """
+        Возвращает результат выполнения запроса. При первом обращении вызывает все исключения,
+        вызванные в ходе выполнения запроса; при последующих обращениях просто возвращает результат. Если запрос ещё
+        не выполнен, вызывается исключение NotFinishedError.
+        """
+        if not self._finished:
+            raise err.NotFinishedError(f'Request {self} is not finished now.')
+
+        if not self._result:
+            self._result = self._future.result()
+        return self._result
+
+    def wait_until_complete(self) -> Response:
+        """
+        Дожидается завершения запроса и возвращает результат. Вызывает все исключения,
+        вызванные в ходе выполнения запроса.
+        """
+        asyncio.wait(self._future)
+        self._finished = True
+        return self.result()
+
+
+class RequestsGroup(QObject):
+    """Группа запросов. Позволяет отслеживать момент выполнения всех запросов группы."""
+    finished = Signal(tp.Any)  # Вызывается при завершении всех запросов группы. Возвращает группу
+
+    def __init__(self, *args):
+        super().__init__()
+        self._requests: list[Request] = list(args)
+        for request in self._requests:
+            request.finished.connect(self._finish_request)
+
+    def _finish_request(self):
+        result = []
+        for request in self._requests:
+            result.append(request.is_finished())
+        if all(result):
+            self.finished.emit(self)
+
+    def wait_until_complete(self):
+        """Дожидается завершения всех запросов группы."""
+        for request in self._requests:
+            request.wait_until_complete()
+        self._finish_request()
+
+    def requests(self) -> list[Request]:
+        return self._requests
+
+
 if __name__ == '__main__':
     pass
-

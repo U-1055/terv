@@ -5,7 +5,7 @@ import os
 import time
 
 import pytest
-from client.src.requester.requester import err, Requester, Request
+from client.src.requester.requester import err, Requester, Request, InternalRequest
 from common.base import ErrorCodes
 from test.conftest import launch_test_server, client_requester, REQUEST_LIMIT, LEN_TEST_REPO_CONTENT, TIMEOUT
 
@@ -22,9 +22,9 @@ def requester() -> Requester:
 
 
 @pytest.fixture()
-def error_request(request: pytest.FixtureRequest) -> Request:
+def error_request(request: pytest.FixtureRequest) -> InternalRequest:
     error_id = request.node.callspec.params.get('error_id')
-    return Request(path=f'http://localhost:5000/error/{error_id}', method='GET')
+    return InternalRequest(path=f'http://localhost:5000/error/{error_id}', method='GET')
 
 
 @pytest.fixture()
@@ -38,14 +38,28 @@ def timeout_requester(request: pytest.FixtureRequest, requester: Requester) -> R
     ['error_id'],
     [[i] for i in range(max(unique_errors) - 2)]
 )
-def test_preparing_error(requester: Requester, launch_test_server, error_request: Request, error_id: int):
+def test_preparing_error(requester: Requester, launch_test_server, error_request: InternalRequest, error_id: int):
 
-    future = requester.make_custom_request(error_request)
-    loop = asyncio.get_event_loop()
-    future = asyncio.wrap_future(future)
-
+    request: Request = requester.make_custom_request(error_request)
     with pytest.raises(err.exceptions_error_ids[error_id]):
-        loop.run_until_complete(future)
+        request.wait_until_complete()
+
+
+@pytest.mark.parametrize(
+    ['params'],
+    [[[[f'{i}' for v in range(3)] for i in range(10)]]]
+)
+def test_requests_group(requester: Requester, launch_test_server, params: list[list[str]]):
+    """
+    Тестирует группы запросов. Обращается к эндпоинту /register, который возвращает в поле content переданные данные
+    (из JSON).
+    """
+    requests = [requester.register(*args) for args in params]
+    group = requester.create_group(*requests)
+    group.wait_until_complete()
+    results = [request.result().content for request in group.requests()]
+    for args in params:
+        assert args in results, f'There is no result {args} in results. The request may be not finished. Results: {results}'
 
 
 @pytest.mark.f_data({REQUEST_LIMIT: 10})
@@ -55,12 +69,9 @@ def test_preparing_error(requester: Requester, launch_test_server, error_request
 )
 def test_request_sequence(client_requester, launch_test_server, limit: int, offset: int):
     """Проверка получения данных из последовательности запросов."""
-    future: concurrent.futures.Future = client_requester.get_wf_tasks([i for i in range(100)], 'access', limit, offset)
-    loop = asyncio.get_event_loop()
-    future = asyncio.wrap_future(future, loop=loop)
-    loop.run_until_complete(future)
+    request = client_requester.get_wf_tasks([i for i in range(100)], 'access', limit, offset)
 
-    result = future.result()
+    result = request.wait_until_complete()
 
     assert len(result.content) == limit
     assert result.records_left == LEN_TEST_REPO_CONTENT - limit - offset

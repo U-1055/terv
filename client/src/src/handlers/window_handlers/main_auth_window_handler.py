@@ -5,7 +5,7 @@ import asyncio
 from client.src.gui.windows.auth_window import PopUpAuthWindow
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler
 from client.src.gui.main_view import MainWindow
-from client.src.requester.requester import Requester
+from client.src.requester.requester import Requester, Request
 from client.src.client_model.model import Model
 from client.src.src.handlers.widgets_view_handlers.auth_view_handlers import AuthViewHandler, RegisterViewHandler
 from client.src.base import DataStructConst, GuiLabels
@@ -48,9 +48,9 @@ class MainAuthWindowHandler(BaseWindowHandler):
 
     def _on_tried_to_auth(self):
 
-        def prepare_auth(future: asyncio.Future):  # ToDo: как можно избежать написания вложенных функций под каждый запрос
+        def prepare_auth(request: Request):  # ToDo: как можно избежать написания вложенных функций под каждый запрос
             try:
-                self._prepare_request(future, self._set_new_tokens)
+                self._prepare_request(request, self._set_new_tokens)
                 self.auth_complete.emit()
             except err.UnknownCredentials:
                 self._auth_handler.set_error_password(self._labels.incorrect_credentials)
@@ -64,14 +64,14 @@ class MainAuthWindowHandler(BaseWindowHandler):
             self._auth_handler.set_error_login(self._labels.fill_all)
             return
 
-        request: asyncio.Future = self._requester.authorize(login, password)
-        request.add_done_callback(prepare_auth)
+        request = self._requester.authorize(login, password)
+        request.finished.connect(prepare_auth)
 
     def _on_tried_to_register(self):
 
-        def prepare_register(future: asyncio.Future):
+        def prepare_register(request: Request):
             try:
-                self._prepare_request(future)
+                self._prepare_request(request)
                 self.registration_complete.emit()
             # Ошибки, которые можно обнаружить только после запроса на сервер
             except err.LoginAlreadyExists:
@@ -104,7 +104,7 @@ class MainAuthWindowHandler(BaseWindowHandler):
         if is_error:
             return
 
-        request: asyncio.Future = self._requester.register(login, password, email)
-        request.add_done_callback(prepare_register)
+        request = self._requester.register(login, password, email)
+        request.finished.connect(prepare_register)
 
 

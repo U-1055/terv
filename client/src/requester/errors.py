@@ -51,6 +51,14 @@ class NoLastRequest(RequesterError):  # Не было запросов
     pass
 
 
+class RequestError(Exception):  # Ошибка при обращении к объекту запроса
+    pass
+
+
+class NotFinishedError(RequestError):  # Запрос ещё не завершен
+    pass
+
+
 class ExpiredAccessToken(APIError):  # Просроченный access-токен
     pass
 

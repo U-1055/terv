@@ -1,23 +1,17 @@
-import asyncio
 import dataclasses
 import datetime
 import logging
-import time
 
 from PySide6.QtCore import QTimer
 
-import typing as tp
-
-from client.src.src.handlers.window_handlers.base import BaseWindowHandler, MainWindow, Requester, Model, BaseWindow
+from client.src.src.handlers.window_handlers.base import BaseWindowHandler, MainWindow, Requester, Model
 from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels
-from client.src.gui.widgets_view.base_view import BaseView
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import TaskViewHandler
 from client.src.gui.windows.userflow_window import UserFlowWindow
 from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, ScheduleWidgetView, NotesWidgetView,
-                                                       WidgetSettingsMenu, ReminderWidgetView)
+                                                       WidgetSettingsMenu)
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import (NotesViewHandler, ScheduleViewHandler,
                                                                              ReminderViewHandler)
-from client.src.requester.requester import Response
 import client.models.common_models as cm
 from client.utils.data_tools import make_unique_dict_names
 
@@ -35,9 +29,9 @@ class UserFlowWindowHandler(BaseWindowHandler):
         super().__init__(window, main_view, requester, model)
         self._window, self._main_view, self._requester, self._model, self._data_const = window, main_view, requester, model, data_const
         self._data_model: 'UserFlowDataModel' = UserFlowDataModel()
-        self._task_view_handler: TaskViewHandler = None
-        self._notes_view_handler: NotesWidgetView = None
-        self._schedule_view_handler: ScheduleWidgetView = None
+        self._task_view_handler: TaskViewHandler | None = None
+        self._notes_view_handler: NotesWidgetView | None = None
+        self._schedule_view_handler: ScheduleWidgetView | None = None
         self._window.btn_set_widgets_pressed.connect(self._on_btn_set_widgets_pressed)
 
         self._timer = QTimer()
@@ -130,8 +124,8 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 logging.debug('Reminder widget placed')
 
     def _get_user_info(self):
-        request: asyncio.Future = self._requester.get_user_info(self._model.get_access_token())
-        request.add_done_callback(lambda future: self._prepare_request(future, self._set_user))
+        request = self._requester.get_user_info(self._model.get_access_token())
+        request.finished.connect(lambda response: self._prepare_request(response, self._set_user))
 
     def update_state(self):
         self._get_user_info()
@@ -158,27 +152,25 @@ class UserFlowWindowHandler(BaseWindowHandler):
         access_token = self._model.get_access_token()
 
         if self._data_model.user:
-            personal_daily_events: asyncio.Future = self._requester.get_personal_daily_events(self._data_model.user.id,
-                                                                                              access_token)
-            personal_daily_events.add_done_callback(lambda future: self._prepare_request(future, self._set_personal_daily_events))
+            personal_daily_events = self._requester.get_personal_daily_events(self._data_model.user.id, access_token)
+            personal_daily_events.finished.connect(lambda request: self._prepare_request(request, self._set_personal_daily_events))
 
-            personal_many_days_events: asyncio.Future = self._requester.get_personal_daily_events()
-            personal_many_days_events.add_done_callback(
-                lambda future: self._prepare_request(future, self._set_personal_many_days_events))
+            personal_many_days_events = self._requester.get_personal_daily_events()
+            personal_many_days_events.finished.connect(lambda request: self._prepare_request(request, self._set_personal_many_days_events))
 
-            wf_daily_events: asyncio.Future = self._requester.get_wf_daily_events_by_users(self._data_model.user.id,
+            wf_daily_events = self._requester.get_wf_daily_events_by_users(self._data_model.user.id,
                                                                                            self._data_model.user.notified_daily_events,
                                                                                            access_token,
                                                                                            datetime.date.today(),
                                                                                            )
-            wf_daily_events.add_done_callback(lambda future: self._prepare_request(future, self._set_wf_daily_events))
-            wf_many_days_events: asyncio.Future = self._requester.get_wf_many_days_events_by_user(
+            wf_daily_events.finished.connect(lambda request: self._prepare_request(request, self._set_wf_daily_events))
+            wf_many_days_events = self._requester.get_wf_many_days_events_by_user(
                 self._data_model.user.id,
                 self._data_model.user.notified_many_days_events,
                 access_token,
                 datetime.date.today(),
                     )
-            wf_many_days_events.add_done_callback(lambda future: self._prepare_request(future, self._set_wf_daily_events))
+            wf_many_days_events.finished.connect(lambda request: self._prepare_request(request, self._set_wf_daily_events))
 
         else:
             self._get_user_info()
@@ -188,11 +180,11 @@ class UserFlowWindowHandler(BaseWindowHandler):
         access_token = self._model.get_access_token()
 
         if self._data_model.user:
-            tasks: asyncio.Future = self._requester.get_personal_tasks(self._user.id, access_token)
-            tasks.add_done_callback(lambda future: self._prepare_request(future, self._set_tasks))
+            tasks = self._requester.get_personal_tasks(self._user.id, access_token)
+            tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_tasks))
         else:
-            request: asyncio.Future = self._requester.get_user_info(access_token)
-            request.add_done_callback(lambda future: self._prepare_request(future, lambda: self._set_task_handler(view)))
+            request = self._requester.get_user_info(access_token)
+            request.finished.connect(lambda request_: self._prepare_request(request_, lambda: self._set_task_handler(view)))
 
 
 @dataclasses.dataclass

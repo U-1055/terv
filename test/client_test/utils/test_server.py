@@ -33,6 +33,12 @@ def wf_tasks():
                          records_left=answer.get(repo.RECORDS_LEFT))
 
 
+@app.route('/register', methods=['POST'])
+def register():
+    params = (request.json.get('login'), request.json.get('password'), request.json.get('email'))
+    return form_response(200, 'OK', content=params)
+
+
 def launch():
     global thread
 

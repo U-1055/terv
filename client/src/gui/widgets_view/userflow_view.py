@@ -188,8 +188,26 @@ class ScheduleWidgetView(BaseView):
         """
         event = QEventWidget(title, time_start, time_end, lasting, wdg_description, time_separator, lasting_label,
                        start_end_label,
-                       btn_show_details_label, parent=self)
-        self.add_custom_event(event)
+                       btn_show_details_label)
+        widget = QWidget()
+        lbl = QLabel('TEXT')
+        lbl.setParent(widget)
+        self._get_fact_size()
+
+        padding_steps = parse_time(event.time_start(), 15)  # 15 минут в интервале
+        height_steps = parse_time(event.time_end(), 15) - padding_steps  # Высота виджета в 15-ти минутных интервалах
+        # ToDo: выравнивание по нижней границе
+        scene = self._view.graphicsView.scene()
+        text_width, text_height = self.get_scene_font_metrics(scene)
+        text_width *= 5  # 5 - длина надписи в формате HH:MM
+        first_line_padding = text_height * 0.5  # Отступ первой линии (соответствующей времени 00:00)
+        v_padding = padding_steps * self._sub_step // 1 + first_line_padding
+
+        h_padding = text_width + self._base_padding * 1.5  # Отступ для виджета (на всякий случай умножаем на 1.5, чтобы был чуть больше)
+        widget_ = scene.addWidget(lbl)
+        widget_.setPos(h_padding, v_padding)
+        self._current_event = None
+
 
     def add_custom_event(self, event: QEventWidget):
         """
