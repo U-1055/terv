@@ -39,17 +39,18 @@ class Authenticator:
         self._refresh_token_lifetime = refresh_token_lifetime
         self._data_struct = data_struct
 
-    def _create_token(self, login: str, user_id: int, lifetime: datetime.timedelta) -> str:
+    def _create_token(self, user_id: int, lifetime: datetime.timedelta) -> str:
         secret = self._model.get_secret()
         token_ = jwt.encode(
             payload={
-                'sub': {DataStruct.login: login, DataStruct.user_id: user_id},
+                'sub': str(user_id),
                 'exp': datetime.datetime.now(tz=datetime.timezone.utc) + lifetime,  # Время истечения токена
                 'iat': datetime.datetime.now(tz=datetime.timezone.utc)  # Время создания токена
             },
             key=secret,
             algorithm=self._jwt_alg
         )
+        jwt.decode(token_, key=secret, algorithms=[self._jwt_alg], leeway=2)
         return token_
 
     def check_token_valid(self, token_: str, type_: str) -> bool:
@@ -80,19 +81,6 @@ class Authenticator:
             return False
         return True
 
-    def get_login(self, token_: str) -> str:
-        """
-        Возвращает логин из access-токена. Вызывает ValueError, если токен недействителен или произошла ошибка при
-        декодировании.
-        """
-
-        if self.check_token_valid(token_, self._data_struct.access_token):
-            secret = self._model.get_secret()
-            payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
-            return payload.get('sub').get(DataStruct.login)
-        else:
-            raise ValueError
-
     def get_user_id(self, token_: str) -> int:
         """
         Возвращает user_id из access-токена. Вызывает ValueError, если токен недействителен или произошла ошибка при
@@ -101,7 +89,7 @@ class Authenticator:
         if self.check_token_valid(token_, self._data_struct.access_token):
             secret = self._model.get_secret()
             payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
-            return payload.get('sub').get(DataStruct.user_id)
+            return payload.get('sub')
         else:
             raise ValueError
 
@@ -115,14 +103,12 @@ class Authenticator:
         if self.check_token_valid(refresh_token, self._data_struct.refresh_token):
             secret = self._model.get_secret()
             payload = jwt.decode(refresh_token, key=secret, algorithms=[self._jwt_alg])
-            sub = payload.get('sub')
-            login = sub.get(DataStruct.login)
-            user_id = sub.get(DataStruct.user_id)
+            user_id = payload.get('sub')
 
-            if not login:
-                raise ValueError('Invalid token: no login')
-            access_token = self._create_token(login, user_id, self._access_token_lifetime)
-            new_refresh_token = self._create_token(login, user_id, self._refresh_token_lifetime)
+            if not user_id:
+                raise ValueError('Invalid token: no user_id')
+            access_token = self._create_token(user_id, self._access_token_lifetime)
+            new_refresh_token = self._create_token(user_id, self._refresh_token_lifetime)
 
             self._model.add_token_to_blacklist(refresh_token)
 
@@ -158,8 +144,8 @@ class Authenticator:
         try:
             if not checkpw(bytes(password, encoding='utf-8'), bytes(hashed_password, encoding='utf-8')):
                 raise ValueError
-            access_token = self._create_token(login, user_id, self._access_token_lifetime)
-            refresh_token = self._create_token(login, user_id, self._refresh_token_lifetime)
+            access_token = self._create_token(user_id, self._access_token_lifetime)
+            refresh_token = self._create_token(user_id, self._refresh_token_lifetime)
             return {self.access_name: access_token, self.refresh_name: refresh_token}
         except ValueError as e:
             logging.debug(f'INVALID PASSWORD: saved_hash: {hashed_password}; received_hash: {bytes(password, encoding='utf-8')}')
@@ -180,6 +166,24 @@ class Authorizer:
         self._repo = repository
         self._data_const = data_const
         self._permissions = permissions
+
+    @staticmethod
+    def check_access_to_personal_objects(user_id: int, objects: list[dict]) -> bool:
+        """
+        Проверяет доступ пользователя к личным объектам.
+        Если нет доступа хотя бы к одному из объектов - возвращает False.
+        """
+
+        for object_ in objects:
+            owner_id = object_.get(DBFields.owner_id)
+            if owner_id != user_id:
+                return False
+        return True
+
+    @staticmethod
+    def pre_check_access_to_personal_objects(user_id: int, owner_id: int) -> bool:
+        """Проверяет доступ пользователя к личным объектам."""
+        return user_id == owner_id
 
     def check_permissions(self, user_id: int, objects: list[dict], object_type: str, permission: str) -> bool:
         """

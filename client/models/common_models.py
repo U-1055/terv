@@ -12,8 +12,7 @@ class User(Base):
 
     id: int
     username: str = Field(max_length=30)
-    email: str = Field(max_length=30) 
-    hashed_password: str = Field(max_length=30) 
+    email: str = Field(max_length=30)
 
     # РП и проекты
     created_workflows: list[int]

@@ -10,7 +10,7 @@ from pathlib import Path
 from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
-from server.database.models.db_utils import launch_db, init_db
+from server.database.models.db_utils import launch_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
@@ -26,7 +26,7 @@ logging.debug('Module app.py is running')
 app = Flask(__name__)
 config = Config('../config.json')
 database_path = config.database_path
-engine = init_db(database_path)
+engine = launch_db(database_path)
 
 logging.debug(f'Module app.py is running. Environment: {config.env}')
 
@@ -226,6 +226,28 @@ def users():
 
 
 @exceptions_handler
+@app.route('/users/<int:user_id>/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def user_personal_tasks(user_id: int):
+    response = None
+    request_sender_id = authenticator.get_user_id(request.headers.get('Authorization'))
+    if not authorizer.pre_check_access_to_personal_objects(request_sender_id, user_id):
+        return form_response(403, f"You haven't access to personal objects of user (ID: {user_id})",
+                             error_id=ErCodes.forbidden_access_to_personal_object.value)
+
+    if request.method == 'GET':
+        request.args[CommonStruct.user_id] = str(user_id)
+        response = handlers.get_personal_tasks(request, repo)
+    elif request.method == 'PUT':
+        response = handlers.update_personal_tasks(request, repo)
+    elif request.method == 'POST':
+        response = handlers.add_personal_tasks(request, repo)
+    elif request.method == 'DELETE':
+        response = handlers.delete_personal_tasks(request, repo)
+
+    return response
+
+
+@exceptions_handler
 @app.route('/wf_tasks', methods=['GET', 'PUT', 'POST', 'DELETE'])
 def wf_tasks():
     """
@@ -294,7 +316,7 @@ def wfl_daily_events(workflow_id: int):
 def wf_many_days_events(workflow_id: int):
     response = None
 
-    if request.method == 'GET':  # ToDo: дописать методы crud_handlers
+    if request.method == 'GET':
         response = handlers.get_wf_daily_events(request, repo)
     if request.method == 'POST':
         response = handlers.add_wf_daily_events(request, workflow_id, repo)

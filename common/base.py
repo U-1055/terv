@@ -170,29 +170,30 @@ class ErrorCodes(enum.Enum):
     existing - (для идентификаторов) уже есть объект с таким идентификатором
 
     """
-    ok = 200
-    server_error = 500
+    ok = 200  # Запрос выполнен успешно
+    server_error = 500  # Ошибка сервера
 
-    no_email = 0
-    invalid_email = 1
-    no_password = 2
-    invalid_password = 3
-    no_login = 4
-    invalid_login = 5
+    no_email = 0  # Нет email'а
+    invalid_email = 1  # Некорректный email
+    no_password = 2  # Нет пароля
+    invalid_password = 3  # Некорректный пароль
+    no_login = 4  # Нет логина
+    invalid_login = 5  # Некорректный логин
 
-    existing_login = 6
-    existing_email = 7
+    existing_login = 6  # Логин уже существует
+    existing_email = 7  # Email уже существует
 
-    invalid_credentials = 8
-    invalid_refresh = 9
-    invalid_access = 10
-    no_access = 11
-    no_refresh = 12
+    invalid_credentials = 8  # Некорректные учётные данные
+    invalid_refresh = 9  # Некорректный refresh-токен
+    invalid_access = 10  # Некорректный access-токен
+    no_access = 11  # Нет access-токена
+    no_refresh = 12  # Нет refresh-токена
 
-    no_tokens = 13
-    incorrect_id = 14
-    incorrect_limit = 15
-    incorrect_offset = 16
+    no_tokens = 13  # Нет токенов
+    incorrect_id = 14  # Некорректный ID
+    incorrect_limit = 15  # Некорректный limit
+    incorrect_offset = 16  # Некорректный offset
+    forbidden_access_to_personal_object = 17  # Попытка получить доступ к личному объекту другого пользователя
 
 
 def check_password(password: str) -> bool:

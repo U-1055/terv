@@ -8,7 +8,7 @@ import typing as tp
 from client.src.gui.windows.windows import BaseWindow
 from client.models.base import Base
 from client.src.gui.main_view import MainWindow
-from client.src.requester.requester import Requester, Request
+from client.src.requester.requester import Requester, Request, RequestsGroup
 from client.src.client_model.model import Model
 import client.src.requester.errors as err
 from common.base import CommonStruct
@@ -44,6 +44,11 @@ class BaseWindowHandler(QObject):
     def _send_error(self, title: str, message: str):
         self.error_occurred.emit(title, message)
 
+    def _prepare_requests_group(self, requests_group: RequestsGroup):
+        """Обрабатывает группу запросов RequestsGroup."""
+        for request in requests_group.requests():
+            self._prepare_request(request)
+
     def _prepare_request(self, request: Request, prepare_data_func: tp.Callable = None):
         """
         Обрабатывает асинхронный запрос. Отправляет Response.content в prepare_data_dunc.
@@ -69,9 +74,6 @@ class BaseWindowHandler(QObject):
 
         except err.NetworkTimeoutError as e:  # Обработка ошибки сети
             self.network_error_occurred.emit()
-
-        except Exception as e:  # Все остальные исключения передаются вызывающей стороне
-            raise e
 
     def update_data(self):
         """
