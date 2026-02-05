@@ -72,6 +72,8 @@ class Workflow(Base):
     work_directions: Mapped[list['WFWorkDirection']] = relationship('WFWorkDirection', back_populates='workflow')
     documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='workflow')
     base_categories: Mapped[list['WFBaseCategory']] = relationship('WFBaseCategory', back_populates='workflow')
+    daily_events: Mapped[list['WFDailyEvent']] = relationship('WFDailyEvent', back_populates='workflow')
+    many_days_events: Mapped[list['WFManyDaysEvent']] = relationship('WFManyDaysEvent', back_populates='workflow')
 
 
 class Project(Base):
@@ -179,7 +181,7 @@ class PersonalTask(Base):
     work_direction_id: Mapped[int] = mapped_column(ForeignKey('personal_work_direction.id'), nullable=True)
     parent_task_id: Mapped[int] = mapped_column(ForeignKey('personal_task.id'), nullable=True)
 
-    name: Mapped[str] = mapped_column(String[30])
+    name: Mapped[str] = mapped_column(String[30], nullable=False)
     description: Mapped[str] = mapped_column(String[1000])
     plan_deadline: Mapped[datetime.datetime] = mapped_column(nullable=False)
     fact_deadline: Mapped[datetime.datetime] = mapped_column(nullable=True)
@@ -264,6 +266,7 @@ class WFDailyEvent(Base):
 
     creator: Mapped[User] = relationship(User, back_populates='created_wf_daily_events')
     notified: Mapped[list['User']] = relationship(secondary='wf_daily_event_user', back_populates='notified_daily_events')  # Оповещаемые пользователи
+    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='daily_events')
 
 
 class WFManyDaysEvent(Base):
@@ -281,6 +284,7 @@ class WFManyDaysEvent(Base):
 
     creator: Mapped[User] = relationship(User, back_populates='created_wf_many_days_events')
     notified: Mapped[list['User']] = relationship(secondary='wf_many_days_event_user', back_populates='notified_many_days_events')  # Оповещаемые пользователи
+    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='many_days_events')
 
 
 class WFBaseCategory(Base):

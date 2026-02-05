@@ -50,7 +50,6 @@ class Authenticator:
             key=secret,
             algorithm=self._jwt_alg
         )
-        jwt.decode(token_, key=secret, algorithms=[self._jwt_alg], leeway=2)
         return token_
 
     def check_token_valid(self, token_: str, type_: str) -> bool:
