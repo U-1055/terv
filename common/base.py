@@ -27,6 +27,7 @@ class CommonStruct:
     executor_id = 'executor_id'
     workflow_id = 'workflow_id'
     date = 'date'
+    task_status = 'task_status'
 
     wf_daily_events = 'wf_daily_events'
     wf_many_days_events = 'wf_many_days_events'
@@ -50,6 +51,13 @@ class CommonStruct:
     datetime_format = f'{date_format}T{time_format}'
     max_name_length = 30  # Максимальная длина названий объектов
     max_description_length = 1000  # Максимальная длина описаний объектов
+
+
+class TasksStatuses:
+    """Статусы задач."""
+    completed = 'completed'
+    in_progress = 'in_progress'
+    standing_by = 'standing_by'
 
 
 class DBFields:
@@ -158,6 +166,19 @@ class DBFields:
     many_days_event_id = 'many_days_event_id'
     # WFRoleDocument's fields
     document_id = 'document_id'
+
+
+class ObjectTypes:
+    """Названия объектов, возвращаемых сервером."""
+
+    user = 'user'
+    wf_task = 'wf_task'
+    wf_daily_event = 'wf_daily_event'
+    wf_many_days_event = 'wf_daily_event'
+    personal_daily_event = 'personal_daily_event'
+    personal_many_days_event = 'personal_many_days_event'
+    personal_task = 'personal_task'
+    workflow = 'workflow'
 
 
 class ErrorCodes(enum.Enum):

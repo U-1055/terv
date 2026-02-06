@@ -55,6 +55,7 @@ class Logic:
     def _on_auth_complete(self):
         self._view.show_message(self._labels.op_complete, self._labels.authentication_complete)
         self._auth_window_handler.close()
+        self._opened_now.update_state()
 
     def _on_registration_complete(self):
         self._view.show_message(self._labels.op_complete, self._labels.register_complete)

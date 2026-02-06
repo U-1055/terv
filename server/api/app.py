@@ -1,9 +1,7 @@
 import logging
-import os
-import threading
 
 from flask import Flask, request
-from sqlalchemy.orm.session import Session, sessionmaker
+from sqlalchemy.orm.session import sessionmaker
 
 from pathlib import Path
 
@@ -34,7 +32,6 @@ session = sessionmaker(bind=engine)
 repo = DataRepository(session)
 model = Model(Path('../storage/storage'))
 ds_const = DataStruct()
-
 common_struct = CommonStruct()
 
 authenticator = Authenticator(
@@ -188,13 +185,30 @@ def personal_tasks():
     response = None  # Только чтобы не ругалась IDE на возможное отсутствие объявления
 
     if request.method == 'GET':
-        response = handlers.get_wf_tasks(request, repo)
+        response = handlers.get_personal_tasks(request, repo)
     elif request.method == 'POST':
-        response = handlers.add_wf_tasks(request, repo)
+        response = handlers.add_personal_tasks(request, repo)
     elif request.method == 'PUT':
-        response = handlers.update_wf_tasks(request, repo)
+        response = handlers.update_personal_tasks(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.delete_wf_tasks(request, repo)
+        response = handlers.delete_personal_tasks(request, repo)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/personal_tasks/<int:task_id>/status', methods=['GET', 'PUT'])
+def personal_task_status(task_id: int):
+
+    access_token = request.args.get('Authorization')
+    request_sender_id = authenticator.get_user_id(access_token)
+
+    response = None
+
+    if request.method == 'GET':
+        pass   # ToDo: реализация изменения статуса + проверка авторизации в crud-handler'е
+    elif request.method == 'PUT':
+        pass
 
     return response
 
@@ -229,20 +243,34 @@ def users():
 @app.route('/users/<int:user_id>/personal_tasks', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def user_personal_tasks(user_id: int):
     response = None
+
     request_sender_id = authenticator.get_user_id(request.headers.get('Authorization'))
     if not authorizer.pre_check_access_to_personal_objects(request_sender_id, user_id):
         return form_response(403, f"You haven't access to personal objects of user (ID: {user_id})",
                              error_id=ErCodes.forbidden_access_to_personal_object.value)
 
     if request.method == 'GET':
-        request.args[CommonStruct.user_id] = str(user_id)
-        response = handlers.get_personal_tasks(request, repo)
+        response = handlers.get_personal_tasks(request, repo, user_id)
     elif request.method == 'PUT':
         response = handlers.update_personal_tasks(request, repo)
     elif request.method == 'POST':
         response = handlers.add_personal_tasks(request, repo)
     elif request.method == 'DELETE':
         response = handlers.delete_personal_tasks(request, repo)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/users/<int:user_id>/wf_tasks', methods=['GET'])
+def user_wf_tasks(user_id: int):
+
+    request_sender_id = authenticator.get_user_id(request.headers.get('Authorization'))
+    if not authorizer.pre_check_access_to_personal_objects(request_sender_id, user_id):
+        return form_response(403, f"You haven't access to personal objects of user (ID: {user_id})",
+                             error_id=ErCodes.forbidden_access_to_personal_object.value)
+
+    response = handlers.get_wf_tasks(request, repo, user_id)
 
     return response
 
@@ -266,6 +294,19 @@ def wf_tasks():
         response = handlers.delete_wf_tasks(request, repo)
 
     return response
+
+
+@exceptions_handler
+@app.route('/wf_tasks/<int:task_id>/status', methods=['GET', 'PUT'])
+def wf_task_status(task_id: int):
+    response = None
+
+    if request.method == 'GET':
+        pass
+    elif request.method == 'PUT':
+        pass
+
+    return form_response(200, 'OK')
 
 
 @exceptions_handler

@@ -88,7 +88,7 @@ class Authenticator:
         if self.check_token_valid(token_, self._data_struct.access_token):
             secret = self._model.get_secret()
             payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
-            return payload.get('sub')
+            return int(payload.get('sub'))
         else:
             raise ValueError
 

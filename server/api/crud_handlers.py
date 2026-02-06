@@ -15,7 +15,8 @@ import server.services.services as services
 
 
 @utl.get_request
-def get_wf_tasks(request: Request, repo: DataRepository, limit: int = None, offset: int = None):  # ToDo: авторизация
+def get_wf_tasks(request: Request, repo: DataRepository, user_id: int = None, limit: int = None, offset: int = None,
+                 require_last_num: bool = False):  # ToDo: авторизация
     """
     Возвращает задачи РП. Вид запроса:
     api/wf_tasks/ids,name,description,project_id,creator_id,entrusted_id,executor_id
@@ -142,17 +143,17 @@ def delete_users(request: Request, repo: DataRepository):
 
 
 @utl.get_request
-def get_users(request: Request, repo: DataRepository, authenticator: Authenticator, limit: int = None, offset: int = None):
+def get_users(request: Request, repo: DataRepository, authenticator: Authenticator, limit: int = None,
+              offset: int = None, require_last_num: bool = False):
 
     params = request.args
     ids = params.getlist(CommonStruct.ids)
-    require_last_num = params.get(CommonStruct.require_last_num)
 
     if not ids:  # Если передан только access
         try:
             access_token = request.headers.get('Authorization')
-            usernames = [authenticator.get_login(access_token)]
-            result = repo.get_users_by_username(usernames, limit=limit, offset=offset)
+            user_ids = [authenticator.get_user_id(access_token)]
+            result = repo.get_users_by_id(user_ids, limit=limit, offset=offset)
             return utl.form_response(200, 'OK', content=result.content)
 
         except ValueError:
@@ -198,12 +199,15 @@ def update_users(request: Request, repo: DataRepository):
 
     return utl.form_response(200, 'OK')
 
+# ToDo: параметры фильтрации как аргументы во всех обработчики GET-ов.
+
 
 @utl.get_request
-def get_personal_tasks(request: Request, repo: DataRepository, limit: int = None, offset: int = None):
+def get_personal_tasks(request: Request, repo: DataRepository, user_id: int = None, limit: int = None, offset: int = None,
+                       require_last_num: bool = False):
     """Получает личные задачи по их ID."""
 
-    params = request.args
+    params = request.args  # ToDo: фильтрация по пользователю и по датам
     ids = params.getlist(CommonStruct.ids)
     require_last_num = params.get(CommonStruct.require_last_num)
 
@@ -212,10 +216,10 @@ def get_personal_tasks(request: Request, repo: DataRepository, limit: int = None
                                                                'One of ids is not integer'))
     ids = utl.list_to_int(ids)
     try:
-        result = repo.get_wf_tasks_by_id(ids, limit, offset)
+        result = repo.get_personal_tasks_by_id(ids, limit, offset)
         if limit or offset or require_last_num:  # Проверка запроса лимита или offset-а
             return utl.form_response(200, 'OK', last_rec_num=result.last_record_num,
-                                     records_left=result.records_left)
+                                     records_left=result.records_left, content=result.content)
         else:
             return utl.form_response(200, 'OK', content=result.content)
     except err.IntegrityError as e:
@@ -275,7 +279,37 @@ def delete_personal_tasks(request: Request, repo: DataRepository):
         ))
 
 
-def add_users_to_workflow(request: flask.Request):
+@utl.get_request
+def get_wf_daily_events(request: flask.Request, repo: DataRepository, limit: int = None, offset: int = None,
+                        require_last_num: bool = False):
+    """Получает однодневные события РП."""
+    ids = request.args.getlist(CommonStruct.ids)
+
+
+def update_wf_daily_events(request: flask.Request, workflow_id: int, repo: DataRepository):
+    services.WFDailyEventService.update()
+
+
+def add_wf_daily_events(request: flask.Request, workflow_id: int, repo: DataRepository):
+    """Добавляет однодневные события РП."""
+    wf_daily_events = request.args.getlist(CommonStruct.wf_daily_events)
+    try:
+        repo.add_wf_daily_events(wf_daily_events)
+        return utl.form_success_response()
+    except err.IntegrityError as e:
+        logging.warning(f'DB-error occurred during creating WFDailyEvent: {e}')
+        return utl.form_response(400, APIAn.database_write_error(
+            CommonStruct.wf_daily_events, request.endpoint,
+            'Database error occurred',
+            str(e)
+        ))
+
+
+def delete_wf_daily_events(request: flask.Request, workflow_id: int, repo: DataRepository):
+    ids = request.args.getlist(CommonStruct.ids)  # ToDo: дописать, когда будет реализована обработка ошибок сервисного слоя
+
+
+def add_users_to_workflow(request: flask.Request, repo: DataRepository):
     """Добавляет пользователей в ПП. Структура запроса: api/endpoint&workflow_id,user_ids."""
     ids = request.args.getlist(CommonStruct.ids)
     workflow_id = request.args.get(CommonStruct.workflow_id)
@@ -293,14 +327,14 @@ def add_users_to_workflow(request: flask.Request):
                                                                request.endpoint, 'All of values must be digits'))
 
     try:
-        services.WorkflowService.add_users(ids, workflow_id)
+        services.WorkflowService.add_users(ids, workflow_id, repo)
     except ValueError as e:
         logging.warning(f'Error during adding users to workflow: {e}')
         return utl.form_response(400, "Invalid params in request's params")  # ToDo: разобраться с обработкой ошибок (например, ввести исключения сервисного слоя)
     return utl.form_success_response()
 
 
-def delete_users_from_workflow(request: flask.Request):
+def delete_users_from_workflow(request: flask.Request, repo: DataRepository):
     """Удаляет пользователей из ПП. Структура запроса: api/endpoint&workflow_id,user_ids."""
     ids = request.args.getlist(CommonStruct.ids)
     workflow_id = request.args.get(CommonStruct.workflow_id)
@@ -317,11 +351,14 @@ def delete_users_from_workflow(request: flask.Request):
         return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids,
                                                                request.endpoint, 'All of values must be digits'))
     try:
-        services.WorkflowService.delete_users(workflow_id, ids)
+        services.WorkflowService.delete_users(workflow_id, ids, repo)
     except ValueError as e:
         logging.warning(f'Error during deleting users to workflow: {e}')
         return utl.form_response(400,
                                  "Invalid params in request's params")
     return utl.form_success_response()
 
+
+def set_wf_task_status(request: flask.Request, repo: DataRepository):
+    pass
 

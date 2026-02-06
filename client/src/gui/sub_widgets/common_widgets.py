@@ -28,7 +28,7 @@ class QStructuredText(QWidget):
     content_clicked = Signal(str)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
     field_clicked = Signal(str)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
 
-    field_column = 0  #  Столбцы, в которых размещаются виджеты
+    field_column = 0  # Столбцы, в которых размещаются виджеты
     content_column = 1
 
     def __init__(self, structure: dict = None, field_font: QFont = GUIStyles.bold_font,
@@ -118,6 +118,10 @@ class QStructuredText(QWidget):
         self._structure = dict()
         self._place_fields()
 
+    def structure(self) -> dict:
+        """Возвращает структуру текста в виде: {<поле>: <текст поля>}."""
+        return self._structure
+
     def set_structure(self, structure: dict):
         self._structure = structure
         self._place_fields()
@@ -155,6 +159,8 @@ class QStructuredText(QWidget):
 
     def field_suffix(self) -> str:
         return self._field_suffix
+
+
 
 
 if __name__ == '__main__':

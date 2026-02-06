@@ -1,7 +1,9 @@
 """Слой API."""
 from __future__ import annotations
 
-from PySide6.QtCore import QObject, Signal
+import os
+
+from PySide6.QtCore import QObject, Signal, QThread
 import httpx
 
 import concurrent.futures
@@ -12,6 +14,7 @@ import time
 import typing as tp
 import asyncio
 import threading
+from queue import Queue
 
 import client.src.requester.errors as err
 from common.base import CommonStruct, ErrorCodes
@@ -22,6 +25,13 @@ from client.utils.timeout_list import TimeoutList
 def run_loop(loop: asyncio.AbstractEventLoop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
+
+
+class LoopThread(QObject):
+
+    @staticmethod
+    def run(loop):
+        run_loop(loop)
 
 
 def synchronized_request(func) -> tp.Callable[..., Request]:  # ToDo: разобраться с аннотациями и переписать тесты реквестера
@@ -35,6 +45,7 @@ def synchronized_request(func) -> tp.Callable[..., Request]:  # ToDo: разоб
             time.sleep(0.1)
 
         future = asyncio.run_coroutine_threadsafe(func(*args), loop)
+
         request = Request(future, loop)
         return request
 
@@ -158,9 +169,9 @@ class Requester:
                     result = await client.post(request.path, headers=request.headers, params=request.query_params,
                                                json=request.json)
                 elif request.method == InternalRequest.DELETE:
-                    result = await client.post(request.path, headers=request.headers, params=request.query_params)
+                    result = await client.delete(request.path, headers=request.headers, params=request.query_params)
                 elif request.method == InternalRequest.PUT:
-                    result = await client.post(request.path, headers=request.headers, params=request.query_params,
+                    result = await client.put(request.path, headers=request.headers, params=request.query_params,
                                                json=request.json)
                 else:
                    raise err.RequesterError(f'Unknown method: {request.method}')
@@ -216,13 +227,19 @@ class Requester:
         response = await self._make_request(request)
         return response
 
-
     @synchronized_request
-    async def get_personal_tasks(self, user_id: int, access_token: str, task_ids: list[int] = None,
+    async def get_personal_tasks(self, user_id: int, access_token: str, on_date: datetime.date, tasks_ids: list[int] = None,
                                  limit: int = None, offset: int = None) -> Response:
-        """Получает личные задачи (конкретную или по user_id)."""
+        """
+        Получает личные задачи (конкретную или по user_id).
 
-        path = f'{self._server}/personal_tasks'
+        :param user_id: ID владельца задачи.
+        :param access_token: access-токен.
+        :param on_date: Дата, на которую запланирована работа над задачей.
+        :param tasks_ids: ID задач.
+        """
+
+        path = f'{self._server}/users/{user_id}/personal_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                           query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
         response = await self._choose_request_type(request, limit)
@@ -235,7 +252,7 @@ class Requester:
 
         path = f'{self._server}/users/{user_id}/wf_daily_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
-                          query_params={
+                              query_params={
                               CommonStruct.limit: limit,
                               CommonStruct.offset: offset,
                               CommonStruct.ids: wf_daily_events_ids
@@ -282,8 +299,8 @@ class Requester:
         return response
 
     @synchronized_request
-    async def get_personal_daily_events(self, user_id: int, access_token: str, limit: int = None,
-                                        date: datetime.date = None, offset: int = None):
+    async def get_personal_daily_events(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
+                                        offset: int = None):
         path = f'{self._server}/personal_daily_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={
@@ -299,6 +316,15 @@ class Requester:
         return response
 
     @synchronized_request
+    async def get_wf_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
+                                   offset: int = None):
+        path = f'{self._server}/users/{user_id}/wf_tasks'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct: offset, CommonStruct.date: date})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
     async def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
         path = f'{self._server}/wf_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
@@ -307,6 +333,23 @@ class Requester:
                               CommonStruct.offset: offset
                           })
         response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
+    async def set_wf_task_status(self, wf_task_id: int, status: str, access_token: str):
+        """Изменяет статус задачи РП."""
+        path = f'{self._server}/wf_tasks/{wf_task_id}/status'
+        request = InternalRequest(path, InternalRequest.PUT, query_params={CommonStruct.task_status: status}, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def set_personal_task_status(self, personal_task_id: int, status: str, access_token: str):
+        """Изменяет статус личной задачи."""
+        path = f'{self._server}/personal_tasks/{personal_task_id}/status'
+        request = InternalRequest(path, InternalRequest.PUT, query_params={CommonStruct.task_status: status},
+                                  headers={'Authorization': access_token})
+        response = await self._make_request(request)
         return response
 
     @synchronized_request
@@ -482,7 +525,7 @@ class RequestsGroup(QObject):
         super().__init__()
         self._requests: list[Request] = list(args)
         for request in self._requests:
-            request.finished.connect(self._finish_request)
+            request.finished.connect(lambda _: self._finish_request())
 
     def _finish_request(self):
         result = []

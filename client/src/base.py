@@ -16,6 +16,8 @@ class DataStructConst:
         'style_2': r'..\data\resources\ui\styles\dark_theme.qss'
     }
 
+    gui_date_format = '%d %b. %Y г.'
+    gui_day_date_format = '%a, %d %b.'
     tasks_widget = 'tasks_widget'
     schedule_widget = 'schedule_widget'
     reminder_widget = 'reminder_widget'
@@ -90,6 +92,16 @@ class GuiLabels:
     default_time_separator = '-'
     lasting_label = 'Длительность: '
     start_end_label = 'Время: '
+
+    workflow = 'Рабочее пространство'
+    project = 'Проект'
+    entrusted = 'Поручил'
+    plan_deadline = 'Дедлайн'
+    title = 'Название'
+    description = 'Описание'
+    fact_start_work_date = 'Взято в работу'
+    plan_start_work_date = 'Планируется взять в работу'
+    responsible = 'Ответственный'
 
 
 class GUIStyles:

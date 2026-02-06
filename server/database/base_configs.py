@@ -3,6 +3,7 @@ from sqlalchemy.orm.session import sessionmaker
 
 import datetime
 
+from server.auth.auth_module import hash_password
 import server.database.models.common_models as cm
 import server.database.models.roles as roles
 
@@ -20,7 +21,7 @@ def set_db_config_1(engine: Engine,
     """
     Устанавливает конфиг БД. По умолчанию - два пользователя, 1 РП, 10 личных задач, 10 задач РП, 10 личных однодневных
     мероприятий, 10 личных многодневных мероприятий, 10 однодневных мероприятий РП, 10 многодневных мероприятий РП.
-
+    Логин пользователя, которому принадлежат личные объекты (и который участвует в объектах РП): User. Пароль:x41822n_.
     :param engine: Движок для подключения к БД.
     :param personal_tasks_params: Параметры личных задач вида: ((<name>, <description>), ...).
     :param workflow_name: Название РП.
@@ -38,7 +39,7 @@ def set_db_config_1(engine: Engine,
 
     session_maker = sessionmaker(bind=engine)
     with session_maker() as session, session.begin():
-        user = cm.User(username='User', hashed_password='x41822n_', email='something@email.sth')
+        user = cm.User(username='User', hashed_password=hash_password('x41822n_'), email='something@email.sth')
         wf_creator = cm.User(username='Creator', hashed_password='password', email='email_1')
         session.add(user)
         session.add(wf_creator)

@@ -1,9 +1,9 @@
-import asyncio
-import logging
-
 from PySide6.QtCore import Signal, QObject
 
 import typing as tp
+import asyncio
+import logging
+import threading
 
 from client.src.gui.windows.windows import BaseWindow
 from client.models.base import Base
@@ -27,6 +27,7 @@ class BaseWindowHandler(QObject):
         self._main_view = main_view
         self._requester = requester
         self._model = model
+        self._main_thread_id = threading.get_ident()
 
     def _set_new_tokens(self, tokens: dict):
         access_token = tokens.get(CommonStruct.access_token)
@@ -44,10 +45,11 @@ class BaseWindowHandler(QObject):
     def _send_error(self, title: str, message: str):
         self.error_occurred.emit(title, message)
 
-    def _prepare_requests_group(self, requests_group: RequestsGroup):
-        """Обрабатывает группу запросов RequestsGroup."""
+    def _prepare_requests_group(self, requests_group: RequestsGroup, prepare_group_func: tp.Callable = None):
+        """Обрабатывает группу запросов RequestsGroup. Передаёт группу в переданную функцию."""
         for request in requests_group.requests():
             self._prepare_request(request)
+        prepare_group_func(requests_group)
 
     def _prepare_request(self, request: Request, prepare_data_func: tp.Callable = None):
         """
@@ -57,6 +59,10 @@ class BaseWindowHandler(QObject):
         :param request: объект запроса Request.
         :param prepare_data_func: функция, куда будет передан результат Future future.result().
         """
+        thread_id = threading.get_ident()
+        if thread_id != self._main_thread_id:
+            logging.warning(f'Preparing of the request executing in other thread: ID: {thread_id}. Main thread: {self._main_thread_id}')
+
         try:
             result = request.result()
             content = result.content
@@ -80,6 +86,10 @@ class BaseWindowHandler(QObject):
         Обновляет данные в обработчике. При вызове обработчик собирает данные со своих виджетов, делает соответствующие
         запросы на сервер, затем обновляет данных в виджетах.
         """
+        pass
+
+    def update_state(self):
+        """Обновляет состояние обработчика. Содержит логику настройки обработчика."""
         pass
 
     def get_window(self):

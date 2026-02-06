@@ -43,14 +43,6 @@ class User(Base):
     personal_daily_events: list[int] | None
     personal_many_days_events: list[int] | None
 
-    one_links: tp.ClassVar = []
-    many_links: tp.ClassVar = [
-        'created_workflows', 'created_projects', 'linked_workflows', 'linked_projects', 'created_wf_tasks',
-        'assigned_to_user_tasks', 'assigned_by_user_tasks', 'responsibility_tasks', 'created_personal_tasks',
-        'created_wf_documents', 'created_wf_daily_events', 'created_wf_many_days_events', 'notified_daily_events',
-        'notified_many_days_events', 'work_directions', 'personal_daily_events', 'personal_many_days_events'
-                  ]
-
 
 class Workflow(Base):
     """Рабочее пространство."""
@@ -85,20 +77,20 @@ class WFTask(Base):
     __tablename__ = 'wf_task'
     id: int
     workflow_id: int  # РП
-    project_id: int  # Проект
-    creator_id: int # Создатель
+    project_id: int | None  # Проект
+    creator_id: int  # Создатель
     entrusted_id: int  # Поручивший
-    work_direction_id: int  # Направление работы
-    parent_task_id: int  # Родительская задача
+    work_direction_id: int | None  # Направление работы
+    parent_task_id: int | None  # Родительская задача
 
     name: str = Field(max_length=30) 
     description: str = Field(max_length=2000)
     plan_deadline: datetime.datetime
-    fact_deadline: datetime.datetime
-    plan_time: datetime.datetime
-    fact_time: datetime.datetime
-    plan_start_work_date: datetime.datetime
-    fact_start_work_date: datetime.datetime
+    fact_deadline: datetime.datetime | None
+    plan_time: datetime.datetime | None
+    fact_time: datetime.datetime | None
+    plan_start_work_date: datetime.datetime | None
+    fact_start_work_date: datetime.datetime | None
 
     responsible: list[int]
     executors: list[int]
@@ -110,16 +102,16 @@ class PersonalTask(Base):
     __tablename__ = 'personal_task'
     id: int
     owner_id: int
-    work_direction_id: int
+    work_direction_id: int | None
 
     name: str = Field(max_length=30)
     description: str = Field(max_length=2000)
     plan_deadline: datetime.datetime
-    fact_deadline: datetime.datetime
-    plan_time: datetime.datetime
-    fact_time: datetime.datetime
-    plan_start_work_date: datetime.datetime
-    fact_start_work_date: datetime.datetime
+    fact_deadline: datetime.datetime | None
+    plan_time: datetime.datetime | None
+    fact_time: datetime.datetime | None
+    plan_start_work_date: datetime.datetime | None
+    fact_start_work_date: datetime.datetime | None
 
 
 class WFWorkDirection(Base):

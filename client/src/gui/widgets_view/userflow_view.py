@@ -52,11 +52,13 @@ class TaskWidgetView(BaseUserFlowWidget):
         self._view.scrollArea.setWidget(self._view.scrollAreaWidgetContents)
         self._view.scrollAreaWidgetContents.setLayout(self._tasks_layout)
         self._tasks_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self._tasks_layout
 
         self._tasks_struct: dict[str, dict] = dict()
 
     def complete_task(self, type_: str, id_: int):
+        widget = self._tasks_struct[type_][id_]
+
+        widget.hide()
         self.task_completed.emit(type_, id_)
 
     def add_task(self, name: str, id_: int, type_: str, task_description: dict = None):
@@ -74,12 +76,13 @@ class TaskWidgetView(BaseUserFlowWidget):
         widget = UserFlowTask(name, type_, id_, task_description)
 
         if type_ not in self._tasks_struct:  # Обновление структуры задач
-            self._tasks_struct[type_] = dict(id_=widget)
+            self._tasks_struct[type_] = {id_: widget}
         else:
             if id_ not in self._tasks_struct[type_]:
                 self._tasks_struct[type_][id_] = widget
             else:
-                raise ValueError(f"Task's id {id_} must be unique. (Task: name: {name}, id: {id_}, type: {type_}).")
+                raise ValueError(f"Task's id {id_} must be unique. (Task: name: {name}, id: {id_}, type: {type_})."
+                                 f"Tasks struct: {self._tasks_struct}")
         widget.completed.connect(self.complete_task)
         self._tasks_layout.addWidget(widget)
 

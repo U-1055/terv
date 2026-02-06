@@ -114,6 +114,15 @@ class NoEmail(IncorrectParamsError):
 class NoTokens(IncorrectParamsError):
     pass
 
+
+class ForbiddenAccess(APIError):
+    pass
+
+
+class ForbiddenAccessToPersonalObject(ForbiddenAccess):
+    pass
+
+
 # Соответствие между кодами ошибок и исключениями
 
 
@@ -132,8 +141,6 @@ exceptions_error_ids = {
     ErrorCodes.invalid_access.value: ExpiredAccessToken,
     ErrorCodes.no_tokens.value: NoTokens,
     ErrorCodes.existing_email.value: EmailAlreadyExists,
-    ErrorCodes.existing_login.value: LoginAlreadyExists
+    ErrorCodes.existing_login.value: LoginAlreadyExists,
+    ErrorCodes.forbidden_access_to_personal_object: ForbiddenAccessToPersonalObject
 }
-
-
-
