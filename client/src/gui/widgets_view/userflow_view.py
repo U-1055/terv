@@ -36,30 +36,69 @@ class BaseUserFlowWidget(BaseView):
 
 
 class TaskWidgetView(BaseUserFlowWidget):
-    task_completed = Signal(str)
+    """
+    Виджет задач. Позволяет добавлять и выполнять задачи. Задачи разделяются на типы и идентифицируются по ID.
+    (Это позволяет иметь задачи с одинаковыми именами). Задачи одного типа должны иметь разные ID.
+    """
+
+    task_completed = Signal(str, int)  # Вызывается при выполнении задачи. Возвращает тип задачи и её ID.
 
     def __init__(self):
         super().__init__(DataStructConst.tasks_widget)
         self._view = UserFlowTaskWidget()
         self._view.setupUi(self)
         self._view.label.setText(GuiLabels.tasks_widget)
+        self._tasks_layout = QVBoxLayout()
+        self._view.scrollArea.setWidget(self._view.scrollAreaWidgetContents)
+        self._view.scrollAreaWidgetContents.setLayout(self._tasks_layout)
+        self._tasks_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._tasks_layout
 
-    def complete_task(self, name: str):
-        self.task_completed.emit()
+        self._tasks_struct: dict[str, dict] = dict()
 
-    def add_task(self, name):
-        widget = UserFlowTask(name)
-        self._view.verticalLayout_2.addWidget(widget)
+    def complete_task(self, type_: str, id_: int):
+        self.task_completed.emit(type_, id_)
+
+    def add_task(self, name: str, id_: int, type_: str, task_description: dict = None):
+        """
+        Добавляет задачу в виджет.
+        (Параметры type_ и id_ нужны для однозначной идентификации задачи при её выполнении).
+
+        :param name: Название задачи.
+        :param id_: ID задачи.
+        :param type_: Тип задачи.
+        :param task_description: Структурированный текст, появляющийся в контекстном меню при нажатии на задачу.
+                                 Текст вида {<название поля>: <текст поля>}.
+
+        """
+        widget = UserFlowTask(name, type_, id_, task_description)
+
+        if type_ not in self._tasks_struct:  # Обновление структуры задач
+            self._tasks_struct[type_] = dict(id_=widget)
+        else:
+            if id_ not in self._tasks_struct[type_]:
+                self._tasks_struct[type_][id_] = widget
+            else:
+                raise ValueError(f"Task's id {id_} must be unique. (Task: name: {name}, id: {id_}, type: {type_}).")
+        widget.completed.connect(self.complete_task)
+        self._tasks_layout.addWidget(widget)
+
+    def set_tasks(self):
+        self.clear()
+
+    def clear(self):
+        """Удаляет все задачи из виджета."""
+        for i in range(self._view.verticalLayout_2.count()):
+            wdg = self._view.verticalLayout_2.itemAt(i).widget()
+            if wdg:
+                wdg.hide()
+        self._tasks_struct = dict()
 
     def to_loading_state(self):
         pass
 
     def to_normal_state(self):
         pass
-
-    @property
-    def tasks(self) -> tuple[str, ...]:
-        return '', ''
 
 
 class NotesWidgetView(BaseUserFlowWidget):
@@ -163,51 +202,38 @@ class ScheduleWidgetView(BaseView):
 
         h_padding = text_width + self._base_padding * 1.5  # Отступ для виджета (на всякий случай умножаем на 1.5, чтобы был чуть больше)
         event.setWindowOpacity(1)
+        # Виджет создаётся заново, потому что хранимые виджеты не настраиваются, т.к. их родителем является ScheduleWidget
+        # Если виджеты будут без родителя, они удаляются Qt.
 
-        rect = scene.addRect(h_padding, v_padding, self._graphics_size.width() - h_padding,
-                             height_steps)  # Настройка виджета
+        event = QEventWidget(event.title(), event.time_start(), event.time_end(),
+                             event.wdg_description(), event.time_separator(),
+                             event.start_end_label(), event.btn_show_details_label())
+        rect = scene.addWidget(event)  # Настройка виджета
+        rect.setPos(h_padding, v_padding)
 
         rect.setFlag(rect.GraphicsItemFlag.ItemIsPanel)
         self._current_event = None
 
-    def add_event(self, title: str, time_start: str, time_end: str, lasting: str,
-                  wdg_description: dict = None, time_separator: str = GuiLabels.default_time_separator,
-                  lasting_label: str = '', start_end_label: str = '', btn_show_details_label: str = ''):
+    def add_event(self, title: str, time_start: str, time_end: str, wdg_description: dict = None,
+                  time_separator: str = GuiLabels.default_time_separator, start_end_label: str = '',
+                  btn_show_details_label: str = ''):
         """
         Добавляет событие.
+
         :param title: название события.
         :param time_start: время начала.
         :param time_end: время окончания.
-        :param lasting: длительность в формате H ч. M мин. (Например: 3 ч. 15 мин.)
-        :param wdg_description: QStructuredText (client.src.gui.sub_widgets.common_widgets.QStructuredText), который
-                                 выводится по нажатию на кнопку.
-        :param lasting_label: надпись, показываемая перед длительностью.
+        :param wdg_description: словарь, содержащий описание структурированного текста (как в QStructuredText),
+                                который выводится при нажатии на событие. Словарь вида: {<название поля>: <текст>}.
         :param start_end_label: надпись, показываемая перед временем начала и окончания события.
         :param time_separator: разделитель между временем начала и временем конца.
         :param btn_show_details_label: надпись на кнопке подробностей.
+
         """
-        event = QEventWidget(title, time_start, time_end, lasting, wdg_description, time_separator, lasting_label,
-                       start_end_label,
-                       btn_show_details_label)
-        widget = QWidget()
-        lbl = QLabel('TEXT')
-        lbl.setParent(widget)
-        self._get_fact_size()
 
-        padding_steps = parse_time(event.time_start(), 15)  # 15 минут в интервале
-        height_steps = parse_time(event.time_end(), 15) - padding_steps  # Высота виджета в 15-ти минутных интервалах
-        # ToDo: выравнивание по нижней границе
-        scene = self._view.graphicsView.scene()
-        text_width, text_height = self.get_scene_font_metrics(scene)
-        text_width *= 5  # 5 - длина надписи в формате HH:MM
-        first_line_padding = text_height * 0.5  # Отступ первой линии (соответствующей времени 00:00)
-        v_padding = padding_steps * self._sub_step // 1 + first_line_padding
-
-        h_padding = text_width + self._base_padding * 1.5  # Отступ для виджета (на всякий случай умножаем на 1.5, чтобы был чуть больше)
-        widget_ = scene.addWidget(lbl)
-        widget_.setPos(h_padding, v_padding)
-        self._current_event = None
-
+        event = QEventWidget(title, time_start, time_end, wdg_description, time_separator, start_end_label,
+                             btn_show_details_label)
+        self.add_custom_event(event)
 
     def add_custom_event(self, event: QEventWidget):
         """
@@ -372,9 +398,22 @@ class WidgetSettingsMenu(QDialog):
 
 
 if __name__ == '__main__':
-    from test.client_test.utils.window import setup_gui
 
-    widget = ScheduleWidgetView()
-    widget.add_event('Name', '14:15', '14:45', '45 мин.')
+    def sth(type_: str, id_: int):
+        print(type_, id_)
+
+    from test.client_test.utils.window import setup_gui
+    text = {
+        'Описание': 'То-то и то-то',
+        'Создатель': 'Такой-то',
+        'Участвуют': 'Тот и этот'
+    }
+
+    widget = TaskWidgetView()
+    for i in range(10):
+        widget.add_task(f'Name_{i}', i, '14:45', text)
+
+    widget.task_completed.connect(sth)
+
     setup_gui(widget)
 

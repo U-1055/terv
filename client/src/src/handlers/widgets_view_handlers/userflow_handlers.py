@@ -17,6 +17,7 @@ class TaskViewHandler(BaseViewHandler):
     """
 
     task_completed = Signal(str)
+    task_clicked = Signal(str)
 
     def __init__(self, window: TaskWidgetView, tasks: dict = None):
         super().__init__(window)
@@ -25,8 +26,9 @@ class TaskViewHandler(BaseViewHandler):
 
         self._window = window
         self._window.task_completed.connect(self._on_task_completed)
-        for task in tasks:
-            window.add_task(task)
+        if tasks:
+            for task in tasks:
+                window.add_task(task)
 
     def _on_task_completed(self, task: str):
         self._tasks.pop(task)
@@ -40,6 +42,9 @@ class TaskViewHandler(BaseViewHandler):
     def tasks(self, tasks: tuple[str, ...]):
         self._tasks = tasks
         self._completed_tasks = []
+
+        for task in self._tasks:
+            self._window.add_task(task)
 
     @property
     def completed_tasks(self) -> list:

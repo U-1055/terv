@@ -36,9 +36,9 @@ class UserFlowWindow(BaseWindow):
         btn_set_widgets = QPushButton(GuiLabels.userflow_settings)
         btn_set_widgets.clicked.connect(self.press_btn_set_widgets)
 
-        self._main_layout.addLayout(self._widgets_layout, 5)
+        self._main_layout.addLayout(self._widgets_layout, 2)
         self._main_layout.addWidget(btn_set_widgets, 1, alignment=AlignBottom)
-        self._main_layout.addLayout(self._schedule_layout, 1)
+        self._main_layout.addLayout(self._schedule_layout, 2)
 
         self.setLayout(self._main_layout)
 

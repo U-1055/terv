@@ -1,23 +1,42 @@
 import logging
 
 from PySide6.QtWidgets import QWidget, QPushButton, QLabel, QHBoxLayout, QMenu, QWidgetAction
-from PySide6.QtCore import Signal, QObject
+from PySide6.QtCore import Signal, QObject, Qt, QPoint
 
 from client.src.base import DataStructConst, GuiLabels
 from client.src.ui.ui_event_widget import Ui_Form as EventView
 from client.src.gui.sub_widgets.common_widgets import QStructuredText
-from client.src.gui.sub_widgets.util_widgets import QMouseActivatingLineEdit
+from client.src.gui.sub_widgets.util_widgets import QMouseActivatingLineEdit, QClickableLabel
 
 
 class UserFlowTask(QWidget):
-    completed = Signal(str)
+    """
+    Виджет задачи ПП.
 
-    def __init__(self, name: str):
+    :param name: Название задачи.
+    :param type_: Тип задачи.
+    :param id_: ID задачи
+    :param wdg_description: Структурированный текст (как в QStructuredText), выводимый при нажатии на задачу.
+
+    """
+    completed = Signal(str, int)  # Вызывается при нажатии на кнопку выполнения задачи. Возвращает тип задачи и её ID.
+
+    def __init__(self, name: str, type_: str, id_: int, wdg_description: dict = None):
         super().__init__()
+        if wdg_description:
+            self._structured_text = QStructuredText(wdg_description)
+        else:
+            self._structured_text = None
+        self._id = id_
+        self._type = type_
 
         main_layout = QHBoxLayout()
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self._lbl_name = QLabel(name)
+        self._lbl_name = QClickableLabel(name)
+        self._lbl_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._lbl_name.customContextMenuRequested.connect(self._on_lbl_clicked)
+
         self._btn_complete = QPushButton()
         self._btn_complete.clicked.connect(self.complete_task)
 
@@ -26,14 +45,33 @@ class UserFlowTask(QWidget):
 
         self.setLayout(main_layout)
 
+    def _on_lbl_clicked(self, pos: QPoint):
+        menu = QMenu(parent=self._lbl_name)
+        action = QWidgetAction(menu)
+        action.setDefaultWidget(self._structured_text)
+        menu.addAction(action)
+        menu.exec(self._lbl_name.mapToGlobal(pos))  # Переводим координаты виджета в абсолютные
+
     def complete_task(self):
-        self.completed.emit(self._lbl_name)
+        self.completed.emit(self._type, self._id)
 
     def name(self) -> str:
         return self._lbl_name.text()
 
     def set_name(self, name: str):
         self._lbl_name.setText(name)
+
+    def type(self):
+        return self._type
+
+    def set_type(self, type_: str):
+        self._type = type_
+
+    def id(self) -> int:
+        return self._id
+
+    def set_id(self, id_: int):
+        self._id = id_
 
 
 class Reminder(QWidget):
@@ -77,31 +115,32 @@ class QEventWidget(QWidget):
     :param title: название события.
     :param time_start: время начала.
     :param time_end: время окончания.
-    :param lasting: длительность в формате H ч. M мин. (Например: 3 ч. 15 мин.)
-    :param wdg_description: QStructuredText (client.src.gui.sub_widgets.common_widgets.QStructuredText), который
-    выводится по нажатию на кнопку.
+    :param wdg_description: словарь, содержащий описание структурированного текста (как в QStructuredText),
+                            который выводится при нажатии на событие. Словарь вида: {<название поля>: <текст>}.
     :param lasting_label: надпись, показываемая перед длительностью.
     :param start_end_label: надпись, показываемая перед временем начала и окончания события.
     """
 
-    def __init__(self, title: str, time_start: str, time_end: str, lasting: str,
-                 wdg_description: QStructuredText = None, time_separator: str = GuiLabels.default_time_separator,
-                 lasting_label: str = '', start_end_label: str = '', btn_show_details_label: str = '', parent: QWidget = None):
+    def __init__(self, title: str, time_start: str, time_end: str,
+                 wdg_description: dict = None, time_separator: str = GuiLabels.default_time_separator,
+                 start_end_label: str = '', btn_show_details_label: str = '', parent: QWidget = None):
         super().__init__(parent=parent)
 
         self._parent = parent
         self._title = title
         self._time_start = time_start
         self._time_end = time_end
-        self._lasting = lasting
-        self._wdg_description = wdg_description
+        if wdg_description:
+            self._wdg_description = QStructuredText(wdg_description)
+        else:
+            self._wdg_description = None
         self._time_separator = time_separator
-        self._lasting_label = lasting_label
         self._start_end_label = start_end_label
         self._btn_show_details_label = btn_show_details_label
 
         self._view = EventView()
         self._view.setupUi(self)
+
         self._view.btn_show_details.clicked.connect(self._on_btn_show_details_clicked)
         self._view.btn_show_details.setText(self._btn_show_details_label)
 
@@ -124,7 +163,6 @@ class QEventWidget(QWidget):
     def _setup_widgets(self):
         self._view.lbl_start_end.setText(f'{self._start_end_label}{self._time_start}{self._time_separator}{self._time_end}')
         self._view.lbl_title.setText(self._title)
-        self._view.lbl_lasting.setText(f'{self._lasting_label}{self._lasting}')
     
     def title(self) -> str:
         return self._title
@@ -148,20 +186,17 @@ class QEventWidget(QWidget):
 
     def time_end(self) -> str:
         return self._time_end
-    
-    def lasting(self) -> str:
-        return self._lasting
-    
-    def set_lasting(self, lasting: str):
-        self._lasting = lasting
-        self._view.lbl_lasting.setText(f'{self._lasting_label}{self._lasting}')
 
-    def wdg_description(self) -> QStructuredText | None:
-        return self._wdg_description
+    def wdg_description(self) -> dict | None:
+        if self._wdg_description:
+            return self._wdg_description.structure()
 
-    def set_wdg_description(self, wdg_description: QStructuredText):
-        self._wdg_description = wdg_description
-        self._set_menu()
+    def set_wdg_description(self, wdg_description: dict | None):
+        if wdg_description is not None:
+            self._wdg_description = QStructuredText(wdg_description)
+            self._set_menu()
+        else:
+            self._wdg_description = None
 
     def set_time_separator(self, time_separator: str):
         self._time_separator = time_separator
@@ -170,13 +205,6 @@ class QEventWidget(QWidget):
 
     def time_separator(self) -> str:
         return self._time_separator
-
-    def set_lasting_label(self, lasting_label: str):
-        self._lasting = lasting_label
-        self._view.lbl_lasting.setText(f'{self._lasting_label}{self._lasting}')
-
-    def lasting_label(self) -> str:
-        return self._lasting_label
 
     def set_start_end_label(self, start_end_label: str):
         self._start_end_label = start_end_label
@@ -196,16 +224,6 @@ class QEventWidget(QWidget):
 
 if __name__ == '__main__':
     from test.client_test.utils.window import setup_gui
-
-    task_info = QStructuredText(
-        {
-            'Описание': ''.join([f'{''.join(['C' for i in range(10)])} ' for x in range(100)]),
-            'Создатель': ''.join(['n' for i in range(30)]),
-            'Поручил': ''.join(['n' for i in range(30)])
-        }
-    )
-
-    event = QEventWidget('some_text', '14:15', '14:20', '5 мин.', task_info, '-', GuiLabels.lasting_label,
-                   GuiLabels.start_end_label)
-    setup_gui(event)
+    wdg = UserFlowTask('name', '1', 2, {'1': '1111111', 'GGG': '1342'})
+    setup_gui(wdg)
 
