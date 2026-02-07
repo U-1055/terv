@@ -42,6 +42,29 @@ def parse_time(time_: str, minutes_in_interval: int) -> int:
     return intervals
 
 
+def get_lasting(time_start: datetime.time, time_end: datetime.time, hour: str = 'ч.', minute: str = 'м.') -> str:
+    """
+    Возвращает длительность временного интервала в формате H <hour>, M <minute>.
+
+    :param time_start: Начало интервала.
+    :param time_end: Конец интервала.
+    :param hour: Строка, которая будет поставлена после значения часа (Например, 3 <hour> 15 мин.).
+    :param minute: Строка, которая будет поставлена после значения минут (Например, 3 ч. 15 <minute>).
+
+    """
+    start_seconds = time_start.hour * 3600 + time_start.minute * 60 + time_start.second
+    end_seconds = time_end.hour * 3600 + time_end.minute * 60 + time_end.second
+
+    if time_start <= time_end:  # На случай времён в двух разных днях (Например, 23:00-01:00)
+        difference = end_seconds - start_seconds
+    else:  # Если время начала раньше времени окончания
+        difference = 24 * 3600 - start_seconds + end_seconds  # Длительность до полуночи + длительность на следующий день
+
+    hours = difference // 3600
+    minutes = difference % 3600 // 60
+    return f'{hours} {hour} {minutes} {minute}'
+
+
 def iterable_to_str(list_: tp.Iterable, separator: str, prefix: str = '', suffix: str = ''):
     """
     Превращает итерируемый в строку, обрабатываемую по заданным параметрам (separator, preffix, suffix).
@@ -69,7 +92,4 @@ def date_to_gui_view(date: datetime.date, year: bool = True, month: bool = True,
 
 
 if __name__ == '__main__':
-    dicts = [{'name': i} for i in range(20)]
-    print(dicts)
-    result = make_unique_dict_names(dicts)
-    print(result)
+    print(get_lasting(datetime.time(15, 15, 0), datetime.time(17, 0, 15)))

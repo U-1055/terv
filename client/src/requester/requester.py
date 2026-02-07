@@ -181,10 +181,10 @@ class Requester:
             return Response(request, server_response.content, server_response.records_left,
                             server_response.last_record_num)
         except err.APIError as e:  # Обработка ошибок API
-            logging.warning(f'Excepted error {e} during making request {InternalRequest}')
+            logging.warning(f'Excepted error {e} during making request {str(InternalRequest)}')
             raise e
         except (httpx.ConnectError, httpx.ReadError, httpx.WriteError) as e:  # Обработка ошибок сети
-            logging.warning(f'Excepted network connection error {e} during making request {InternalRequest}')
+            logging.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
             raise err.get_network_error(e, request)
 
     @synchronized_request
@@ -244,8 +244,8 @@ class Requester:
         return response
 
     @synchronized_request
-    async def get_wf_daily_events_by_users(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
-                                           date: datetime.date = None, limit: int = None, offset: int = 0):
+    async def get_wf_daily_events_by_user(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
+                                          date: datetime.date = None, limit: int = None, offset: int = 0):
 
         path = f'{self._server}/users/{user_id}/wf_daily_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
@@ -265,7 +265,7 @@ class Requester:
     async def get_wf_many_days_events_by_user(self, user_id: int, wf_many_days_events_ids: list[int], access_token: str,
                                               date: datetime.date = None, limit: int = None, offset: int = None):
 
-        path = f'{self._server}/users/{user_id}/wf_daily_events'
+        path = f'{self._server}/users/{user_id}/wf_many_days_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                           query_params={
                               CommonStruct.limit: limit,
@@ -325,10 +325,10 @@ class Requester:
     async def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
         path = f'{self._server}/wf_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
-                          query_params={
-                              CommonStruct.limit: limit,
-                              CommonStruct.offset: offset
-                          })
+                                  query_params={
+                                  CommonStruct.limit: limit,
+                                  CommonStruct.offset: offset
+                                 })
         response = await self._choose_request_type(request, limit)
         return response
 

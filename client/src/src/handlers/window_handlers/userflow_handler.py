@@ -4,8 +4,10 @@ import dataclasses
 import datetime
 import logging
 import threading
+import typing as tp
 
-from client.src.src.handlers.window_handlers.base import BaseWindowHandler, MainWindow, Requester, Model, RequestsGroup
+from client.src.src.handlers.window_handlers.base import (BaseWindowHandler, MainWindow, Requester, Model, RequestsGroup,
+                                                          Request)
 from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels
 from client.src.src.handlers.widgets_view_handlers.userflow_handlers import TaskViewHandler
 from client.src.gui.windows.userflow_window import UserFlowWindow
@@ -17,7 +19,7 @@ import client.models.common_models as cm
 from client.utils.data_tools import make_unique_dict_names
 from common.base import DBFields, ObjectTypes, TasksStatuses
 from client.src.gui.sub_widgets.widgets import QStructuredText
-from client.utils.data_tools import iterable_to_str
+from client.utils.data_tools import iterable_to_str, get_lasting
 
 
 class UserFlowWindowHandler(BaseWindowHandler):
@@ -33,6 +35,8 @@ class UserFlowWindowHandler(BaseWindowHandler):
         super().__init__(window, main_view, requester, model)
         self._window, self._main_view, self._requester, self._model, self._data_const = window, main_view, requester, model, data_const
         self._data_model: 'UserFlowDataModel' = UserFlowDataModel()
+        self._requests: 'UserFlowRequests' = UserFlowRequests()
+
         self._task_widget: TaskWidgetView | None = None
         self._notes_view_handler: NotesWidgetView | None = None
         self._schedule_view_handler: ScheduleWidgetView | None = None
@@ -64,9 +68,6 @@ class UserFlowWindowHandler(BaseWindowHandler):
     def _on_reminder_added(self, reminder: str):
         self._model.add_reminder(reminder)
 
-    def _on_id_clicked(self):
-        pass
-
     def _on_task_completed(self, type_: str, id_: int):
         """Обрабатывает выполнение задачи в виджете задач."""
         access = self._model.get_access_token()
@@ -78,6 +79,10 @@ class UserFlowWindowHandler(BaseWindowHandler):
             return
 
         request.finished.connect(lambda request_: self._prepare_request(request_))
+
+    def _on_id_clicked(self, id_: int, type_: str, field: str):
+        """Обрабатывает нажатие на id объекта в ScheduleWidget. Выводит информацию об объекте."""
+        logging.debug(f'Field: {field} of object (ID: {id_}, type: {type_}) clicked.')
 
     def _set_widgets_settings(self, widgets: tuple[str, ...]):
         """Устанавливает настройки виджетов (Изменяет список отображаемых виджетов)."""
@@ -92,6 +97,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
         self._place_settable_widgets()  # Обновляем конфигурацию
 
     def _set_user(self, user_info: tuple[dict]):
+        logging.debug(f'User info received: {user_info}')
         self._data_model.user = cm.User(**user_info[0])
 
     def _set_tasks_widget(self):
@@ -172,46 +178,77 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 handler.reminder_edited.connect(self._on_reminder_edited)
                 logging.debug('Reminder widget placed')
 
-    def _get_user_info(self):
+    def _get_user_info(self) -> Request:
         request = self._requester.get_user_info(self._model.get_access_token())
         request.finished.connect(lambda response: self._prepare_request(response, self._set_user))
+        self._requests.user_request = request
+        return request
 
     def update_state(self):
+        logging.debug('UserFlowWInHandler state updated')
         self._get_user_info()
         self._place_settable_widgets()
 
     def update_data(self):
-        self._get_task_handler_data()
+        self._place_settable_widgets()
 
-    def _set_personal_daily_events(self, events: tuple[dict, ...] ):
-        self._data_model.personal_daily_events = [cm.PersonalDailyEvent(**event) for event in events]
+    def _set_personal_daily_events(self, events: tuple[dict, ...]):
+        logging.debug(f'Personal daily events received: {events}.')
+        if events:
+            self._data_model.personal_daily_events = [cm.PersonalDailyEvent(**event) for event in events]
 
     def _set_personal_many_days_events(self, events: tuple[dict, ...]):
-        self._data_model.personal_many_days_events = [cm.PersonalManyDaysEvent(**event) for event in events]
+        logging.debug(f'Personal many days events received.')
+        if events:
+            self._data_model.personal_many_days_events = [cm.PersonalManyDaysEvent(**event) for event in events]
 
     def _set_wf_many_days_events(self, events: tuple[dict, ...]):
-        self._data_model.wf_many_days_events = [cm.WFManyDaysEvent(**event) for event in events]
+        logging.debug(f'WF many days events received.')
+        if events:
+            self._data_model.wf_many_days_events = [cm.WFManyDaysEvent(**event) for event in events]
 
     def _set_wf_daily_events(self, events: tuple[dict, ...]):
-        self._data_model.wf_daily_events = [cm.WFDailyEvent(**event) for event in events]
+        logging.debug(f'WF daily events received')
+        if events:
+            self._data_model.wf_daily_events = [cm.WFDailyEvent(**event) for event in events]
 
     def _set_schedule_widget(self):
-        events = [*self._data_model.wf_daily_events, *self._data_model.personal_daily_events,
-                  *self._data_model.wf_many_days_events, *self._data_model.personal_many_days_events]
-        event_views_data = []
-        for event in events:
+        logging.debug(f'Setting schedule widget. Events data received: '
+                      f'WFDaily: {self._data_model.wf_daily_events and True}. '
+                      f'WFManyDays: {self._data_model.wf_many_days_events and True}. '
+                      f'PersonalDaily: {self._data_model.personal_daily_events and True}. '
+                      f'PersonalManyDays: {self._data_model.personal_many_days_events and True}')
+        daily_events = []
+        for events in [self._data_model.wf_daily_events, self._data_model.personal_daily_events]:
+            if events:
+                daily_events.extend(events)
+
+        many_days_events = []
+        for events in [self._data_model.wf_many_days_events, self._data_model.personal_many_days_events]:
+            if events:
+                many_days_events.extend(events)
+
+        for event in daily_events:
             time_start = event.time_start.strftime('%H:%M')
             time_end = event.time_end.strftime('%H:%M')
+            description = {
+                f'{GuiLabels.title}:': f'{time_start}-{time_end}.',
+                f'{GuiLabels.description}': event.description,
+                f'{GuiLabels.lasting}:': get_lasting(event.time_start, event.time_end)
+            }
 
             if event.__tablename__ == ObjectTypes.wf_daily_event:
-                event: cm.PersonalDailyEvent
-                structured_data = {}
-                description = QStructuredText()
-
-            if event.__tablename__ == ObjectTypes.personal_daily_event:
                 event: cm.WFDailyEvent
+                description.update({
+                    f'{GuiLabels.title}:': f'{time_start}-{time_end}.',
+                    f'{GuiLabels.workflow}': f'#{event.workflow_id}',
+                    f'{GuiLabels.creator}': f'#{event.creator_id}',
+                    f'{GuiLabels.description}': event.description,
+                    f'{GuiLabels.notifieds}': iterable_to_str(event.notified, ',', '#')
+                })
+            self._schedule_view_handler.add_event(event.id, event.__tablename__, event.name, time_start, time_end, description)
 
-            self._schedule_view_handler.add_event(event.name, time_start, time_end)
+        self._schedule_view_handler.event_tooltip_content_clicked.connect(self._on_id_clicked)
 
     def _set_personal_tasks(self, tasks: tuple[dict, ...]):
         self._data_model.personal_tasks = [cm.PersonalTask(**task) for task in tasks]
@@ -227,16 +264,20 @@ class UserFlowWindowHandler(BaseWindowHandler):
             personal_daily_events = self._requester.get_personal_daily_events(self._data_model.user.id, access_token,
                                                                               datetime.date.today())
             personal_daily_events.finished.connect(lambda request: self._prepare_request(request, self._set_personal_daily_events))
+            self._requests.personal_daily_events_request = personal_daily_events
+
             personal_many_days_events = self._requester.get_personal_many_days_events(self._data_model.user.id, access_token,
                                                                                       datetime.date.today())
             personal_many_days_events.finished.connect(lambda request: self._prepare_request(request, self._set_personal_many_days_events))
+            self._requests.personal_many_days_events_request = personal_many_days_events
 
-            wf_daily_events = self._requester.get_wf_daily_events_by_users(self._data_model.user.id,
-                                                                           self._data_model.user.notified_daily_events,
-                                                                           access_token,
-                                                                           datetime.date.today(),
-                                                                           )
+            wf_daily_events = self._requester.get_wf_daily_events_by_user(self._data_model.user.id,
+                                                                          self._data_model.user.notified_daily_events,
+                                                                          access_token,
+                                                                          datetime.date.today(),
+                                                                          )
             wf_daily_events.finished.connect(lambda request: self._prepare_request(request, self._set_wf_daily_events))
+            self._requests.wf_daily_events = wf_daily_events
 
             wf_many_days_events = self._requester.get_wf_many_days_events_by_user(
                 self._data_model.user.id,
@@ -245,31 +286,31 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 datetime.date.today(),
                     )
             wf_many_days_events.finished.connect(lambda request: self._prepare_request(request, self._set_wf_many_days_events))
+            self._requests.wf_many_days_event = wf_many_days_events
 
             group = self._requester.create_group(personal_daily_events, personal_many_days_events, wf_daily_events,
                                                  wf_many_days_events)
             group.finished.connect(lambda request: self._set_schedule_widget())
 
         else:
-            self._get_user_info()
+            self._prepare_no_data(self._get_user_info, self._requests.user_request, self._get_schedule_widget_data)
 
     def _get_task_handler_data(self):
         """Получает данные для обработчика задач и вызывает методы для его настройки."""
         access_token = self._model.get_access_token()
 
-        # ToDo: описать два подхода к запросам (через группу и через последовательные подвязки на сигналы и подвязку на сигнал группы в конце)
         if self._data_model.user:
             personal_tasks = self._requester.get_personal_tasks(self._data_model.user.id, access_token, datetime.date.today())
             personal_tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_personal_tasks))
             wf_tasks = self._requester.get_wf_tasks_by_user(self._data_model.user.id, access_token, datetime.date.today())
             wf_tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_wf_tasks))
+            self._requests.wf_tasks_request = wf_tasks
+            self._requests.personal_tasks_request = personal_tasks
 
             group = self._requester.create_group(personal_tasks, wf_tasks)
             group.finished.connect(lambda _: self._set_tasks_widget())
-
-        else:
-            request = self._requester.get_user_info(access_token)
-            request.finished.connect(lambda request_: self._prepare_request(request_, lambda _: self._get_task_handler_data()))
+        else:  # Если данных не получено
+            self._prepare_no_data(self._get_user_info, self._requests.user_request, self._get_task_handler_data)
 
 
 @dataclasses.dataclass
@@ -283,3 +324,16 @@ class UserFlowDataModel:
     personal_many_days_events: list[cm.PersonalManyDaysEvent] = ()
     wf_daily_events: list[cm.WFDailyEvent] = ()
     wf_many_days_events: list[cm.WFManyDaysEvent] = ()
+
+
+@dataclasses.dataclass
+class UserFlowRequests:
+    """Датакласс, содержащий запросы UserFlow."""
+
+    user_request: Request | None = None
+    personal_tasks_request: Request | None = None
+    wf_tasks_request: Request | None = None
+    personal_daily_events_request: Request | None = None
+    personal_many_days_events_request: Request | None = None
+    wf_daily_events: Request | None = None
+    wf_many_days_event: Request | None = None

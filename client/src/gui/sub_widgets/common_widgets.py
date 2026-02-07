@@ -105,6 +105,11 @@ class QStructuredText(QWidget):
         self._structure[field] = content
         self._place_fields()
 
+    def put_fields(self, structure: dict):
+        """Обновляет виджет полями из переданного словаря (аналогично dict.update())."""
+        self._structure.update(structure)
+        self._place_fields()
+
     def content(self, field: str) -> str | None:
         """Возвращает содержимое поля field."""
         return self._structure.get(field)

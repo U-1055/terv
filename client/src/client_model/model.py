@@ -79,10 +79,12 @@ class Model:
             return storage.get(self._ds_const.note)
 
     def set_access_token(self, token_: str):
+        logging.info(f'Set new access token: {token_}.')
         with shelve.open(self._storage, 'w') as storage:
             storage[self._ds_const.access_token] = token_
 
     def set_refresh_token(self, token_: str):
+        logging.info(f'Set new refresh token: {token_}.')
         with shelve.open(self._storage, 'w') as storage:
             storage[self._ds_const.refresh_token] = token_
 

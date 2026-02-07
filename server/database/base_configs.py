@@ -1,5 +1,6 @@
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.sql import select
 
 import datetime
 
@@ -89,9 +90,9 @@ def set_db_config_1(engine: Engine,
                                for params in personal_daily_events_params]
         else:
             wf_daily_events = [cm.WFDailyEvent(name=f'wf_daily_event.{i}', description='Description',
-                                               time_start=datetime.time(hour=i, minute=time_now.minute),
-                                               time_end=datetime.time(hour=i + 1, minute=time_now.minute),
-                                               date=today, workflow=workflow, creator=wf_creator)
+                                               time_start=datetime.time(hour=i + 10, minute=time_now.minute),
+                                               time_end=datetime.time(hour=i + 11, minute=time_now.minute),
+                                               date=today, workflow=workflow, creator=wf_creator, notified=[user])
                                for i in range(10)]
         session.add_all(wf_daily_events)
 
@@ -129,7 +130,14 @@ def set_db_config_1(engine: Engine,
 
 
 if __name__ == '__main__':
+    from server.database.models.db_utils import init_db
+    from server.database.repository import DataRepository
+
+    init_db('sqlite:///database')
     engine = create_engine('sqlite:///database')
     set_db_config_1(engine=engine)
+    repo = DataRepository(sessionmaker(bind=engine))
+    print(repo.get_users_by_username().content)
+
 
 

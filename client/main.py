@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QApplication
 
 from pathlib import Path
 import threading
+import logging
 
 from common_utils.log_utils.memory_logger import check_memory
 from client.src.src.main_logic import Logic
@@ -13,13 +14,15 @@ from client.src.gui.main_view import MainWindow, setup_gui
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst
 
+logging.basicConfig(level=logging.INFO)
+
 
 def launch(model_class, model_params: tuple, view_class, view_params: tuple, presenter_class, presenter_params: tuple):
     app = QApplication()
     root = view_class(*view_params)
     model = model_class(*model_params)
     logic = presenter_class(root, model, *presenter_params)
-
+    logging.info(f'Access token: {model.get_access_token()}. Refresh token: {model.get_refresh_token()}')
     setup_gui(root, app)
 
 # ToDo: настройка стилей + шрифтов

@@ -121,8 +121,16 @@ class NotesWidgetView(BaseUserFlowWidget):
 
 class ScheduleWidgetView(BaseView):
     """
-    Представление виджета расписания
+    Виджет расписания.
+
+    :var event_tooltip_field_clicked: Сигнал, вызывающийся при нажатии на поле подсказки события. Передаёт аргументами:
+                                      id_ события, тип события, название поля.
+    :var event_tooltip_content_clicked: Сигнал, вызывающийся при нажатии на текст поля подсказки события.
+                                        Передаёт аргументами: id_ события, тип события, название поля.
     """
+
+    event_tooltip_field_clicked = Signal(int, str, str)
+    event_tooltip_content_clicked = Signal(int, str, str)
 
     def __init__(self, title: str = GuiLabels.schedule_widget):
         super().__init__()
@@ -140,11 +148,17 @@ class ScheduleWidgetView(BaseView):
         self._sub_step: int | None = None
         self._label_padding: int | None = None
         self._base_padding: int | None = None
-        self._events: list[QEventWidget] = []
+        self._events: dict[str, dict[int, QEventWidget]] = dict()
         self._current_event: QEventWidget | None = None
 
         self._set_marking()  # С задержкой, т.к. иначе виджет не успевает отрисоваться и будет некорректный размер
         QTimer.singleShot(50, self._reset_scene)  # Перерисовка сцены после окончательной отрисовки виджета (когда будут определены реальные размеры)
+
+    def _on_event_tooltip_field_clicked(self, id_: int, type_: str, field: str):
+        self.event_tooltip_field_clicked.emit(id_, type_, field)
+
+    def _on_event_tooltip_content_clicked(self, id_: int, type_: str, field: str):
+        self.event_tooltip_content_clicked.emit(id_, type_, field)
 
     def _set_marking(self):
         """Устанавливает разметку. Создаёт новую сцену."""
@@ -174,8 +188,10 @@ class ScheduleWidgetView(BaseView):
     def _reset_scene(self):
         """Перерисовывает QGraphicsScene виджета."""
         self._set_marking()
-        for event in self._events:
-            self.add_custom_event(event)
+        for type_ in self._events:
+            for id_ in self._events[type_]:
+                event = self._events[type_][id_]
+                self.add_custom_event(event, id_, type_)
 
     @staticmethod
     def get_scene_font_metrics(scene: QGraphicsScene) -> tuple[int, int]:
@@ -191,7 +207,8 @@ class ScheduleWidgetView(BaseView):
         self._base_padding = self._graphics_size.width() // 20  # Малый отступ (для добавления малой величины к координате)
         # Число 20 выбрано просто так (При делении на него получается достаточно малая величина)
 
-    def _place_wdg_event(self, event: QEventWidget):
+    def _place_wdg_event(self, event: QEventWidget, id_: int, type_: str):
+        """Размещает виджет события."""
         self._get_fact_size()
 
         padding_steps = parse_time(event.time_start(), 15)  # 15 минут в интервале
@@ -211,44 +228,50 @@ class ScheduleWidgetView(BaseView):
         event = QEventWidget(event.title(), event.time_start(), event.time_end(),
                              event.wdg_description(), event.time_separator(),
                              event.start_end_label(), event.btn_show_details_label())
+        event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_field_clicked(id_, type_, field))
+        event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_content_clicked(id_, type_, field))
+
         rect = scene.addWidget(event)  # Настройка виджета
         rect.setPos(h_padding, v_padding)
 
         rect.setFlag(rect.GraphicsItemFlag.ItemIsPanel)
-        self._current_event = None
 
-    def add_event(self, title: str, time_start: str, time_end: str, wdg_description: dict = None,
+    def add_event(self, id_: int, type_: str, title: str, time_start: str, time_end: str, wdg_description: dict = None,
                   time_separator: str = GuiLabels.default_time_separator, start_end_label: str = '',
                   btn_show_details_label: str = ''):
         """
         Добавляет событие.
 
-        :param title: название события.
-        :param time_start: время начала.
-        :param time_end: время окончания.
-        :param wdg_description: словарь, содержащий описание структурированного текста (как в QStructuredText),
+        :param id_: ID события.
+        :param type_: Тип события
+        :param title: Название события.
+        :param time_start: Время начала.
+        :param time_end: Время окончания.
+        :param wdg_description: Cловарь, содержащий описание структурированного текста (как в QStructuredText),
                                 который выводится при нажатии на событие. Словарь вида: {<название поля>: <текст>}.
-        :param start_end_label: надпись, показываемая перед временем начала и окончания события.
-        :param time_separator: разделитель между временем начала и временем конца.
-        :param btn_show_details_label: надпись на кнопке подробностей.
-
+        :param start_end_label: Надпись, показываемая перед временем начала и окончания события.
+        :param time_separator: Разделитель между временем начала и временем конца.
+        :param btn_show_details_label: Надпись на кнопке подробностей.
         """
 
         event = QEventWidget(title, time_start, time_end, wdg_description, time_separator, start_end_label,
                              btn_show_details_label)
-        self.add_custom_event(event)
+        self.add_custom_event(event, id_, type_)
 
-    def add_custom_event(self, event: QEventWidget):
+    def add_custom_event(self, event: QEventWidget, id_: int, type_: str):
         """
         Добавляет событие
         :param event: экземпляр QEventWidget.
+        :param type_: Тип события.
+        :param id_: ID события.
         """
-        if not self._current_event:
-            self._current_event = event
-        if event not in self._events:
-            self._events.append(event)
+        if type_ not in self._events:  # Обновление словаря событий
+            self._events[type_] = {id_: event}
+        else:
+            self._events[type_][id_] = event
+
         self._get_fact_size()
-        self._place_wdg_event(event)
+        self._place_wdg_event(event, id_, type_)
 
     def delete_event(self, title: str):
         pass
@@ -412,11 +435,9 @@ if __name__ == '__main__':
         'Участвуют': 'Тот и этот'
     }
 
-    widget = TaskWidgetView()
-    for i in range(10):
-        widget.add_task(f'Name_{i}', i, '14:45', text)
-
-    widget.task_completed.connect(sth)
+    widget = ScheduleWidgetView()
+    for i in range(0, 20, 2):
+        widget.add_event(1, '', '1:1', f'{i}:00', f'{i + 1}:45')
 
     setup_gui(widget)
 

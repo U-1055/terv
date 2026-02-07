@@ -13,9 +13,9 @@ from server.data_const import APIAnswers as APIAn
 def form_response(http_code: int,
                   message: str,
                   content: tp.Any = None,
-                  error_id: int = ErrorCodes.ok.value,
                   last_rec_num: int = None,
-                  records_left: int = None
+                  records_left: int = None,
+                  error_id: int = ErrorCodes.ok.value,
                   ) -> Response:
     """
     Формирует ответ API.
@@ -117,7 +117,7 @@ def get_request(func: tp.Callable):
     соответствующий ответ API.
     """
 
-    def prepare(request: flask.Request, *args):
+    def prepare(request: flask.Request, *args, **kwargs):
         limit = request.args.get(CommonStruct.limit)
         offset = request.args.get(CommonStruct.offset)
         require_last_num = request.args.get(CommonStruct.require_last_num)
@@ -141,7 +141,7 @@ def get_request(func: tp.Callable):
         if require_last_num and require_last_num != '0':
             require_last_num = True
 
-        return func(request, *args, limit=limit, offset=offset, require_last_num=require_last_num)
+        return func(request, *args, **kwargs, limit=limit, offset=offset, require_last_num=require_last_num)
 
     return prepare
 

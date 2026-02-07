@@ -102,6 +102,9 @@ class GuiLabels:
     fact_start_work_date = 'Взято в работу'
     plan_start_work_date = 'Планируется взять в работу'
     responsible = 'Ответственный'
+    notifieds = 'Уведомляются'
+    creator = 'Создатель'
+    lasting = 'Длительность'
 
 
 class GUIStyles:
