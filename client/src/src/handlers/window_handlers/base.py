@@ -29,6 +29,7 @@ class BaseWindowHandler(QObject):
         self._model = model
         self._access_token_status = True
         self._refresh_token_status = True
+        self._refresh_request_sent = False  # Отправлен ли запрос на обновление токенов
         self._main_thread_id = threading.get_ident()
 
     def _prepare_no_data(self, data_get_func: tp.Callable[[], Request], data_get_request: Request, calling_func: tp.Callable):
@@ -67,6 +68,7 @@ class BaseWindowHandler(QObject):
         self._model.set_refresh_token(refresh_token)
         self.set_access_token_status(True)  # Access-токен снова валиден
         self.set_refresh_token_status(True)  # Новый refresh тоже валиден
+        self._refresh_request_sent = False
 
     def _update_tokens(self):
         """Обновляет access и refresh токены по refresh-токену. Обновляет обработчик после получения токенов."""
@@ -106,8 +108,10 @@ class BaseWindowHandler(QObject):
                 else:
                     self._send_error('Error', 'The data has not been received')
         except err.ExpiredAccessToken as e:  # Обработка просрочки access-токена
-            self.set_access_token_status(False)
-            self._update_tokens()
+            if not self._refresh_request_sent:  # Чтобы избежать повторной отправки запроса
+                self.set_access_token_status(False)
+                self._update_tokens()
+                self._refresh_request_sent = True
 
         except err.ExpiredRefreshToken as e:  # Обработка просрочки refresh-токена
             logging.debug('Expired Refresh Token')

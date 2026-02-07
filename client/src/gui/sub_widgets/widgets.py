@@ -121,6 +121,9 @@ class QEventWidget(QWidget):
     :param start_end_label: надпись, показываемая перед временем начала и окончания события.
     """
 
+    tooltip_field_clicked = Signal(str)  # Вызывается при нажатии на поле wdg_description. Возвращает название поля
+    tooltip_content_clicked = Signal(str)  # Вызывается при нажатии на текст поля wdg_description. Возвращает название поля
+
     def __init__(self, title: str, time_start: str, time_end: str,
                  wdg_description: dict = None, time_separator: str = GuiLabels.default_time_separator,
                  start_end_label: str = '', btn_show_details_label: str = '', parent: QWidget = None):
@@ -132,6 +135,8 @@ class QEventWidget(QWidget):
         self._time_end = time_end
         if wdg_description:
             self._wdg_description = QStructuredText(wdg_description)
+            self._wdg_description.field_clicked.connect(self._on_tooltip_field_clicked)
+            self._wdg_description.content_clicked.connect(self._on_tooltip_content_clicked)
         else:
             self._wdg_description = None
         self._time_separator = time_separator
@@ -146,7 +151,7 @@ class QEventWidget(QWidget):
 
         self._set_menu()
         self._setup_widgets()
-    
+
     def _set_menu(self):
         """Настраивает меню для кнопки (wdg_description)."""
 
@@ -159,6 +164,12 @@ class QEventWidget(QWidget):
     def _on_btn_show_details_clicked(self):
         """Показать подробности (wdg_description)."""
         self._view.btn_show_details.menu()
+
+    def _on_tooltip_field_clicked(self, field: str):
+        self.tooltip_field_clicked.emit(field)
+
+    def _on_tooltip_content_clicked(self, field: str):
+        self.tooltip_content_clicked.emit(field)
 
     def _setup_widgets(self):
         self._view.lbl_start_end.setText(f'{self._start_end_label}{self._time_start}{self._time_separator}{self._time_end}')

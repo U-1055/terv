@@ -1,24 +1,18 @@
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import QTimer
 
 import dataclasses
 import datetime
 import logging
 import threading
-import typing as tp
 
-from client.src.src.handlers.window_handlers.base import (BaseWindowHandler, MainWindow, Requester, Model, RequestsGroup,
-                                                          Request)
+from client.src.src.handlers.window_handlers.base import (BaseWindowHandler, MainWindow, Requester, Model, Request)
 from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels
-from client.src.src.handlers.widgets_view_handlers.userflow_handlers import TaskViewHandler
 from client.src.gui.windows.userflow_window import UserFlowWindow
 from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, ScheduleWidgetView, NotesWidgetView,
                                                        WidgetSettingsMenu)
-from client.src.src.handlers.widgets_view_handlers.userflow_handlers import (NotesViewHandler, ScheduleViewHandler,
-                                                                             ReminderViewHandler)
+from client.src.src.handlers.widgets_view_handlers.userflow_handlers import (NotesViewHandler, ReminderViewHandler)
 import client.models.common_models as cm
-from client.utils.data_tools import make_unique_dict_names
-from common.base import DBFields, ObjectTypes, TasksStatuses
-from client.src.gui.sub_widgets.widgets import QStructuredText
+from common.base import ObjectTypes, TasksStatuses
 from client.utils.data_tools import iterable_to_str, get_lasting
 
 
@@ -80,9 +74,13 @@ class UserFlowWindowHandler(BaseWindowHandler):
 
         request.finished.connect(lambda request_: self._prepare_request(request_))
 
-    def _on_id_clicked(self, id_: int, type_: str, field: str):
+    def _on_id_in_schedule_clicked(self, id_: int, type_: str, field: str):
         """Обрабатывает нажатие на id объекта в ScheduleWidget. Выводит информацию об объекте."""
         logging.debug(f'Field: {field} of object (ID: {id_}, type: {type_}) clicked.')
+
+    def _on_id_clicked(self, type_: str, field: str):
+        """Обрабатывает нажатие на ID объекта."""
+        logging.debug(f'Field: {field} of object (type: {type_}) clicked in EventsTodayWidget.')
 
     def _set_widgets_settings(self, widgets: tuple[str, ...]):
         """Устанавливает настройки виджетов (Изменяет список отображаемых виджетов)."""
@@ -142,6 +140,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
         self._window.delete_tasks_widget()
         self._window.delete_reminder_widget()
         self._window.delete_schedule_widget()
+        self._window.delete_events_today_widget()
 
         for widget_type in self._data_const.names_widgets:
             result = self._model.get_widget_settings(widget_type)
@@ -163,8 +162,10 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 handler.set_notes(note)
                 logging.debug('Notes widget placed')
             if widget_type == self._data_const.schedule_widget:
-                widget_view = self._window.place_schedule_widget()
-                self._schedule_view_handler = widget_view
+                schedule_widget = self._window.place_schedule_widget()
+                events_today_widget = self._window.place_events_today_widget()
+                self._schedule_view_handler = schedule_widget
+                self._events_today_widget = events_today_widget
                 self._get_schedule_widget_data()
                 logging.debug('Schedule widget placed')
             if widget_type == self._data_const.reminder_widget:
@@ -247,8 +248,30 @@ class UserFlowWindowHandler(BaseWindowHandler):
                     f'{GuiLabels.notifieds}': iterable_to_str(event.notified, ',', '#')
                 })
             self._schedule_view_handler.add_event(event.id, event.__tablename__, event.name, time_start, time_end, description)
-
         self._schedule_view_handler.event_tooltip_content_clicked.connect(self._on_id_clicked)
+
+        for event in many_days_events:
+            event: cm.WFManyDaysEvent
+            date_start = event.datetime_start.date().strftime(DataStructConst.gui_month_date_format)
+            date_end = event.datetime_end.date().strftime(DataStructConst.gui_month_date_format)
+            lasting = event.datetime_end.date() - event.datetime_start.date()
+
+            description = {
+                f'{GuiLabels.title}:': event.name,
+                f'{GuiLabels.lasting}:': f'{lasting.days} {GuiLabels.days}'
+                           }
+
+            if event.__tablename__ == ObjectTypes.wf_many_days_event:
+                description.update({
+                    f'{GuiLabels.workflow}': f'#{event.workflow_id}',
+                    f'{GuiLabels.creator}:': f'#{event.creator_id}',
+                    f'{GuiLabels.notifieds}:': f'{iterable_to_str(event.notified, ',', '#')}'
+                })
+
+            wdg_event = self._events_today_widget.add_event(event.name, date_start, date_end, description)
+
+            if event.__tablename__ == ObjectTypes.wf_many_days_event:
+                wdg_event.tooltip_content_clicked.connect(lambda field: self._on_id_clicked(ObjectTypes.wf_many_days_event, field))
 
     def _set_personal_tasks(self, tasks: tuple[dict, ...]):
         self._data_model.personal_tasks = [cm.PersonalTask(**task) for task in tasks]

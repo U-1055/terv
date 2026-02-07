@@ -7,7 +7,7 @@ import time
 from PySide6.QtCore import Signal, Qt, QSize, QTimer, QObject
 from PySide6.QtWidgets import (QVBoxLayout, QListWidget, QDialog, QHBoxLayout, QPushButton, QAbstractItemView, QLabel,
                                QScrollArea, QWidget, QGraphicsScene, QSizePolicy)
-from PySide6.QtGui import QFontMetrics, QBrush, QPen, QColor
+from PySide6.QtGui import QFontMetrics
 
 import logging
 import typing as tp
@@ -18,8 +18,8 @@ from client.src.ui.ui_userflow_notes_widget import Ui_Form as UserFlowNotesWidge
 from client.src.ui.ui_userflow_schedule_widget import Ui_Form as UserFlowScheduleWidget
 from client.src.gui.sub_widgets.widgets import UserFlowTask, Reminder, QEventWidget
 from client.src.base import GuiLabels, DataStructConst, ObjectNames
-from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.utils.data_tools import parse_time
+from client.src.gui.sub_widgets.common_widgets import QToolTipLabel
 
 MultiSelection = QAbstractItemView.SelectionMode.MultiSelection
 
@@ -375,6 +375,31 @@ class ReminderWidgetView(BaseUserFlowWidget):
         return self._max_reminder_length
 
 
+class EventsTodayWidget(QWidget):
+
+    def __init__(self, title: str = GuiLabels.events_today):
+        super().__init__()
+        main_layout = QVBoxLayout()
+        lbl = QLabel(title)
+        self._wdg_layout = QVBoxLayout()
+        scroll_area = QScrollArea()
+        scroll_area_content = QWidget()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(scroll_area_content)
+        scroll_area_content.setLayout(self._wdg_layout)
+
+        main_layout.addWidget(lbl)
+        main_layout.addWidget(scroll_area)
+
+        self.setLayout(main_layout)
+
+    def add_event(self, title: str, date_start: str, date_end: str, wdg_description: dict = None) -> QToolTipLabel:
+        """Добавляет событие в виджет."""
+        wdg = QToolTipLabel(f'{title} ({date_start} - {date_end})', wdg_description)
+        self._wdg_layout.addWidget(wdg)
+        return wdg
+
+
 class WidgetSettingsMenu(QDialog):
     """Виджет настроек ПП. Принимает список размещаемых виджетов."""
     set = Signal(tp.Any, tuple[str, ...])  # Вызывается при закрытии окна. Возвращает выбранные пользователем виджеты
@@ -435,9 +460,9 @@ if __name__ == '__main__':
         'Участвуют': 'Тот и этот'
     }
 
-    widget = ScheduleWidgetView()
+    widget = EventsTodayWidget()
     for i in range(0, 20, 2):
-        widget.add_event(1, '', '1:1', f'{i}:00', f'{i + 1}:45')
+        widget.add_event(1, '', '1:1', {'1': 'DER'})
 
     setup_gui(widget)
 

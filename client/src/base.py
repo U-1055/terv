@@ -18,6 +18,7 @@ class DataStructConst:
 
     gui_date_format = '%d %b. %Y г.'
     gui_day_date_format = '%a, %d %b.'
+    gui_month_date_format = '%a %b'
     tasks_widget = 'tasks_widget'
     schedule_widget = 'schedule_widget'
     reminder_widget = 'reminder_widget'
@@ -67,6 +68,7 @@ class GuiLabels:
     notes_widget = 'Заметки'
     reminder_widget = 'Напоминания'
     schedule_widget = 'Расписание'
+    events_today = 'Мероприятия на сегодня'
 
     new_reminder = 'Новое напоминание'
 
@@ -105,6 +107,7 @@ class GuiLabels:
     notifieds = 'Уведомляются'
     creator = 'Создатель'
     lasting = 'Длительность'
+    days = 'дней'
 
 
 class GUIStyles:

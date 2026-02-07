@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 from pathlib import Path
 import threading
 import logging
+import locale
 
 from common_utils.log_utils.memory_logger import check_memory
 from client.src.src.main_logic import Logic
@@ -15,6 +16,7 @@ from client.src.client_model.model import Model
 from client.src.base import DataStructConst
 
 logging.basicConfig(level=logging.INFO)
+locale.setlocale(locale.LC_TIME, 'Russian')
 
 
 def launch(model_class, model_params: tuple, view_class, view_params: tuple, presenter_class, presenter_params: tuple):

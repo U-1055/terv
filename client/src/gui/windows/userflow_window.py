@@ -5,7 +5,7 @@ import logging
 
 from client.src.base import GuiLabels, DataStructConst
 from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, NotesWidgetView, ScheduleWidgetView, 
-                                                       BaseUserFlowWidget, ReminderWidgetView)
+                                                       BaseUserFlowWidget, ReminderWidgetView, EventsTodayWidget)
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.aligns import AlignBottom, AlignRight
 from client.utils.qt_utils import filled_rows_count, filled_columns_count
@@ -25,6 +25,7 @@ class UserFlowWindow(BaseWindow):
         self._notes_widget: NotesWidgetView | None = None
         self._reminder_widget: ReminderWidgetView | None = None
         self._schedule_widget: ScheduleWidgetView | None = None
+        self._events_today_widget: EventsTodayWidget | None = None
 
         self._main_layout = QHBoxLayout()
         self._widgets_layout = QGridLayout()
@@ -91,7 +92,7 @@ class UserFlowWindow(BaseWindow):
     def place_schedule_widget(self) -> ScheduleWidgetView:
         widget = ScheduleWidgetView()
         self._schedule_widget = widget
-        self._schedule_layout.addWidget(widget, 5)
+        self._schedule_layout.insertWidget(1, widget, 10)
         return widget
 
     def place_notes_widget(self, x: int = 0, y: int = 0, x_size: int = 1,
@@ -125,6 +126,12 @@ class UserFlowWindow(BaseWindow):
         self._place_settable_widget(self._reminder_widget, x, y, x_size, y_size)
         return self._reminder_widget
 
+    def place_events_today_widget(self) -> EventsTodayWidget:
+        """Размещает виджет многодневных событий."""
+        self._events_today_widget = EventsTodayWidget()
+        self._schedule_layout.insertWidget(0, self._events_today_widget, 1)
+        return self._events_today_widget
+
     def delete_notes_widget(self):
         if self._notes_widget:
             self._notes_widget.hide()
@@ -144,6 +151,11 @@ class UserFlowWindow(BaseWindow):
         if self._schedule_widget:
             self._schedule_widget.hide()
             self._schedule_widget = None
+
+    def delete_events_today_widget(self):
+        if self._events_today_widget:
+            self._events_today_widget.hide()
+            self._events_today_widget = None
 
     def close(self):
         super().close()

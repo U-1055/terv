@@ -19,6 +19,9 @@ def hash_password(password: str) -> str:
     return hashpw(bytes(password, encoding='utf-8'), gensalt()).decode('utf-8')
 
 
+logging.basicConfig(level=logging.INFO)
+
+
 class Authenticator:
     """Класс, отвечающий за проверку аутентификации пользователя."""
 
@@ -61,22 +64,25 @@ class Authenticator:
 
         secret = self._model.get_secret()
         if self._model.check_token_in_blacklist(token_):
+            logging.warning(f'Token in blacklist. Token: {token_}')
             return False
         try:
             payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
             creating_time = payload.get('iat')  # Проверка типа токена
             expiring_time = payload.get('exp')
             if type_ == self._data_struct.access_token:
-                if expiring_time - creating_time != self._access_token_lifetime.seconds:
+                if expiring_time - creating_time != self._access_token_lifetime.total_seconds():
                     return False
             elif type_ == self._data_struct.refresh_token:
-                if expiring_time - creating_time != self._refresh_token_lifetime.seconds:
-                    assert ValueError(f'Refresh-Token expired: {expiring_time}')
+                if expiring_time - creating_time != self._refresh_token_lifetime.total_seconds():
+                    logging.warning(f"Invalid refresh token. Token's time difference: {expiring_time - creating_time}."
+                                    f"It must be refresh token lifetime: {self._refresh_token_lifetime.total_seconds()}")
                     return False
             else:
                 raise ValueError(f'Unknown token_type: {type_}. Must be access or refresh')
 
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            logging.warning(f'Invalid token. Type: {type_}. Token: {token_}')
             return False
         return True
 
@@ -111,7 +117,7 @@ class Authenticator:
 
             self._model.add_token_to_blacklist(refresh_token)
 
-            return {'access': access_token, 'refresh': new_refresh_token}
+            return {CommonStruct.access_token: access_token, CommonStruct.refresh_token: new_refresh_token}
         else:
             raise ValueError
 

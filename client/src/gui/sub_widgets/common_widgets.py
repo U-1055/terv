@@ -1,8 +1,8 @@
 """Обобщённые Qt-подобные виджеты."""
-from PySide6.QtWidgets import QWidget, QGridLayout, QLabel, QScrollArea, QVBoxLayout, QSizePolicy
+from PySide6.QtWidgets import QWidget, QGridLayout, QLabel, QScrollArea, QVBoxLayout, QSizePolicy, QMenu, QWidgetAction
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPoint
 
 import typing as tp
 
@@ -24,7 +24,7 @@ class QStructuredText(QWidget):
     :param field_suffix: окончание, добавляемое к названиям полей. По умолчанию отсутствует.
 
     """
-
+    # ToDo: передача содержимого поля в сигнале content_clicked
     content_clicked = Signal(str)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
     field_clicked = Signal(str)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
 
@@ -166,15 +166,47 @@ class QStructuredText(QWidget):
         return self._field_suffix
 
 
+class QToolTipLabel(QLabel):
+    """
+    QLabel, по нажатию на который выводится QStucturedText.
+
+    :var tooltip_field_clicked: Сигнал, вызывающийся при нажатии на поле подсказки виджета. Передаёт название поля.
+    :var tooltip_content_clicked: Сигнал, вызывающийся при нажатии на текст поля подсказки виджета. Передаёт название поля.
+
+    """
+
+    tooltip_field_clicked = Signal(str)
+    tooltip_content_clicked = Signal(str)
+
+    def __init__(self, text: str = '', structured_text: dict | None = None):
+        super().__init__(text)
+        self._structured_text = structured_text
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._on_context_menu_requested)
+
+    def _on_context_menu_requested(self, pos: QPoint):
+        if not self._structured_text:
+            return
+
+        menu = QMenu()
+        action = QWidgetAction(menu)
+        wdg_structured_text = QStructuredText(self._structured_text)
+        action.setDefaultWidget(wdg_structured_text)
+        menu.addAction(action)
+        menu.exec(self.mapToGlobal(pos))
+
+    def structured_text(self) -> dict | None:
+        return self._structured_text
+
+    def set_structured_text(self, structured_text: dict | None):
+        if structured_text is not None:
+            self._structured_text = QStructuredText(structured_text)
+        else:
+            self._structured_text = None
 
 
 if __name__ == '__main__':
     from test.client_test.utils.window import setup_gui
-    test_data = {
-        'Описание': ''.join([f"{''.join(['C' for i in range(10)])} " for i1 in range(90)])
-    }
-    wdg = QStructuredText(test_data)
-    wdg.field_clicked.connect(print)
-    wdg.content_clicked.connect(print)
+    wdg = QToolTipLabel('LABEL')
 
     setup_gui(wdg)

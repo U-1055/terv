@@ -174,7 +174,7 @@ class ObjectTypes:
     user = 'user'
     wf_task = 'wf_task'
     wf_daily_event = 'wf_daily_event'
-    wf_many_days_event = 'wf_daily_event'
+    wf_many_days_event = 'wf_many_days_event'
     personal_daily_event = 'personal_daily_event'
     personal_many_days_event = 'personal_many_days_event'
     personal_task = 'personal_task'
