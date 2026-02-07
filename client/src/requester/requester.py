@@ -27,13 +27,6 @@ def run_loop(loop: asyncio.AbstractEventLoop):
     loop.run_forever()
 
 
-class LoopThread(QObject):
-
-    @staticmethod
-    def run(loop):
-        run_loop(loop)
-
-
 def synchronized_request(func) -> tp.Callable[..., Request]:  # ToDo: разобраться с аннотациями и переписать тесты реквестера
     def prepare(*args) -> Request:
         try:
@@ -85,11 +78,15 @@ class Requester:
             exc = err.exceptions_error_ids.get(error_code)
             raise exc(message, request=request)
 
+    def _check_request_is_unique(self, request: InternalRequest) -> bool:
+        """Проверяет, выполняется ли уже запрос к эндпоинту переданного запроса."""
+        paths = [req.path for req in self._requests]
+        return request.path in paths
+
     def set_timeout(self, timeout: int):
         """Установить новый timeout (в мс)."""
         self._timeout = timeout
         self._requests.set_timeout(self._timeout // 1000)
-
 
     @property
     def timeout(self) -> int:
@@ -154,7 +151,7 @@ class Requester:
             raise e
 
     async def _make_request(self, request: InternalRequest) -> Response:
-
+        logging.info(f'Executing request: {request}.')
         if self._requests and self._requests[-1].path == request.path and self._requests[-1].method == request.method: #  Запросы одинаковы
             diff = request.time - self._requests[-1].time  # Разница во времени отправки
             if diff < datetime.timedelta(milliseconds=self._timeout):
@@ -198,10 +195,10 @@ class Requester:
     @synchronized_request
     async def register(self, login: str, password: str, email: str) -> Response:
         request = InternalRequest(f'{self._server}/register', InternalRequest.POST,
-                          json_={
-            self._struct.login: login,
-            self._struct.password: password,
-            self._struct.email: email
+                                  json_={
+                    self._struct.login: login,
+                    self._struct.password: password,
+                    self._struct.email: email
         })
         response = await self._make_request(request)
         return response
@@ -209,7 +206,7 @@ class Requester:
     @synchronized_request
     async def update_tokens(self, refresh_token: str) -> Response:
         request = InternalRequest(f'{self._server}/auth/refresh', InternalRequest.POST,
-                          json_={self._struct.refresh_token: refresh_token})
+                                  json_={CommonStruct.refresh_token: refresh_token})
         response = await self._make_request(request)
         return response
 
@@ -484,6 +481,7 @@ class Request(QObject):
         self._loop = loop
         self._finished = False
         self._result: Response | None = None
+        self._exception: Exception | None = None
 
         self._future.add_done_callback(lambda future_: self._finish())
 
@@ -504,8 +502,19 @@ class Request(QObject):
             raise err.NotFinishedError(f'Request {self} is not finished now.')
 
         if not self._result:
-            self._result = self._future.result()
+            try:
+                self._result = self._future.result()
+            except Exception as e:
+                self._exception = e
+                raise e
         return self._result
+
+    def exception(self) -> Exception | None:
+        """
+        Возвращает экземпляр исключения, вызванного при обработке запроса. Если исключений не было, или запрос ещё не
+        выполнен, возвращается None.
+        """
+        return self._exception
 
     def wait_until_complete(self) -> Response:
         """

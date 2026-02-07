@@ -43,6 +43,7 @@ def test_preparing_error(requester: Requester, launch_test_server, error_request
     request: Request = requester.make_custom_request(error_request)
     with pytest.raises(err.exceptions_error_ids[error_id]):
         request.wait_until_complete()
+    assert type(request.exception()) is err.exceptions_error_ids[error_id], f"Request's exception: {request.exception()}"
 
 
 @pytest.mark.parametrize(

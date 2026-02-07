@@ -12,8 +12,9 @@ from client.src.src.handlers.window_handlers.base import BaseWindowHandler
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst, GuiLabels
 from client.src.src.handlers.window_handlers.main_auth_window_handler import MainAuthWindowHandler
+import client.models.common_models as cm
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.CRITICAL)
 logging.debug('Module main_logic.py is running')
 
 
@@ -55,6 +56,8 @@ class Logic:
     def _on_auth_complete(self):
         self._view.show_message(self._labels.op_complete, self._labels.authentication_complete)
         self._auth_window_handler.close()
+        self._opened_now.set_access_token_status(True)
+        self._opened_now.set_refresh_token_status(True)  # Токены обновлены
         self._opened_now.update_state()
 
     def _on_registration_complete(self):
@@ -68,6 +71,9 @@ class Logic:
         self._opened_now.update_data()
         self._view.close()
 
+    def _set_user(self, user: dict):
+        self._user = cm.User(**user)
+
     def _authorize(self):
         logging.debug('Opening authorize window')
         main_auth_window = self._view.open_auth_window()
@@ -79,7 +85,7 @@ class Logic:
 
     def _update_current_window(self):
         if self._opened_now:
-            logging.debug('Updating current hanlder...')
+            logging.debug(f'Updating current hanlder. Handler: {self._opened_now}')
             self._opened_now.update_data()
 
     def _update_state(self):
