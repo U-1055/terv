@@ -7,7 +7,7 @@ from client.src.base import GuiLabels, DataStructConst
 from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, NotesWidgetView, ScheduleWidgetView, 
                                                        BaseUserFlowWidget, ReminderWidgetView, EventsTodayWidget)
 from client.src.gui.windows.windows import BaseWindow
-from client.src.gui.aligns import AlignBottom, AlignRight
+from client.src.gui.aligns import AlignBottom
 from client.utils.qt_utils import filled_rows_count, filled_columns_count
 
 
@@ -69,9 +69,12 @@ class UserFlowWindow(BaseWindow):
                 y += 1  # поскольку в программе пока не может быть столько виджетов ПП
             logging.debug(f'Coordinates for widget {widget.name} computed: x: {x}; y: {y}')
 
+            assert not self._widgets_layout.itemAtPosition(x, y)
+
             self._widgets_layout.addWidget(widget, y, x)
         else:
             self._widgets_layout.addWidget(widget, y, x, y_size, x_size)
+
 
     def place_task_widget(self, x: int = 0, y: int = 0, x_size: int = 1, y_size: int = 1) -> TaskWidgetView:
         """

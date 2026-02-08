@@ -32,13 +32,17 @@ class UserFlowWindowHandler(BaseWindowHandler):
         self._requests: 'UserFlowRequests' = UserFlowRequests()
 
         self._task_widget: TaskWidgetView | None = None
-        self._notes_view_handler: NotesWidgetView | None = None
-        self._schedule_view_handler: ScheduleWidgetView | None = None
+        self._notes_widget: NotesWidgetView | None = None
+        self._schedule_widget: ScheduleWidgetView | None = None
         self._window.btn_set_widgets_pressed.connect(self._on_btn_set_widgets_pressed)
 
         self._main_thread_id = threading.get_ident()
 
         self._timer = QTimer()
+
+    def _on_note_changed(self):
+        note = self._notes_widget.notes()
+        self._model.set_note(note)
 
     def _on_btn_set_widgets_pressed(self):
         selected_widgets = []
@@ -157,9 +161,10 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 logging.debug('Tasks widget placed.')
             if widget_type == self._data_const.notes_widget:
                 widget_view = self._window.place_notes_widget(x, y, x_size, y_size)
+                self._notes_widget = widget_view
                 note = self._model.get_note()
-                handler = NotesViewHandler(widget_view)
-                handler.set_notes(note)
+                self._notes_widget.set_notes(note)
+                self._notes_widget.text_changed.connect(self._on_note_changed)
                 logging.debug('Notes widget placed')
             if widget_type == self._data_const.schedule_widget:
                 schedule_widget = self._window.place_schedule_widget()

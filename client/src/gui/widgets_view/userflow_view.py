@@ -105,12 +105,24 @@ class TaskWidgetView(BaseUserFlowWidget):
 
 
 class NotesWidgetView(BaseUserFlowWidget):
+    """
+    Виджет заметки.
+
+    :var text_changed: Сигнал, вызываемый при редактировании текста в виджете.
+
+    """
+
+    text_changed = Signal()
 
     def __init__(self):
         super().__init__(DataStructConst.notes_widget)
         self._view = UserFlowNotesWidget()
         self._view.setupUi(self)
         self._view.label.setText(GuiLabels.notes_widget)
+        self._view.textEdit.textChanged.connect(self._on_text_changed)
+
+    def _on_text_changed(self):
+        self.text_changed.emit()
 
     def set_notes(self, text: str):
         self._view.textEdit.setText(text)
