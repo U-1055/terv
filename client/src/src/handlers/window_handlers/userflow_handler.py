@@ -1,4 +1,5 @@
 from PySide6.QtCore import QTimer
+from PySide6.QtGui import QColor
 
 import dataclasses
 import datetime
@@ -151,23 +152,27 @@ class UserFlowWindowHandler(BaseWindowHandler):
             if not result:
                 continue
 
-            x, y, x_size, y_size = (result.get(self._data_const.x), result.get(self._data_const.y),
-                                    result.get(self._data_const.x_size), result.get(self._data_const.y_size))
-
             if widget_type == self._data_const.tasks_widget:
-                self._task_widget = self._window.place_task_widget(x, y, x_size, y_size)
+                self._task_widget = self._window.place_task_widget()
                 self._task_widget.task_completed.connect(self._on_task_completed)
                 self._get_task_handler_data()
                 logging.debug('Tasks widget placed.')
             if widget_type == self._data_const.notes_widget:
-                widget_view = self._window.place_notes_widget(x, y, x_size, y_size)
+                widget_view = self._window.place_notes_widget()
                 self._notes_widget = widget_view
                 note = self._model.get_note()
                 self._notes_widget.set_notes(note)
                 self._notes_widget.text_changed.connect(self._on_note_changed)
                 logging.debug('Notes widget placed')
             if widget_type == self._data_const.schedule_widget:
-                schedule_widget = self._window.place_schedule_widget()
+                current_style = self._model.get_current_style()
+                style = self._model.get_style(current_style)
+                if current_style == DataStructConst.dark_style:
+                    marking_color = DataStructConst.light_marking_color
+                else:
+                    marking_color = DataStructConst.dark_marking_color
+
+                schedule_widget = self._window.place_schedule_widget(marking_color, style)
                 events_today_widget = self._window.place_events_today_widget()
                 self._schedule_view_handler = schedule_widget
                 self._events_today_widget = events_today_widget
@@ -175,7 +180,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 logging.debug('Schedule widget placed')
             if widget_type == self._data_const.reminder_widget:
                 reminders = self._model.get_reminders()
-                widget_view = self._window.place_reminder_widget(x, y, x_size, y_size)
+                widget_view = self._window.place_reminder_widget()
                 handler = ReminderViewHandler(widget_view)
                 handler.set_max_reminder_length(DataStructConst.max_reminder_length)
                 handler.set_reminders(reminders)

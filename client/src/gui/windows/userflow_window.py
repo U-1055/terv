@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QGridLayout, QVBoxLayout, QPushButton
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor
 
 import logging
 
@@ -8,7 +9,7 @@ from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, NotesWidg
                                                        BaseUserFlowWidget, ReminderWidgetView, EventsTodayWidget)
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.aligns import AlignBottom
-from client.utils.qt_utils import filled_rows_count, filled_columns_count
+from client.utils.qt_utils import filled_rows_count, filled_columns_count, get_next_widget_grid_pos
 
 
 class UserFlowWindow(BaseWindow):
@@ -27,19 +28,23 @@ class UserFlowWindow(BaseWindow):
         self._schedule_widget: ScheduleWidgetView | None = None
         self._events_today_widget: EventsTodayWidget | None = None
 
+        self._tasks_widget_pos: tuple[int, int] | None = None
+        self._notes_widget_pos: tuple[int, int] | None = None
+        self._reminder_widget_pos: tuple[int, int] | None = None
+
         self._main_layout = QHBoxLayout()
         self._widgets_layout = QGridLayout()
         self._schedule_layout = QVBoxLayout()
 
-        self._last_x = 0  # Координаты последнего размещённого виджета на сетке
+        self._last_x = -1  # Координаты последнего размещённого виджета на сетке (Вначале виджета нет, поэтому -1)
         self._last_y = 0
 
         btn_set_widgets = QPushButton(GuiLabels.userflow_settings)
         btn_set_widgets.clicked.connect(self.press_btn_set_widgets)
 
-        self._main_layout.addLayout(self._widgets_layout, 2)
+        self._main_layout.addLayout(self._widgets_layout, 10)
         self._main_layout.addWidget(btn_set_widgets, 1, alignment=AlignBottom)
-        self._main_layout.addLayout(self._schedule_layout, 2)
+        self._main_layout.addLayout(self._schedule_layout, 8)
 
         self.setLayout(self._main_layout)
 
@@ -57,76 +62,44 @@ class UserFlowWindow(BaseWindow):
 
         return [x, y, x_size, y_size]
 
-    def _place_settable_widget(self, widget: BaseUserFlowWidget, x: int, y: int, x_size: int, y_size: int):
-        if not x and not y:
-            x = filled_columns_count(self._widgets_layout) + 1
-            y = filled_rows_count(self._widgets_layout)
-            if y > DataStructConst.max_y_size:
-                y = 0
+    def _place_settable_widget(self, widget: BaseUserFlowWidget) -> tuple[int, int]:
 
-            if x > DataStructConst.max_x_size:
-                x = 0   # Случай, когда y превышает max_y_size не рассматривается,
-                y += 1  # поскольку в программе пока не может быть столько виджетов ПП
-            logging.debug(f'Coordinates for widget {widget.name} computed: x: {x}; y: {y}')
-
-            assert not self._widgets_layout.itemAtPosition(x, y)
-
-            self._widgets_layout.addWidget(widget, y, x)
+        # Выбор новой позиции (следующий столбец или строка) зависит от заполненности виджета
+        y, x = self._last_y, self._last_x
+        if x < DataStructConst.max_x_size - 1:  # -1, т.к. max_x_size считается с 0
+            x += 1
         else:
-            self._widgets_layout.addWidget(widget, y, x, y_size, x_size)
+            y += 1
+            x = 0
 
+        logging.info(f'Coordinates for widget {widget.name} computed: x: {x}; y: {y}')
+        self._widgets_layout.addWidget(widget, y, x)
+        self._last_y, self._last_x = y, x  # Новая позиция последнего виджета
+        return y, x
 
-    def place_task_widget(self, x: int = 0, y: int = 0, x_size: int = 1, y_size: int = 1) -> TaskWidgetView:
-        """
-        Размещает виджет задач.
-        :param x: столбец.
-        :param y: строка.
-        :param x_size: число занимаемых виджетом столбцов.
-        :param y_size: число занимаемых виджетом строк.
-        """
-
-        x, y, x_size, y_size = self._prepare_params(x, y, x_size, y_size)
-        logging.debug(f'Task widget placed with coords: (x: {x}, y: {y}, x_size: {x_size}, y_size: {y_size})')
-
+    def place_task_widget(self) -> TaskWidgetView:
+        """Размещает виджет задач."""
         self._tasks_widget = TaskWidgetView()
-        self._place_settable_widget(self._tasks_widget, x, y, x_size, y_size)
+        self._tasks_widget_pos = self._place_settable_widget(self._tasks_widget)
         return self._tasks_widget
 
-    def place_schedule_widget(self) -> ScheduleWidgetView:
-        widget = ScheduleWidgetView()
+    def place_schedule_widget(self, marking_color: QColor = QColor('black'),
+                              events_style_sheet: str | None = None) -> ScheduleWidgetView:
+        widget = ScheduleWidgetView(marking_color=marking_color, events_style_sheet=events_style_sheet)
         self._schedule_widget = widget
         self._schedule_layout.insertWidget(1, widget, 10)
         return widget
 
-    def place_notes_widget(self, x: int = 0, y: int = 0, x_size: int = 1,
-                           y_size: int = 1) -> NotesWidgetView:
-        """
-        Размещает виджет заметок.
-        :param x: столбец.
-        :param y: строка.
-        :param x_size: число занимаемых виджетом столбцов.
-        :param y_size: число занимаемых виджетом строк.
-        """
-
-        x, y, x_size, y_size = self._prepare_params(x, y, x_size, y_size)
-        logging.debug(f'Notes widget placed with coords: (x: {x}, y: {y}, x_size: {x_size}, y_size: {y_size})')
+    def place_notes_widget(self) -> NotesWidgetView:
+        """Размещает виджет заметок."""
         self._notes_widget = NotesWidgetView()
-        self._place_settable_widget(self._notes_widget, x, y, x_size, y_size)
+        self._notes_widget_pos = self._place_settable_widget(self._notes_widget)
         return self._notes_widget
 
-    def place_reminder_widget(self, x: int = 0, y: int = 0, x_size: int = 1, y_size: int = 1) -> ReminderWidgetView:
-        """
-        Размещает виджет напоминаний.
-        :param x: столбец.
-        :param y: строка.
-        :param x_size: число занимаемых виджетом столбцов.
-        :param y_size: число занимаемых виджетом строк.
-        """
-
-        x, y, x_size, y_size = self._prepare_params(x, y, x_size, y_size)
-        logging.debug(f'reminder widget placed with coords: (x: {x}, y: {y}, x_size: {x_size}, y_size: {y_size})')
+    def place_reminder_widget(self) -> ReminderWidgetView:
+        """Размещает виджет напоминаний."""
         self._reminder_widget = ReminderWidgetView()
-        self._place_settable_widget(self._reminder_widget, x, y, x_size, y_size)
+        self._reminder_widget_pos = self._place_settable_widget(self._reminder_widget)
         return self._reminder_widget
 
     def place_events_today_widget(self) -> EventsTodayWidget:
@@ -137,16 +110,22 @@ class UserFlowWindow(BaseWindow):
 
     def delete_notes_widget(self):
         if self._notes_widget:
+            if self._notes_widget_pos:
+                self._last_y, self._last_x = self._notes_widget_pos
             self._notes_widget.hide()
             self._notes_widget = None
 
     def delete_reminder_widget(self):
         if self._reminder_widget:
+            if self._reminder_widget_pos:
+                self._last_y, self._last_x = self._reminder_widget_pos
             self._reminder_widget.hide()
             self._reminder_widget = None
 
     def delete_tasks_widget(self):
         if self._tasks_widget:
+            if self._tasks_widget_pos:
+                self._last_y, self._last_x = self._tasks_widget_pos
             self._tasks_widget.hide()
             self._tasks_widget = None
 

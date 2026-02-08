@@ -20,11 +20,14 @@
 }
 
 """
+from PySide6.QtCore import QFile
+
 import logging
 import shelve
 from pathlib import Path
 
 from client.src.base import DataStructConst
+import client.src.client_model.resources_rc
 
 userflow_widget = {'x': 0, 'y': 0, 'x_size': 0, 'y_size': 0}
 
@@ -63,7 +66,7 @@ class Model:
                     logging.warning(f'Incorrect type of field {key} of file {self._storage} - '
                                     f'type "{field_type}" must be "{expected_field_type}". Field {key} has been set'
                                     f'to default value: {self.default_struct[key]}.')
-
+            settings = storage[self._ds_const.settings]
             if not storage[self._ds_const.settings].get(self._ds_const.style):
                 storage[self._ds_const.settings] = self.default_struct[self._ds_const.settings]
                 logging.warning(f'There is no field "style" in field "settings" in file. Field '
@@ -98,10 +101,25 @@ class Model:
             token_ = storage[self._ds_const.refresh_token]
             return token_
 
-    def get_style(self) -> str:
+    def get_current_style(self) -> str:
         with shelve.open(self._storage) as storage:
-            token_ = storage[self._ds_const.settings][self._ds_const.style]
-            return token_
+            style = storage[self._ds_const.settings][self._ds_const.style]
+            return style
+
+    def set_current_style(self, style_name: str):
+        with shelve.open(self._storage, 'w') as storage:
+            settings = storage[self._ds_const.settings]
+            settings[self._ds_const.style] = style_name
+            storage[self._ds_const.settings] = settings
+
+    def get_style(self, style_path: str) -> str:
+        if style_path not in [self._ds_const.light_style, self._ds_const.dark_style]:
+            raise ValueError(f'There is no style with name: {style_path}')
+
+        style_file = QFile(style_path)
+        style_file.open(QFile.OpenModeFlag.ReadOnly)
+        style = style_file.readAll().toStdString()
+        return style
 
     def put_widget_settings(self, wdg_type: str, x: int, y: int, x_size: int, y_size: int):
         """Добавляет настройки виджета. Если виджет уже настроен - обновляет настройки на введённые."""

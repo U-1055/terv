@@ -7,7 +7,7 @@ import time
 from PySide6.QtCore import Signal, Qt, QSize, QTimer, QObject
 from PySide6.QtWidgets import (QVBoxLayout, QListWidget, QDialog, QHBoxLayout, QPushButton, QAbstractItemView, QLabel,
                                QScrollArea, QWidget, QGraphicsScene, QSizePolicy)
-from PySide6.QtGui import QFontMetrics
+from PySide6.QtGui import QFontMetrics, QTextOption, QColor, QPen, QBrush
 
 import logging
 import typing as tp
@@ -52,6 +52,8 @@ class TaskWidgetView(BaseUserFlowWidget):
         self._view.scrollArea.setWidget(self._view.scrollAreaWidgetContents)
         self._view.scrollAreaWidgetContents.setLayout(self._tasks_layout)
         self._tasks_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Ignored)
 
         self._tasks_struct: dict[str, dict] = dict()
 
@@ -120,6 +122,8 @@ class NotesWidgetView(BaseUserFlowWidget):
         self._view.setupUi(self)
         self._view.label.setText(GuiLabels.notes_widget)
         self._view.textEdit.textChanged.connect(self._on_text_changed)
+        self._view.textEdit.setWordWrapMode(QTextOption.WrapMode.WordWrap)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
 
     def _on_text_changed(self):
         self.text_changed.emit()
@@ -139,12 +143,14 @@ class ScheduleWidgetView(BaseView):
                                       id_ события, тип события, название поля.
     :var event_tooltip_content_clicked: Сигнал, вызывающийся при нажатии на текст поля подсказки события.
                                         Передаёт аргументами: id_ события, тип события, название поля.
+    :param marking_color: Цвет элементов разметки (линий и подписей времени).
     """
 
     event_tooltip_field_clicked = Signal(int, str, str)
     event_tooltip_content_clicked = Signal(int, str, str)
 
-    def __init__(self, title: str = GuiLabels.schedule_widget):
+    def __init__(self, title: str = GuiLabels.schedule_widget, marking_color: QColor = QColor('black'),
+                 events_style_sheet: str | None = None):
         super().__init__()
         self._view = UserFlowScheduleWidget()
         self._view.setupUi(self)
@@ -155,6 +161,8 @@ class ScheduleWidgetView(BaseView):
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.MinimumExpanding)
 
         self._event_parent = QObject()
+        self._marking_color = marking_color
+        self._events_style_sheet = events_style_sheet
         self._graphics_size: QSize | None = None
         self._hour_step: int | None = None
         self._sub_step: int | None = None
@@ -188,11 +196,12 @@ class ScheduleWidgetView(BaseView):
 
         for i in range(24):
             line_height = i * self._hour_step // 1 + 0.5 * text_height  # 0.5 * text_height, чтобы линия оказывалась посередине надписи
-            scene.addLine(padding, line_height, self._graphics_size.width(), line_height)
+            scene.addLine(padding, line_height, self._graphics_size.width(), line_height, self._marking_color)
 
             lbl_height = line_height - 0.75 * text_height  # ToDo: проверить коэффициент 0.75 в разных конфигурациях окон
             text = datetime.time(hour=i, minute=0).strftime('%H:%M')
             lbl = scene.addText(text)
+            lbl.setDefaultTextColor(self._marking_color)
             lbl.setPos(0, lbl_height)
 
         self._view.graphicsView.setScene(scene)
@@ -242,6 +251,9 @@ class ScheduleWidgetView(BaseView):
                              event.start_end_label(), event.btn_show_details_label())
         event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_field_clicked(id_, type_, field))
         event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_content_clicked(id_, type_, field))
+
+        if self._events_style_sheet:
+            event.setStyleSheet(self._events_style_sheet)
 
         rect = scene.addWidget(event)  # Настройка виджета
         rect.setPos(h_padding, v_padding)
@@ -337,6 +349,8 @@ class ReminderWidgetView(BaseUserFlowWidget):
         scroll_area.setWidgetResizable(True)
         main_layout.addLayout(header_layout)
         main_layout.addWidget(scroll_area)
+
+        self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Maximum)
 
         self.setLayout(main_layout)
 

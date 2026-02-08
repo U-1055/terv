@@ -1,4 +1,4 @@
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QColor
 
 from common.base import CommonStruct
 
@@ -16,6 +16,9 @@ class DataStructConst:
         'style_2': r'..\data\resources\ui\styles\dark_theme.qss'
     }
 
+    light_style = ':\\styles\\light'  # Пути к стилям
+    dark_style = ':\\styles\\dark'
+
     gui_date_format = '%d %b. %Y г.'
     gui_day_date_format = '%a, %d %b.'
     gui_month_date_format = '%a %b'
@@ -26,6 +29,9 @@ class DataStructConst:
     note = 'note'
     reminders = 'reminders'
 
+    dark_marking_color = QColor('black')
+    light_marking_color = QColor('#B0B0B0')
+
     names_widgets = [tasks_widget, notes_widget, reminder_widget, schedule_widget]
 
     x, y = 'x', 'y'
@@ -34,7 +40,7 @@ class DataStructConst:
 
     max_reminder_length = 40  # Максимальная длина напоминания (символы)
 
-    max_x_size = 3
+    max_x_size = 2
     max_y_size = 3
 
     max_requests = 10  # Максимальное число хранимых запросов в реквестере

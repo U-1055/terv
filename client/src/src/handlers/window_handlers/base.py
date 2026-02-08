@@ -44,9 +44,10 @@ class BaseWindowHandler(QObject):
         """
         logging.info(f"Starting prepare request that returns no data. Request: {data_get_request}. "
                      f"Calling method: {calling_func}. Data get method: {data_get_func}."
-                     f"Request's exception: {data_get_request.exception()}")
+                     f"Request's exception: {type(data_get_request.exception())}")
 
-        if type(data_get_request.exception()) is err.NetworkTimeoutError:
+        if isinstance(data_get_request.exception(), err.NetworkTimeoutError):
+            logging.debug(f"Request won't be retried because there is NetworkError. Exc: {data_get_request.exception()}")
             return
         if not self._access_token_status or not self._refresh_token_status:  # Если просрочены токены, запрос не повторяется (Чтобы избежать зацикливания)
             logging.info(f'Request is not prepared: invalid tokens status - Access: {self._access_token_status}.'
