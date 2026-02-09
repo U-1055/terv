@@ -25,6 +25,7 @@ class APIError(Exception):  # Ошибка, возвращённая API
     """
     def __init__(self, message: str, request: Request):
         self.request = request
+        self.message = message
 
 
 class NetworkTimeoutError(APIError):  # Ошибка сети

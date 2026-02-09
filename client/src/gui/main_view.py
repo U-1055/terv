@@ -4,6 +4,7 @@ from PySide6.QtCore import Signal, Qt
 import logging
 
 from client.src.ui.ui_main_window import Ui_Form
+from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
 from client.src.gui.windows.userflow_window import UserFlowWindow
 from client.src.gui.windows.windows import BaseWindow
@@ -86,7 +87,10 @@ class MainWindow(QMainWindow):
         self.btn_pressed.emit()
 
     def set_style(self, style: str):
+        base_widget = BaseWidget()
+        base_widget.set_class_style_sheet(style)
         self.setStyleSheet(style)
+        assert base_widget._style_sheet == style
 
     def show_error(self, title: str, message: str):
         pass

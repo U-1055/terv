@@ -56,6 +56,7 @@ class ObjectNames:
     small_btn_complete = 'small_btn_complete'
     btn_show_details = 'btn_show_details'
     btn_exit = 'btn_exit'
+    wdg_border = 'wdg_border'  # Виджет с границей
 
 
 class GuiLabels:

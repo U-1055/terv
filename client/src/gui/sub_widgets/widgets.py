@@ -1,9 +1,9 @@
 import logging
 
-from PySide6.QtWidgets import QWidget, QPushButton, QLabel, QHBoxLayout, QMenu, QWidgetAction
+from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QMenu, QWidgetAction, QFrame
 from PySide6.QtCore import Signal, QObject, Qt, QPoint
 
-from client.src.base import DataStructConst, GuiLabels
+from client.src.base import DataStructConst, GuiLabels, ObjectNames
 from client.src.ui.ui_event_widget import Ui_Form as EventView
 from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.src.gui.sub_widgets.util_widgets import QMouseActivatingLineEdit, QClickableLabel
@@ -128,6 +128,7 @@ class QEventWidget(QWidget):
                  wdg_description: dict = None, time_separator: str = GuiLabels.default_time_separator,
                  start_end_label: str = '', btn_show_details_label: str = '', parent: QWidget = None):
         super().__init__(parent=parent)
+        self.setObjectName(ObjectNames.wdg_border)
 
         self._parent = parent
         self._title = title
@@ -148,6 +149,7 @@ class QEventWidget(QWidget):
 
         self._view.btn_show_details.clicked.connect(self._on_btn_show_details_clicked)
         self._view.btn_show_details.setText(self._btn_show_details_label)
+        self._view.btn_show_details.setObjectName(ObjectNames.btn_show_details)
 
         self._set_menu()
         self._setup_widgets()
@@ -198,9 +200,9 @@ class QEventWidget(QWidget):
     def time_end(self) -> str:
         return self._time_end
 
-    def wdg_description(self) -> dict | None:
+    def wdg_description(self) -> QStructuredText | None:
         if self._wdg_description:
-            return self._wdg_description.structure()
+            return self._wdg_description
 
     def set_wdg_description(self, wdg_description: dict | None):
         if wdg_description is not None:

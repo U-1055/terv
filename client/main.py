@@ -24,10 +24,7 @@ def launch(model_class, model_params: tuple, view_class, view_params: tuple, pre
     root = view_class(*view_params)
     model = model_class(*model_params)
     logic = presenter_class(root, model, *presenter_params)
-    logging.info(f'Access token: {model.get_access_token()}. Refresh token: {model.get_refresh_token()}')
     setup_gui(root, app)
-
-# ToDo: настройка стилей + шрифтов
 
 
 def run_main_config(check_ram: bool = False):

@@ -4,6 +4,7 @@ import typing as tp
 import logging
 
 from client.src.gui.main_view import MainWindow
+from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.requester.requester import Requester
 from client.utils.timeout_list import TimeoutList
 from client.src.src.handlers.window_handlers.userflow_handler import UserFlowWindowHandler
@@ -43,8 +44,14 @@ class Logic:
 
         self._win_handlers = TimeoutList(timeout, self._close_outdated_window, 15)
 
-        current_style = self._model.get_style()
-        self._view.set_style(current_style)
+        current_style = self._model.get_current_style()  # Установка стиля
+        if current_style:
+            style = self._model.get_style(current_style)
+        else:
+            style = self._model.get_style(DataStructConst.dark_style)
+            self._model.set_current_style(DataStructConst.dark_style)
+        logging.debug(f'Current style: {current_style}.')
+        self._view.set_style(style)
 
         self._view.btn_open_userflow_pressed.connect(self._open_userflow)
         self._view.btn_open_personal_tasks_window_pressed.connect(self._open_personal_tasks_window)

@@ -7,12 +7,13 @@ import time
 from PySide6.QtCore import Signal, Qt, QSize, QTimer, QObject
 from PySide6.QtWidgets import (QVBoxLayout, QListWidget, QDialog, QHBoxLayout, QPushButton, QAbstractItemView, QLabel,
                                QScrollArea, QWidget, QGraphicsScene, QSizePolicy)
-from PySide6.QtGui import QFontMetrics, QTextOption, QColor, QPen, QBrush
+from PySide6.QtGui import QFontMetrics, QTextOption, QColor
 
 import logging
 import typing as tp
 
 from client.src.gui.widgets_view.base_view import BaseView
+from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.ui.ui_userflow_task_widget import Ui_Form as UserFlowTaskWidget
 from client.src.ui.ui_userflow_notes_widget import Ui_Form as UserFlowNotesWidget
 from client.src.ui.ui_userflow_schedule_widget import Ui_Form as UserFlowScheduleWidget
@@ -24,7 +25,7 @@ from client.src.gui.sub_widgets.common_widgets import QToolTipLabel
 MultiSelection = QAbstractItemView.SelectionMode.MultiSelection
 
 
-class BaseUserFlowWidget(BaseView):
+class BaseUserFlowWidget(BaseWidget):
     """
     Базовый класс виджетов ПП.
     :param name: название виджета (из констант DataStructConst).
@@ -32,6 +33,8 @@ class BaseUserFlowWidget(BaseView):
 
     def __init__(self, name: str):
         super().__init__()
+        self.setObjectName(ObjectNames.wdg_border)
+        self.setStyleSheet(self._style_sheet)
         self.name = name
 
 
@@ -54,7 +57,6 @@ class TaskWidgetView(BaseUserFlowWidget):
         self._tasks_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Ignored)
-
         self._tasks_struct: dict[str, dict] = dict()
 
     def complete_task(self, type_: str, id_: int):
@@ -152,6 +154,7 @@ class ScheduleWidgetView(BaseView):
     def __init__(self, title: str = GuiLabels.schedule_widget, marking_color: QColor = QColor('black'),
                  events_style_sheet: str | None = None):
         super().__init__()
+
         self._view = UserFlowScheduleWidget()
         self._view.setupUi(self)
         self._view.label.setText(title)
@@ -247,11 +250,11 @@ class ScheduleWidgetView(BaseView):
         # Если виджеты будут без родителя, они удаляются Qt.
 
         event = QEventWidget(event.title(), event.time_start(), event.time_end(),
-                             event.wdg_description(), event.time_separator(),
+                             event.wdg_description().structure(), event.time_separator(),
                              event.start_end_label(), event.btn_show_details_label())
         event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_field_clicked(id_, type_, field))
         event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_content_clicked(id_, type_, field))
-
+        event.wdg_description().setStyleSheet(self._events_style_sheet)
         if self._events_style_sheet:
             event.setStyleSheet(self._events_style_sheet)
 
@@ -322,6 +325,9 @@ class ReminderWidgetView(BaseUserFlowWidget):
 
     def __init__(self, max_reminder_length: int = DataStructConst.max_reminder_length):
         super().__init__(DataStructConst.reminder_widget)
+        self.setObjectName(ObjectNames.wdg_border)
+        self.setStyleSheet(self.styleSheet())
+
         self._max_reminder_length = max_reminder_length
 
         main_layout = QVBoxLayout()

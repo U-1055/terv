@@ -1,11 +1,39 @@
 /*-----QWidget-----*/
+QWidget#wdg_border
+{
+	background-color: #121212;
+	color: #ffffff;
+	border-color: #ffffff;
+	border-style: solid;
+	border-width: 2px;
+}
+
 QWidget
 {
 	background-color: #121212;
 	color: #ffffff;
-	border-color: #051a39;
-
 }
+
+
+/*-----QFrame-----*/
+QFrame
+{
+    border-width: 1px;
+	border-color: #051a39;
+}
+
+
+/*-----QEventWidget-----*/
+QEventWidget
+{
+	background-color: #3893FF;
+	color: #ffffff;
+	border-color: #ffffff;
+	border-style: solid;
+	border-width: 2px;
+	border-radius: 3px
+}
+
 
 
 /*-----QLabel-----*/
@@ -134,7 +162,6 @@ QPushButton
 	border-radius: 3px;
 	border-color: #051a39;
 	padding: 5px;
-
 }
 
 
@@ -156,6 +183,7 @@ QPushButton::hover
 	border-radius: 3px;
 	border-color: #051a39;
 	padding: 5px;
+    cursor: pointer;
 
 }
 
@@ -170,6 +198,13 @@ QPushButton::pressed
 	border-color: #051a39;
 	padding: 5px;
 
+}
+
+QPushButton::menu_indicator
+{
+    image: url(empty.png);
+    width: 0px;
+    height: 0px;
 }
 
 
@@ -426,8 +461,8 @@ QLineEdit::disabled
 /*-----QTextEdit-----*/
 QTextEdit
 {
-	background-color: #ffffff;
-	color: #010201;
+	background-color: #333333;
+	color: #FFFFFF;
 	border-color: #051a39;
 
 }
