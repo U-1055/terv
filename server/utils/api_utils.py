@@ -29,8 +29,7 @@ def form_response(http_code: int,
     """
 
     response = {
-        CommonStruct.message: message,
-        CommonStruct.error_id: error_id
+        CommonStruct.message: message
     }
     if content:
         response.update(content=content)
@@ -38,6 +37,8 @@ def form_response(http_code: int,
         response.update(last_rec_num=last_rec_num)
     if records_left is not None:
         response.update(records_left=records_left)
+    if error_id != ErrorCodes.ok.value:
+        response.update(error_id=error_id)
 
     result = jsonify(response)
     result.status_code = http_code

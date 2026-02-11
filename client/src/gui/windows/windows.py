@@ -3,7 +3,7 @@ from PySide6.QtCore import Signal
 
 import logging
 
-from client.src.gui.widgets_view.userflow_view import TaskWidgetView
+from client.src.gui.widgets_view.userspace_view import TaskWidgetView
 
 logging.basicConfig(level=logging.DEBUG)
 

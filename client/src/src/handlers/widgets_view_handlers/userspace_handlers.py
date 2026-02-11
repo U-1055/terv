@@ -4,7 +4,7 @@ from PySide6.QtCore import Signal
 import datetime
 
 from client.src.src.handlers.widgets_view_handlers.base import BaseViewHandler
-from client.src.gui.widgets_view.userflow_view import TaskWidgetView, NotesWidgetView, ScheduleWidgetView, ReminderWidgetView
+from client.src.gui.widgets_view.userspace_view import TaskWidgetView, NotesWidgetView, ScheduleWidgetView, ReminderWidgetView
 from client.src.base import DataStructConst
 
 

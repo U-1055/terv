@@ -9,7 +9,7 @@ class TestBaseWindow(QObject):
     pass
 
 
-class TestUserFlowWindow(TestBaseWindow):
+class TestUserSpaceWindow(TestBaseWindow):
 
     def place_task_widget(self) -> TestTaskWidgetView:
         return TestTaskWidgetView()

@@ -116,8 +116,8 @@ class DataRepository:
         query = select(cm.User).where(cm.User.id.in_(ids))
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
-    def get_workflows(self,
-                      workflow_ids: tp.Iterable[int] = None,
+    def get_workspaces(self,
+                      workspace_ids: tp.Iterable[int] = None,
                       name: str = None,
                       require_last_rec_num: bool = False,
                       limit: int = None,
@@ -125,19 +125,19 @@ class DataRepository:
                       serialize: bool = True
                       ) -> 'RepoSelectResponse':
         """
-        Возвращает рабочие пространства (Workflows).
-        :param workflow_ids:
+        Возвращает рабочие пространства (Workspaces).
+        :param workspace_ids:
         :param name:
         :param limit:
         :param offset:
         :return:
         """
 
-        query = select(cm.Workflow)
-        if workflow_ids:
-            query = query.where(cm.Workflow.id.in_(workflow_ids))
+        query = select(cm.Workspace)
+        if workspace_ids:
+            query = query.where(cm.Workspace.id.in_(workspace_ids))
         if name:
-            query = query.where(cm.Workflow.name.contains(name))
+            query = query.where(cm.Workspace.name.contains(name))
 
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
@@ -164,15 +164,15 @@ class DataRepository:
 
         return self._execute_select(query, limit, offset, require_last_num)
 
-    def get_role_by_user_id(self, workflow_id: int, user_id: int):
+    def get_role_by_user_id(self, workspace_id: int, user_id: int):
         """Получает роль пользователя в проекте."""
-        query = (select(roles.WFRole).where(roles.WFRole.workflow_id == workflow_id).
+        query = (select(roles.WFRole).where(roles.WFRole.workspace_id == workspace_id).
                  where(roles.WFRole.users.any(cm.User.id == user_id)))
         return self._execute_select(query)
 
-    def get_workflow_default_role_id(self, workflow_id: int) -> int:
+    def get_workspace_default_role_id(self, workspace_id: int) -> int:
         """Получает ID роли РП по умолчанию."""
-        query = select(cm.Workflow).where(cm.Workflow.id == workflow_id)
+        query = select(cm.Workspace).where(cm.Workspace.id == workspace_id)
         result = self._execute_select(query)
         role_id = result.content[0].get(DBFields.id)
 
@@ -196,8 +196,8 @@ class DataRepository:
     def update_personal_tasks(self, models: list[cm.WFTask]):
         self._execute_update(models, cm.WFTask)
 
-    def delete_workflows(self, workflows_ids: tp.Iterable[int]):
-        self._execute_delete(workflows_ids, cm.Workflow)
+    def delete_workspaces(self, workspaces_ids: tp.Iterable[int]):
+        self._execute_delete(workspaces_ids, cm.Workspace)
 
     def update_users(self, models: tp.Iterable[dict]):
         self._execute_update(models, cm.User)
@@ -211,8 +211,8 @@ class DataRepository:
     def delete_users(self, ids: tp.Iterable[int]):
         self._execute_delete(ids, cm.User)
 
-    def add_workflows(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
-        return self._execute_insert(models, cm.Workflow)
+    def add_workspaces(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.Workspace)
 
     def add_personal_tasks(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
         return self._execute_insert(models, cm.PersonalTask)
@@ -341,12 +341,12 @@ class DataRepository:
                  )
         return self._get_permissions(query)
 
-    def get_role_by_id_workflow(self, id_: int, workflow_id: int) -> 'RepoSelectResponse':
-        query = select(roles.WFRole).where(roles.WFRole.id == id_).where(roles.WFRole.workflow_id == workflow_id)
+    def get_role_by_id_workspace(self, id_: int, workspace_id: int) -> 'RepoSelectResponse':
+        query = select(roles.WFRole).where(roles.WFRole.id == id_).where(roles.WFRole.workspace_id == workspace_id)
         return self._execute_select(query)
 
-    def update_workflows(self, models: list[dict]):
-        self._execute_update(models, cm.Workflow)
+    def update_workspaces(self, models: list[dict]):
+        self._execute_update(models, cm.Workspace)
 
     def add_wf_roles(self, models: list[dict]) -> 'RepoInsertResponse':
         return self._execute_insert(models, roles.WFRole)

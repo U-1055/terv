@@ -27,14 +27,14 @@ class DatabaseManager:
             creator = cm.User(username='lo', hashed_password='ps', email='email1')
             session.add(creator)
 
-            workflow = cm.Workflow(name='wf1', creator=creator, description='')
-            session.add(workflow)
+            workspace = cm.Workspace(name='wf1', creator=creator, description='')
+            session.add(workspace)
 
             user = cm.User(username=login, hashed_password=hash_password(password), email=email)
             session.add(user)
 
         with self.session_maker() as session, session.begin():
-            workflow = session.execute(select(cm.Workflow).where(cm.Workflow.name == 'wf1')).scalars().one()
+            workspace = session.execute(select(cm.Workspace).where(cm.Workspace.name == 'wf1')).scalars().one()
             user = session.execute(select(cm.User).where(cm.User.username == login)).scalars().one()
             creator = session.execute(select(cm.User).where(cm.User.username == 'lo')).scalars().one()
 
@@ -45,26 +45,26 @@ class DatabaseManager:
                               creator=creator,
                               entrusted=creator,
                               executors=[user],
-                              workflow=workflow,
+                              workspace=workspace,
                               description=''
                               )
                 tasks.append(task)
 
             session.add_all(tasks)
 
-    def set_repository_test_config(self, login: str, workflow_name: str, tasks_num: int):
+    def set_repository_test_config(self, login: str, workspace_name: str, tasks_num: int):
         """
         Создаёт конфиг БД для теста репозитория: двух пользователей (User) (один с username=login),
-        одно РП (Workflow(name=workflow_name)), tasks_num задач РП (WFTask).
+        одно РП (Workspace(name=workspace_name)), tasks_num задач РП (WFTask).
         """
         with self.session_maker() as session, session.begin():
             creator = cm.User(username='lo', hashed_password='2', email='N')
             session.add(creator)
-            workflow = cm.Workflow(name=workflow_name, creator=creator, description='Test WF')
-            session.add(workflow)
-            creator.linked_workflows = [workflow]
+            workspace = cm.Workspace(name=workspace_name, creator=creator, description='Test WF')
+            session.add(workspace)
+            creator.linked_workspaces = [workspace]
 
-            user = cm.User(username=login, hashed_password='2', email='M', linked_workflows=[workflow])
+            user = cm.User(username=login, hashed_password='2', email='M', linked_workspaces=[workspace])
             session.add(user)
             for i in range(tasks_num):
                 wf_task = cm.WFTask(name=f'Task_{i}',
@@ -72,22 +72,22 @@ class DatabaseManager:
                                     creator=creator,
                                     entrusted=creator,
                                     executors=[user],
-                                    workflow=workflow,
+                                    workspace=workspace,
                                     description=''
                                     )
                 session.add(wf_task)
 
-    def set_workflow_service_test_config(self, users_num: int):
+    def set_workspace_service_test_config(self, users_num: int):
         """
-        Устанавливает конфиг для теста сервиса Workflow. (1 пользователь - создатель Workflow, 1 Workflow,
+        Устанавливает конфиг для теста сервиса Workspace. (1 пользователь - создатель Workspace, 1 Workspace,
         users_num пользователей).
         """
         with self.session_maker() as session, session.begin():
             creator = cm.User(username='creator', hashed_password='s', email='ss')
             session.add(creator)
-            workflow = cm.Workflow(name='wf_1', creator=creator)
-            session.add(workflow)
-            creator.linked_workflows = [workflow]
+            workspace = cm.Workspace(name='wf_1', creator=creator)
+            session.add(workspace)
+            creator.linked_workspaces = [workspace]
             for i in range(users_num):
                 user = cm.User(username=f'user_{i}', hashed_password='s', email=f'em{i}')
                 session.add(user)
@@ -96,4 +96,4 @@ class DatabaseManager:
 if __name__ == '__main__':
 
     db_manager = DatabaseManager('sqlite:///database')
-    db_manager.set_workflow_service_test_config(15)
+    db_manager.set_workspace_service_test_config(15)

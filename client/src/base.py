@@ -7,7 +7,7 @@ class DataStructConst:
 
     access_token = 'access_token'
     refresh_token = 'refresh_token'
-    userflow_widgets = 'userflow_widgets'
+    userspace_widgets = 'userspace_widgets'
     settings = 'settings'
     style = 'style'
 
@@ -68,8 +68,8 @@ class GuiLabels:
     register = 'Зарегистрироваться'
     apply = 'Применить'
     email = 'Email'
-    userflow_settings = 'Настройки пространства'
-    label_userflow_settings = 'Выберите виджеты, которые хотите разместить в пространстве'
+    userspace_settings = 'Настройки пространства'
+    label_userspace_settings = 'Выберите виджеты, которые хотите разместить в пространстве'
 
     tasks_widget = 'Задачи на сегодня'
     notes_widget = 'Заметки'
@@ -102,7 +102,7 @@ class GuiLabels:
     lasting_label = 'Длительность: '
     start_end_label = 'Время: '
 
-    workflow = 'Рабочее пространство'
+    workspace = 'Рабочее пространство'
     project = 'Проект'
     entrusted = 'Поручил'
     plan_deadline = 'Дедлайн'
@@ -115,6 +115,14 @@ class GuiLabels:
     creator = 'Создатель'
     lasting = 'Длительность'
     days = 'дней'
+
+    userspace = 'Моё пространство'
+    tasks = 'Задачи'
+    calendar = 'Календарь'
+    knowledge_base = 'База знаний'
+    workspaces = 'Рабочие пространства'
+    projects = 'Проекты'
+    settings = 'Настройки'
 
 
 class GUIStyles:

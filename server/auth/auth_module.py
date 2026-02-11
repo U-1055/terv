@@ -202,13 +202,13 @@ class Authorizer:
 
         if permission not in self._permissions:
             raise ValueError(f'Unknown permission: {permission}')
-        workflows_ids = []
+        workspaces_ids = []
         for object_ in objects:
-            id_ = object_.get(DBFields.workflow_id)
+            id_ = object_.get(DBFields.workspace_id)
             if not id_:
-                raise ValueError(f'The serialized model have not field "workflow_id". Model: {object_}')
+                raise ValueError(f'The serialized model have not field "workspace_id". Model: {object_}')
 
-        for id_ in workflows_ids:  # Временная схема
+        for id_ in workspaces_ids:  # Временная схема
             role_id = self._repo.get_role_by_user_id(id_, user_id).content
             if not role_id:
                 return False  # Нет роли - значит пользователя нет в РП

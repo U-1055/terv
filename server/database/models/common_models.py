@@ -17,14 +17,14 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String[30])
 
     # РП и проекты
-    created_workflows: Mapped[list['Workflow']] = relationship('Workflow', back_populates='creator')
+    created_workspaces: Mapped[list['Workspace']] = relationship('Workspace', back_populates='creator')
     created_projects: Mapped[list['Project']] = relationship('Project', back_populates='creator')
-    linked_workflows: Mapped[list['Workflow']] = relationship(secondary='workflow_user', back_populates='users')
+    linked_workspaces: Mapped[list['Workspace']] = relationship(secondary='workspace_user', back_populates='users')
     linked_projects: Mapped[list['Project']] = relationship(secondary='project_user', back_populates='users')
 
     # Задачи
     created_wf_tasks: Mapped[list['WFTask']] = relationship('WFTask', foreign_keys='WFTask.creator_id',
-                                                            back_populates='creator')  # Созданные задачи workflow
+                                                            back_populates='creator')  # Созданные задачи workspace
     assigned_to_user_tasks: Mapped[list['WFTask']] = relationship(secondary='executor_task',
                                                                   back_populates='executors')  # Порученные пользователЮ
     assigned_by_user_tasks: Mapped[list['WFTask']] = relationship('WFTask', foreign_keys='WFTask.entrusted_id',
@@ -54,10 +54,10 @@ class User(Base):
     personal_many_days_events: Mapped[list['PersonalManyDaysEvent']] = relationship('PersonalManyDaysEvent', back_populates='owner')
 
 
-class Workflow(Base):
+class Workspace(Base):
     """Рабочее пространство."""
 
-    __tablename__ = 'workflow'
+    __tablename__ = 'workspace'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
@@ -65,27 +65,27 @@ class Workflow(Base):
     name: Mapped[str] = mapped_column(String[30])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
-    projects: Mapped[list['Project']] = relationship('Project', back_populates='workflow')
-    tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='workflow')
-    users: Mapped[list['User']] = relationship(secondary='workflow_user', back_populates='linked_workflows')
-    creator: Mapped[User] = relationship(User, back_populates='created_workflows')
-    work_directions: Mapped[list['WFWorkDirection']] = relationship('WFWorkDirection', back_populates='workflow')
-    documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='workflow')
-    base_categories: Mapped[list['WFBaseCategory']] = relationship('WFBaseCategory', back_populates='workflow')
-    daily_events: Mapped[list['WFDailyEvent']] = relationship('WFDailyEvent', back_populates='workflow')
-    many_days_events: Mapped[list['WFManyDaysEvent']] = relationship('WFManyDaysEvent', back_populates='workflow')
+    projects: Mapped[list['Project']] = relationship('Project', back_populates='workspace')
+    tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='workspace')
+    users: Mapped[list['User']] = relationship(secondary='workspace_user', back_populates='linked_workspaces')
+    creator: Mapped[User] = relationship(User, back_populates='created_workspaces')
+    work_directions: Mapped[list['WFWorkDirection']] = relationship('WFWorkDirection', back_populates='workspace')
+    documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='workspace')
+    base_categories: Mapped[list['WFBaseCategory']] = relationship('WFBaseCategory', back_populates='workspace')
+    daily_events: Mapped[list['WFDailyEvent']] = relationship('WFDailyEvent', back_populates='workspace')
+    many_days_events: Mapped[list['WFManyDaysEvent']] = relationship('WFManyDaysEvent', back_populates='workspace')
 
 
 class Project(Base):
     """Проект."""
     __tablename__ = 'project'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey(Workflow.id))
+    workspace_id: Mapped[int] = mapped_column(ForeignKey(Workspace.id))
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
     name: Mapped[str] = mapped_column(String[30])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
-    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='projects')
+    workspace: Mapped[Workspace] = relationship(Workspace, back_populates='projects')
     users: Mapped[list[User]] = relationship(secondary='project_user', back_populates='linked_projects')
     creator: Mapped[User] = relationship(User, back_populates='created_projects')
     tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='project')
@@ -127,10 +127,10 @@ wf_many_days_event_user = Table(
     Column('event_id', ForeignKey('wf_many_days_event.id'), primary_key=True)
 )
 
-workflow_user = Table(
-    'workflow_user',
+workspace_user = Table(
+    'workspace_user',
     Base.metadata,
-    Column('workflow_id', ForeignKey('workflow.id'), primary_key=True),
+    Column('workspace_id', ForeignKey('workspace.id'), primary_key=True),
     Column('user_id', ForeignKey('user.id'), primary_key=True)
 )
 
@@ -146,7 +146,7 @@ class WFTask(Base):
 
     __tablename__ = 'wf_task'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey(Workflow.id))  # РП
+    workspace_id: Mapped[int] = mapped_column(ForeignKey(Workspace.id))  # РП
     project_id: Mapped[int] = mapped_column(ForeignKey(Project.id), nullable=True)  # Проект
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))  # Создатель
     entrusted_id: Mapped[int] = mapped_column(ForeignKey(User.id))  # Поручивший
@@ -166,8 +166,8 @@ class WFTask(Base):
     executors: Mapped[list[User]] = relationship(secondary='executor_task', back_populates='assigned_to_user_tasks')
     creator: Mapped[User] = relationship(User, foreign_keys='WFTask.creator_id', back_populates='created_wf_tasks')
     entrusted: Mapped[User] = relationship(User, foreign_keys='WFTask.entrusted_id', back_populates='assigned_by_user_tasks')
-    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='tasks')
-    work_direction: Mapped[Workflow] = relationship('WFWorkDirection', back_populates='tasks')
+    workspace: Mapped[Workspace] = relationship(Workspace, back_populates='tasks')
+    work_direction: Mapped[Workspace] = relationship('WFWorkDirection', back_populates='tasks')
     parent_task: Mapped['WFTask'] = relationship('WFTask', back_populates='child_tasks', remote_side='WFTask.id')
     child_tasks: Mapped[list['WFTask']] = relationship('WFTask', back_populates='parent_task')
     project: Mapped[Project] = relationship(Project, back_populates='tasks')
@@ -201,10 +201,10 @@ class WFWorkDirection(Base):
     __tablename__ = 'wf_work_direction'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    workspace_id: Mapped[int] = mapped_column(ForeignKey('workspace.id'))
     name: Mapped[str] = mapped_column(String[30])
 
-    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='work_directions')
+    workspace: Mapped[Workspace] = relationship(Workspace, back_populates='work_directions')
     tasks: Mapped[list[WFTask]] = relationship(WFTask, back_populates='work_direction')
 
 
@@ -216,7 +216,7 @@ class PersonalWorkDirection(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     name: Mapped[str] = mapped_column(String[30])
 
-    owner: Mapped[Workflow] = relationship(User, back_populates='work_directions')
+    owner: Mapped[Workspace] = relationship(User, back_populates='work_directions')
     tasks: Mapped[list[WFTask]] = relationship(PersonalTask, back_populates='work_direction')
 
 
@@ -255,7 +255,7 @@ class WFDailyEvent(Base):
     __tablename__ = 'wf_daily_event'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    workspace_id: Mapped[int] = mapped_column(ForeignKey('workspace.id'))
     creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
@@ -266,7 +266,7 @@ class WFDailyEvent(Base):
 
     creator: Mapped[User] = relationship(User, back_populates='created_wf_daily_events')
     notified: Mapped[list['User']] = relationship(secondary='wf_daily_event_user', back_populates='notified_daily_events')  # Оповещаемые пользователи
-    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='daily_events')
+    workspace: Mapped[Workspace] = relationship(Workspace, back_populates='daily_events')
 
 
 class WFManyDaysEvent(Base):
@@ -274,7 +274,7 @@ class WFManyDaysEvent(Base):
     __tablename__ = 'wf_many_days_event'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    workspace_id: Mapped[int] = mapped_column(ForeignKey('workspace.id'))
     creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
 
     name: Mapped[str] = mapped_column(String[30])
@@ -284,7 +284,7 @@ class WFManyDaysEvent(Base):
 
     creator: Mapped[User] = relationship(User, back_populates='created_wf_many_days_events')
     notified: Mapped[list['User']] = relationship(secondary='wf_many_days_event_user', back_populates='notified_many_days_events')  # Оповещаемые пользователи
-    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='many_days_events')
+    workspace: Mapped[Workspace] = relationship(Workspace, back_populates='many_days_events')
 
 
 class WFBaseCategory(Base):
@@ -292,14 +292,14 @@ class WFBaseCategory(Base):
     __tablename__ = 'wf_base_category'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    workspace_id: Mapped[int] = mapped_column(ForeignKey('workspace.id'))
     parent_category_id: Mapped[int] = mapped_column(ForeignKey('wf_base_category.id'), nullable=True)
     name: Mapped[str] = mapped_column(String[30])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
     parent_category: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='child_categories', remote_side='WFBaseCategory.id')
     child_categories: Mapped['WFBaseCategory'] = relationship('WFBaseCategory', back_populates='parent_category')
-    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='base_categories')
+    workspace: Mapped[Workspace] = relationship(Workspace, back_populates='base_categories')
     documents: Mapped[list['WFDocument']] = relationship('WFDocument', back_populates='base_category')
 
 
@@ -311,11 +311,11 @@ class WFDocument(Base):
     __tablename__ = 'wf_document'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    workspace_id: Mapped[int] = mapped_column(ForeignKey('workspace.id'))
     creator_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     base_category_id: Mapped[WFBaseCategory] = mapped_column(ForeignKey('wf_base_category.id'))
 
-    workflow: Mapped[Workflow] = relationship(Workflow, back_populates='documents')
+    workspace: Mapped[Workspace] = relationship(Workspace, back_populates='documents')
     creator: Mapped[User] = relationship(User, back_populates='created_wf_documents')
     base_category: Mapped[WFBaseCategory] = relationship(WFBaseCategory, back_populates='documents')
 

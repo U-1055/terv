@@ -1,1 +1,1 @@
-{"env": "test", "access_token_lifetime": 2, "refresh_token_lifetime": 4, "database_path": "sqlite:///../../test/server_test/utils/test_database/database"}
+{"env": "dev", "access_token_lifetime": 900, "refresh_token_lifetime": 86400, "database_path": "sqlite:///../database/database"}

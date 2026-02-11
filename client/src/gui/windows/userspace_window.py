@@ -5,14 +5,14 @@ from PySide6.QtGui import QColor
 import logging
 
 from client.src.base import GuiLabels, DataStructConst
-from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, NotesWidgetView, ScheduleWidgetView, 
-                                                       BaseUserFlowWidget, ReminderWidgetView, EventsTodayWidget)
+from client.src.gui.widgets_view.userspace_view import (TaskWidgetView, NotesWidgetView, ScheduleWidgetView, 
+                                                       BaseUserSpaceWidget, ReminderWidgetView, EventsTodayWidget)
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.aligns import AlignBottom
 from client.utils.qt_utils import filled_rows_count, filled_columns_count, get_next_widget_grid_pos
 
 
-class UserFlowWindow(BaseWindow):
+class UserSpaceWindow(BaseWindow):
     """
     Окно ПП. Размещает настраиваемые виджеты в соответствии с параметрами:
     x - столбец; y - строка; x_size - число занимаемых виджетов столбцов; y_size - число занимаемых виджетом строк.
@@ -39,7 +39,7 @@ class UserFlowWindow(BaseWindow):
         self._last_x = -1  # Координаты последнего размещённого виджета на сетке (Вначале виджета нет, поэтому -1)
         self._last_y = 0
 
-        btn_set_widgets = QPushButton(GuiLabels.userflow_settings)
+        btn_set_widgets = QPushButton(GuiLabels.userspace_settings)
         btn_set_widgets.clicked.connect(self.press_btn_set_widgets)
 
         self._main_layout.addLayout(self._widgets_layout, 10)
@@ -48,7 +48,7 @@ class UserFlowWindow(BaseWindow):
 
         self.setLayout(self._main_layout)
 
-        logging.debug('UserFlowWindow initialized')
+        logging.debug('UserSpaceWindow initialized')
 
     def press_btn_set_widgets(self):
         self.btn_set_widgets_pressed.emit()
@@ -62,7 +62,7 @@ class UserFlowWindow(BaseWindow):
 
         return [x, y, x_size, y_size]
 
-    def _place_settable_widget(self, widget: BaseUserFlowWidget) -> tuple[int, int]:
+    def _place_settable_widget(self, widget: BaseUserSpaceWidget) -> tuple[int, int]:
 
         # Выбор новой позиции (следующий столбец или строка) зависит от заполненности виджета
         y, x = self._last_y, self._last_x
@@ -141,4 +141,4 @@ class UserFlowWindow(BaseWindow):
 
     def close(self):
         super().close()
-        logging.debug('UserFlowWindow closed')
+        logging.debug('UserSpaceWindow closed')

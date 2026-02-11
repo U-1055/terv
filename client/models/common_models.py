@@ -15,12 +15,12 @@ class User(Base):
     email: str = Field(max_length=30)
 
     # РП и проекты
-    created_workflows: list[int]
+    created_workspaces: list[int]
     created_projects: list[int] 
-    linked_workflows: list[int] 
+    linked_workspaces: list[int] 
 
     # Задачи
-    created_wf_tasks: list[int]  # Созданные задачи workflow
+    created_wf_tasks: list[int]  # Созданные задачи workspace
     assigned_to_user_tasks: list[int]  # Порученные пользователЮ
     assigned_by_user_tasks: list[int]  # Порученные пользователЕМ
     responsibility_tasks: list[int]  # Задачи, где пользователь назначен ответственным
@@ -44,10 +44,10 @@ class User(Base):
     personal_many_days_events: list[int] | None
 
 
-class Workflow(Base):
+class Workspace(Base):
     """Рабочее пространство."""
 
-    __tablename__ = 'workflow'
+    __tablename__ = 'workspace'
 
     id: int
     creator_id: int 
@@ -66,7 +66,7 @@ class Project(Base):
     """Проект."""
     __tablename__ = 'project'
     id: int 
-    workflow_id: int
+    workspace_id: int
     creator_id: int
     name: str = Field(max_length=30) 
     description: str = Field(max_length=2000)
@@ -76,7 +76,7 @@ class WFTask(Base):
 
     __tablename__ = 'wf_task'
     id: int
-    workflow_id: int  # РП
+    workspace_id: int  # РП
     project_id: int | None  # Проект
     creator_id: int  # Создатель
     entrusted_id: int  # Поручивший
@@ -119,7 +119,7 @@ class WFWorkDirection(Base):
     __tablename__ = 'wf_work_direction'
 
     id: int
-    workflow_id: int
+    workspace_id: int
     name: str = Field(max_length=30)
 
     tasks: list[int]
@@ -168,7 +168,7 @@ class WFDailyEvent(Base):
     __tablename__ = 'wf_daily_event'
 
     id: int
-    workflow_id: int 
+    workspace_id: int 
     creator_id: int 
 
     name: str = Field(max_length=30)
@@ -185,7 +185,7 @@ class WFManyDaysEvent(Base):
     __tablename__ = 'wf_many_days_event'
 
     id: int
-    workflow_id: int
+    workspace_id: int
     creator_id: int
 
     name: str = Field(max_length=30)
@@ -201,7 +201,7 @@ class WFBaseCategory(Base):
     __tablename__ = 'wf_base_category'
 
     id: int
-    workflow_id: int
+    workspace_id: int
     parent_category_id: int
     name: str = Field(max_length=30)
     description: str = Field(max_length=2000)
@@ -218,7 +218,7 @@ class WFDocument(Base):
     __tablename__ = 'wf_document'
 
     id: int
-    workflow_id: int
+    workspace_id: int
     creator_id: int
     base_category_id: int
 

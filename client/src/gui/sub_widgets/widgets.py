@@ -9,7 +9,7 @@ from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.src.gui.sub_widgets.util_widgets import QMouseActivatingLineEdit, QClickableLabel
 
 
-class UserFlowTask(QWidget):
+class UserSpaceTask(QWidget):
     """
     Виджет задачи ПП.
 
@@ -237,6 +237,6 @@ class QEventWidget(QWidget):
 
 if __name__ == '__main__':
     from test.client_test.utils.window import setup_gui
-    wdg = UserFlowTask('name', '1', 2, {'1': '1111111', 'GGG': '1342'})
+    wdg = UserSpaceTask('name', '1', 2, {'1': '1111111', 'GGG': '1342'})
     setup_gui(wdg)
 

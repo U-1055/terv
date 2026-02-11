@@ -22,7 +22,7 @@ def client_config():
     requester = Requester('http://localhost:5000')
     logic = Logic(root, model, requester, 10, )
 
-    root.press_btn_open_userflow()  # Переходим на ПП, чтобы логика отправила запрос
+    root.press_btn_open_userspace()  # Переходим на ПП, чтобы логика отправила запрос
     time.sleep(1)  # Ждём, чтобы запрос точно успел пройти
     auth_view = root.auth_window.auth_window()   # Получаем окна
     register_view = root.auth_window.register_window()

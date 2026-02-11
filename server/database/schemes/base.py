@@ -17,7 +17,7 @@ schemes_models = {  # Соответствие моделей и схем
     cm.WFManyDaysEvent: cs.WFManyDaysEventSchema(),
     cm.WFTask: cs.WFTaskSchema(),
     cm.WFWorkDirection: cs.WFWorkDirectionSchema(),
-    cm.Workflow: cs.WorkflowSchema(),
+    cm.Workspace: cs.WorkspaceSchema(),
     roles.WFRole: cs.WFRoleSchema(),
 }
 

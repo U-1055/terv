@@ -54,7 +54,7 @@ def add_wf_tasks(request: Request, repo: DataRepository) -> Response:
         {
          "name": <название задачи>
          "description" <описание задачи>
-         "workflow_id" <ID ПП, в котором создаётся задача>
+         "workspace_id" <ID ПП, в котором создаётся задача>
          "project_id" <Проект>  (Опционально)
          "creator_id" <ID создателя>.
          "entrusted_id" <ID поручившего задачу>.
@@ -280,19 +280,33 @@ def delete_personal_tasks(request: Request, repo: DataRepository):
 
 
 @utl.get_request
-def get_wf_daily_events(request: flask.Request, repo: DataRepository, limit: int = None, offset: int = None,
-                        require_last_num: bool = False):
+def get_wf_daily_events(request: flask.Request, repo: DataRepository, ids = tp.Iterable[int], user_id: int = None,
+                        limit: int = None, offset: int = None, require_last_num: bool = False):
     """Получает однодневные события РП."""
     ids = request.args.getlist(CommonStruct.ids)
+    if not utl.check_list_is_digit(ids):
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
+                                                               'One of ids is not integer'))
+    ids = utl.list_to_int(ids)
+    try:
+        result = repo.get_wf_daily_events_by_id(ids, user_id, limit, offset, require_last_num)
+        return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
+                                 records_left=result.records_left)
+    except err.IntegrityError as e:
+        return utl.form_response(400, APIAn.database_write_error(
+            '', request.endpoint,
+            'Database error occurred',
+            str(e)
+        ))
 
 
-def update_wf_daily_events(request: flask.Request, workflow_id: int, repo: DataRepository):
+def update_wf_daily_events(request: flask.Request, workspace_id: int, repo: DataRepository):
     services.WFDailyEventService.update()
 
 
-def add_wf_daily_events(request: flask.Request, workflow_id: int, repo: DataRepository):
+def add_wf_daily_events(request: flask.Request, workspace_id: int, repo: DataRepository):
     """Добавляет однодневные события РП."""
-    wf_daily_events = request.args.getlist(CommonStruct.wf_daily_events)
+    wf_daily_events = request.json.getlist(CommonStruct.wf_daily_events)
     try:
         repo.add_wf_daily_events(wf_daily_events)
         return utl.form_success_response()
@@ -305,19 +319,82 @@ def add_wf_daily_events(request: flask.Request, workflow_id: int, repo: DataRepo
         ))
 
 
-def delete_wf_daily_events(request: flask.Request, workflow_id: int, repo: DataRepository):
+def delete_wf_daily_events(request: flask.Request, workspace_id: int, repo: DataRepository):
     ids = request.args.getlist(CommonStruct.ids)  # ToDo: дописать, когда будет реализована обработка ошибок сервисного слоя
 
 
-def add_users_to_workflow(request: flask.Request, repo: DataRepository):
-    """Добавляет пользователей в ПП. Структура запроса: api/endpoint&workflow_id,user_ids."""
+@utl.get_request
+def get_wf_many_days_events(request: flask.Request, repo: DataRepository, user_id: int = None, limit: int = None,
+                            offset: int = None, require_last_num: bool = False):
+    """Получает многодневные события РП."""
     ids = request.args.getlist(CommonStruct.ids)
-    workflow_id = request.args.get(CommonStruct.workflow_id)
+    try:
+        ids = utl.list_to_int(ids)
+    except ValueError:
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
+                                                               'One of ids is not integer'))
 
-    if workflow_id.isdigit():
-        workflow_id = int(workflow_id)
+    try:
+        result = repo.get_wf_many_days_events_by_id(ids, user_id, limit, offset, require_last_num)
+        return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
+                                 records_left=result.records_left)
+    except err.IntegrityError as e:
+        pass
+
+
+@utl.get_request
+def get_personal_daily_events(request: flask.Request, repo: DataRepository, user_id: int = None, limit: int = None,
+                              offset: int = None, require_last_num: bool = False):
+    """Получает личные однодневные события."""
+    ids = request.args.getlist(CommonStruct.ids)  # ToDo: проверка доступа
+
+    if not user_id:  # ToDo: такая же проверка для каждого CRUD-а с фильтрацией
+        user_id = request.args.get(CommonStruct.user_id)
+        if str(user_id).isdigit():
+            user_id = int(user_id)
+
+    try:
+        ids = utl.list_to_int(ids)
+    except ValueError:
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
+                                                               'One of ids is not integer'))
+
+    try:
+        result = repo.get_personal_daily_events_by_id(ids, user_id, limit, offset, require_last_num)
+        return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
+                                 records_left=result.records_left)
+    except err.IntegrityError as e:
+        pass
+
+
+@utl.get_request
+def get_personal_many_days_events(request: flask.Request, repo: DataRepository, user_id: int = None, limit: int = None,
+                                  offset: int = None, require_last_num: bool = False):
+    """Получает личные многодневные события."""
+    ids = request.args.getlist(CommonStruct.ids)
+    try:
+        ids = utl.list_to_int(ids)
+    except ValueError:
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
+                                                               'One of ids is not integer'))
+
+    try:
+        result = repo.get_personal_many_days_events_by_id(ids, user_id, limit, offset, require_last_num)
+        return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
+                                 records_left=result.records_left)
+    except err.IntegrityError as e:
+        pass
+
+
+def add_users_to_workspace(request: flask.Request, repo: DataRepository):
+    """Добавляет пользователей в ПП. Структура запроса: api/endpoint&workspace_id,user_ids."""
+    ids = request.args.getlist(CommonStruct.ids)
+    workspace_id = request.args.get(CommonStruct.workspace_id)
+
+    if workspace_id.isdigit():
+        workspace_id = int(workspace_id)
     else:
-        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workflow_id, request.endpoint,
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workspace_id, request.endpoint,
                                                                'Parameter must be digit'))
 
     if utl.check_list_is_digit(ids):
@@ -327,22 +404,22 @@ def add_users_to_workflow(request: flask.Request, repo: DataRepository):
                                                                request.endpoint, 'All of values must be digits'))
 
     try:
-        services.WorkflowService.add_users(ids, workflow_id, repo)
+        services.WorkspaceService.add_users(ids, workspace_id, repo)
     except ValueError as e:
-        logging.warning(f'Error during adding users to workflow: {e}')
+        logging.warning(f'Error during adding users to workspace: {e}')
         return utl.form_response(400, "Invalid params in request's params")  # ToDo: разобраться с обработкой ошибок (например, ввести исключения сервисного слоя)
     return utl.form_success_response()
 
 
-def delete_users_from_workflow(request: flask.Request, repo: DataRepository):
-    """Удаляет пользователей из ПП. Структура запроса: api/endpoint&workflow_id,user_ids."""
+def delete_users_from_workspace(request: flask.Request, repo: DataRepository):
+    """Удаляет пользователей из ПП. Структура запроса: api/endpoint&workspace_id,user_ids."""
     ids = request.args.getlist(CommonStruct.ids)
-    workflow_id = request.args.get(CommonStruct.workflow_id)
+    workspace_id = request.args.get(CommonStruct.workspace_id)
 
-    if workflow_id.isdigit():
-        workflow_id = int(workflow_id)
+    if workspace_id.isdigit():
+        workspace_id = int(workspace_id)
     else:
-        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workflow_id, request.endpoint,
+        return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workspace_id, request.endpoint,
                                                                'Parameter must be digit'))
 
     if utl.check_list_is_digit(ids):
@@ -351,9 +428,9 @@ def delete_users_from_workflow(request: flask.Request, repo: DataRepository):
         return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids,
                                                                request.endpoint, 'All of values must be digits'))
     try:
-        services.WorkflowService.delete_users(workflow_id, ids, repo)
+        services.WorkspaceService.delete_users(workspace_id, ids, repo)
     except ValueError as e:
-        logging.warning(f'Error during deleting users to workflow: {e}')
+        logging.warning(f'Error during deleting users to workspace: {e}')
         return utl.form_response(400,
                                  "Invalid params in request's params")
     return utl.form_success_response()

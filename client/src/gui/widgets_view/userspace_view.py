@@ -14,10 +14,10 @@ import typing as tp
 
 from client.src.gui.widgets_view.base_view import BaseView
 from client.src.gui.sub_widgets.base import BaseWidget
-from client.src.ui.ui_userflow_task_widget import Ui_Form as UserFlowTaskWidget
-from client.src.ui.ui_userflow_notes_widget import Ui_Form as UserFlowNotesWidget
-from client.src.ui.ui_userflow_schedule_widget import Ui_Form as UserFlowScheduleWidget
-from client.src.gui.sub_widgets.widgets import UserFlowTask, Reminder, QEventWidget
+from client.src.ui.ui_userspace_task_widget import Ui_Form as UserSpaceTaskWidget
+from client.src.ui.ui_userspace_notes_widget import Ui_Form as UserSpaceNotesWidget
+from client.src.ui.ui_userspace_schedule_widget import Ui_Form as UserSpaceScheduleWidget
+from client.src.gui.sub_widgets.widgets import UserSpaceTask, Reminder, QEventWidget
 from client.src.base import GuiLabels, DataStructConst, ObjectNames
 from client.utils.data_tools import parse_time
 from client.src.gui.sub_widgets.common_widgets import QToolTipLabel
@@ -25,7 +25,7 @@ from client.src.gui.sub_widgets.common_widgets import QToolTipLabel
 MultiSelection = QAbstractItemView.SelectionMode.MultiSelection
 
 
-class BaseUserFlowWidget(BaseWidget):
+class BaseUserSpaceWidget(BaseWidget):
     """
     Базовый класс виджетов ПП.
     :param name: название виджета (из констант DataStructConst).
@@ -38,7 +38,7 @@ class BaseUserFlowWidget(BaseWidget):
         self.name = name
 
 
-class TaskWidgetView(BaseUserFlowWidget):
+class TaskWidgetView(BaseUserSpaceWidget):
     """
     Виджет задач. Позволяет добавлять и выполнять задачи. Задачи разделяются на типы и идентифицируются по ID.
     (Это позволяет иметь задачи с одинаковыми именами). Задачи одного типа должны иметь разные ID.
@@ -48,7 +48,7 @@ class TaskWidgetView(BaseUserFlowWidget):
 
     def __init__(self):
         super().__init__(DataStructConst.tasks_widget)
-        self._view = UserFlowTaskWidget()
+        self._view = UserSpaceTaskWidget()
         self._view.setupUi(self)
         self._view.label.setText(GuiLabels.tasks_widget)
         self._tasks_layout = QVBoxLayout()
@@ -77,7 +77,7 @@ class TaskWidgetView(BaseUserFlowWidget):
                                  Текст вида {<название поля>: <текст поля>}.
 
         """
-        widget = UserFlowTask(name, type_, id_, task_description)
+        widget = UserSpaceTask(name, type_, id_, task_description)
 
         if type_ not in self._tasks_struct:  # Обновление структуры задач
             self._tasks_struct[type_] = {id_: widget}
@@ -108,7 +108,7 @@ class TaskWidgetView(BaseUserFlowWidget):
         pass
 
 
-class NotesWidgetView(BaseUserFlowWidget):
+class NotesWidgetView(BaseUserSpaceWidget):
     """
     Виджет заметки.
 
@@ -120,7 +120,7 @@ class NotesWidgetView(BaseUserFlowWidget):
 
     def __init__(self):
         super().__init__(DataStructConst.notes_widget)
-        self._view = UserFlowNotesWidget()
+        self._view = UserSpaceNotesWidget()
         self._view.setupUi(self)
         self._view.label.setText(GuiLabels.notes_widget)
         self._view.textEdit.textChanged.connect(self._on_text_changed)
@@ -155,7 +155,7 @@ class ScheduleWidgetView(BaseView):
                  events_style_sheet: str | None = None):
         super().__init__()
 
-        self._view = UserFlowScheduleWidget()
+        self._view = UserSpaceScheduleWidget()
         self._view.setupUi(self)
         self._view.label.setText(title)
         self._view.graphicsView.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -317,7 +317,7 @@ class ScheduleWidgetView(BaseView):
         super().resizeEvent(event)
 
 
-class ReminderWidgetView(BaseUserFlowWidget):
+class ReminderWidgetView(BaseUserSpaceWidget):
     reminder_added = Signal(str)  # Вызывается при добавлении напоминания. Возвращает название напоминания
     reminder_completed = Signal(str)  # Вызывается при закрытии напоминания. Возвращает название напоминания
     reminder_edited = Signal(str,
@@ -439,7 +439,7 @@ class WidgetSettingsMenu(QDialog):
     def __init__(self, widgets: list[str], selected_widgets: list[str]):
         super().__init__()
         self._main_layout = QVBoxLayout()
-        lbl = QLabel(GuiLabels.label_userflow_settings)
+        lbl = QLabel(GuiLabels.label_userspace_settings)
         btn_confirm = QPushButton(GuiLabels.apply)
         btn_confirm.clicked.connect(self.close)
 

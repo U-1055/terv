@@ -8,20 +8,20 @@ import threading
 
 from client.src.src.handlers.window_handlers.base import (BaseWindowHandler, MainWindow, Requester, Model, Request)
 from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels
-from client.src.gui.windows.userflow_window import UserFlowWindow
-from client.src.gui.widgets_view.userflow_view import (TaskWidgetView, ScheduleWidgetView, NotesWidgetView,
+from client.src.gui.windows.userspace_window import UserSpaceWindow
+from client.src.gui.widgets_view.userspace_view import (TaskWidgetView, ScheduleWidgetView, NotesWidgetView,
                                                        WidgetSettingsMenu)
-from client.src.src.handlers.widgets_view_handlers.userflow_handlers import (NotesViewHandler, ReminderViewHandler)
+from client.src.src.handlers.widgets_view_handlers.userspace_handlers import (NotesViewHandler, ReminderViewHandler)
 import client.models.common_models as cm
 from common.base import ObjectTypes, TasksStatuses
 from client.utils.data_tools import iterable_to_str, get_lasting
 
 
-class UserFlowWindowHandler(BaseWindowHandler):
+class UserSpaceWindowHandler(BaseWindowHandler):
 
     def __init__(
             self,
-            window: UserFlowWindow,
+            window: UserSpaceWindow,
             main_view: MainWindow,
             requester: Requester,
             model: Model,
@@ -29,8 +29,8 @@ class UserFlowWindowHandler(BaseWindowHandler):
     ):
         super().__init__(window, main_view, requester, model)
         self._window, self._main_view, self._requester, self._model, self._data_const = window, main_view, requester, model, data_const
-        self._data_model: 'UserFlowDataModel' = UserFlowDataModel()
-        self._requests: 'UserFlowRequests' = UserFlowRequests()
+        self._data_model: 'UserSpaceDataModel' = UserSpaceDataModel()
+        self._requests: 'UserSpaceRequests' = UserSpaceRequests()
 
         self._task_widget: TaskWidgetView | None = None
         self._notes_widget: NotesWidgetView | None = None
@@ -117,7 +117,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
             if task.__tablename__ == ObjectTypes.wf_task:
                 task: cm.WFTask
                 description = {GuiLabels.title: task.name, GuiLabels.description: task.description,
-                               GuiLabels.workflow: f'#{task.workflow_id}', GuiLabels.plan_deadline: plan_deadline}
+                               GuiLabels.workspace: f'#{task.workspace_id}', GuiLabels.plan_deadline: plan_deadline}
                 if task.project_id:
                     description.update({GuiLabels.project: f'#{task.project_id}'})
                 if task.responsible:
@@ -196,7 +196,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
         return request
 
     def update_state(self):
-        logging.debug('UserFlowWInHandler state updated')
+        logging.debug('UserSpaceWInHandler state updated')
         self._get_user_info()
         self._place_settable_widgets()
 
@@ -252,7 +252,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
                 event: cm.WFDailyEvent
                 description.update({
                     f'{GuiLabels.title}:': f'{time_start}-{time_end}.',
-                    f'{GuiLabels.workflow}': f'#{event.workflow_id}',
+                    f'{GuiLabels.workspace}': f'#{event.workspace_id}',
                     f'{GuiLabels.creator}': f'#{event.creator_id}',
                     f'{GuiLabels.description}': event.description,
                     f'{GuiLabels.notifieds}': iterable_to_str(event.notified, ',', '#')
@@ -273,7 +273,7 @@ class UserFlowWindowHandler(BaseWindowHandler):
 
             if event.__tablename__ == ObjectTypes.wf_many_days_event:
                 description.update({
-                    f'{GuiLabels.workflow}': f'#{event.workflow_id}',
+                    f'{GuiLabels.workspace}': f'#{event.workspace_id}',
                     f'{GuiLabels.creator}:': f'#{event.creator_id}',
                     f'{GuiLabels.notifieds}:': f'{iterable_to_str(event.notified, ',', '#')}'
                 })
@@ -347,8 +347,8 @@ class UserFlowWindowHandler(BaseWindowHandler):
 
 
 @dataclasses.dataclass
-class UserFlowDataModel:
-    """Датакласс для асинхронного взаимодействия с данными из UserFlowHandler."""
+class UserSpaceDataModel:
+    """Датакласс для асинхронного взаимодействия с данными из UserSpaceHandler."""
 
     personal_tasks: list[cm.PersonalTask] = ()
     wf_tasks: list[cm.WFTask] = ()
@@ -360,8 +360,8 @@ class UserFlowDataModel:
 
 
 @dataclasses.dataclass
-class UserFlowRequests:
-    """Датакласс, содержащий запросы UserFlow."""
+class UserSpaceRequests:
+    """Датакласс, содержащий запросы UserSpace."""
 
     user_request: Request | None = None
     personal_tasks_request: Request | None = None

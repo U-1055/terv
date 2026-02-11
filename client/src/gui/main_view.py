@@ -6,7 +6,7 @@ import logging
 from client.src.ui.ui_main_window import Ui_Form
 from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
-from client.src.gui.windows.userflow_window import UserFlowWindow
+from client.src.gui.windows.userspace_window import UserSpaceWindow
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.windows.auth_window import PopUpAuthWindow
 from client.src.base import GUIStyles, GuiLabels
@@ -27,7 +27,7 @@ class MainWindow(QMainWindow):
     btn_pressed = Signal()
 
     btn_open_personal_tasks_window_pressed = Signal()
-    btn_open_userflow_pressed = Signal()
+    btn_open_userspace_pressed = Signal()
     btn_update_pressed = Signal()
 
     def __init__(self):
@@ -40,10 +40,13 @@ class MainWindow(QMainWindow):
         self._view = Ui_Form()
         self._view.setupUi(container)
         self.setCentralWidget(container)
-        self._view.pushButton.setText('Task')
-        self._view.pushButton_2.setText('UserFlow')
+        self._view.pushButton.setText(GuiLabels.tasks)
+        self._view.pushButton_2.setText(GuiLabels.userspace)
+        self._view.pushButton_3.setText(GuiLabels.calendar)
+        self._view.pushButton_4.setText(GuiLabels.workspaces)
+        self._view.pushButton_5.setText(GuiLabels.settings)
         self._view.pushButton.clicked.connect(self.press_btn_open_personal_tasks_window)
-        self._view.pushButton_2.clicked.connect(self.press_btn_open_userflow)
+        self._view.pushButton_2.clicked.connect(self.press_btn_open_userspace)
 
         self._opened_dialog_windows: list[QDialog] = []
         self._opened_message_windows: list[QMessageBox] = []
@@ -80,8 +83,8 @@ class MainWindow(QMainWindow):
     def press_btn_open_personal_tasks_window(self):
         self.btn_open_personal_tasks_window_pressed.emit()
 
-    def press_btn_open_userflow(self):
-        self.btn_open_userflow_pressed.emit()
+    def press_btn_open_userspace(self):
+        self.btn_open_userspace_pressed.emit()
 
     def press_btn(self):
         self.btn_pressed.emit()
@@ -169,8 +172,8 @@ class MainWindow(QMainWindow):
     def open_personal_tasks_window(self) -> BaseWindow:
         return self._open_window(PersonalTasksWindow)
 
-    def open_userflow_window(self) -> BaseWindow:
-        return self._open_window(UserFlowWindow)
+    def open_userspace_window(self) -> BaseWindow:
+        return self._open_window(UserSpaceWindow)
 
     def open_calendar_window(self) -> BaseWindow:
         return self._open_window(CalendarWindow)
@@ -217,7 +220,7 @@ if __name__ == '__main__':
     from PySide6.QtCore import QTimer
 
     from test.client_test.utils.window import setup_gui
-    from client.src.gui.widgets_view.userflow_view import WidgetSettingsMenu
+    from client.src.gui.widgets_view.userspace_view import WidgetSettingsMenu
     from client.src.gui.windows.auth_window import PopUpAuthWindow
 
     window = MainWindow()

@@ -25,7 +25,7 @@ class CommonStruct:
     personal_tasks = 'personal_tasks'
     creator_id = 'creator_id'
     executor_id = 'executor_id'
-    workflow_id = 'workflow_id'
+    workspace_id = 'workspace_id'
     date = 'date'
     task_status = 'task_status'
 
@@ -71,9 +71,9 @@ class DBFields:
     username = 'username'
     email = 'email'
     hashed_password = 'hashed_password'
-    created_workflows = 'created_workflows'
+    created_workspaces = 'created_workspaces'
     created_projects = 'created_projects'
-    linked_workflows = 'linked_workflows'
+    linked_workspaces = 'linked_workspaces'
     linked_projects = 'linked_projects'
     created_wf_tasks = 'created_wf_tasks'
     assigned_to_user_tasks = 'assigned_to_user_tasks'
@@ -92,7 +92,7 @@ class DBFields:
     fields = 'fields'
     one_links = 'one_links'
     many_links = 'many_links'
-    # Workflow's fields
+    # Workspace's fields
     creator_id = 'creator_id'
     name = 'name'
     description = 'description'
@@ -104,8 +104,8 @@ class DBFields:
     documents = 'documents'
     base_categories = 'base_categories'
     # Project's fields
-    workflow_id = 'workflow_id'
-    workflow = 'workflow'
+    workspace_id = 'workspace_id'
+    workspace = 'workspace'
     # WFTask's fields
     project_id = 'project_id'
     entrusted_id = 'entrusted_id'
@@ -178,7 +178,7 @@ class ObjectTypes:
     personal_daily_event = 'personal_daily_event'
     personal_many_days_event = 'personal_many_days_event'
     personal_task = 'personal_task'
-    workflow = 'workflow'
+    workspace = 'workspace'
 
 
 class ErrorCodes(enum.Enum):

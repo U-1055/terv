@@ -30,7 +30,7 @@ base_params = {
 def test_normal_limit(config_limit_offset_test_db, set_config, requester: TestRequester, access_token, limit: int):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
-    request = requester.get_workflow_tasks(access_token, ids, limit, 0)
+    request = requester.get_workspace_tasks(access_token, ids, limit, 0)
 
     request_json = request.json()
 
@@ -54,7 +54,7 @@ def test_normal_limit(config_limit_offset_test_db, set_config, requester: TestRe
 def test_over_limit(config_limit_offset_test_db, set_config, requester: TestRequester, access_token: str, limit: int):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
-    request = requester.get_workflow_tasks(access_token, ids, limit, 0)
+    request = requester.get_workspace_tasks(access_token, ids, limit, 0)
 
     length = len(request.json().get(CommonStruct.content))
 
@@ -69,7 +69,7 @@ def test_over_limit(config_limit_offset_test_db, set_config, requester: TestRequ
 def test_not_normal_limit(config_limit_offset_test_db, set_config, requester: TestRequester, access_token: str, limit: int):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
-    request = requester.get_workflow_tasks(access_token, ids, limit, 0)
+    request = requester.get_workspace_tasks(access_token, ids, limit, 0)
 
     status_code = request.status_code
     content = request.json().get(CommonStruct.content)
@@ -86,7 +86,7 @@ def test_not_normal_limit(config_limit_offset_test_db, set_config, requester: Te
 def test_normal_offset(config_limit_offset_test_db, set_config, requester: TestRequester, access_token: str, offset: int):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
-    request = requester.get_workflow_tasks(access_token, ids, 1000, offset)
+    request = requester.get_workspace_tasks(access_token, ids, 1000, offset)
 
     content = request.json().get(CommonStruct.content)
 
@@ -111,7 +111,7 @@ def test_normal_offset(config_limit_offset_test_db, set_config, requester: TestR
 def test_not_normal_offset(config_limit_offset_test_db, set_config, requester: TestRequester, access_token: str, offset: int):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
-    request = requester.get_workflow_tasks(access_token, ids, None, offset)
+    request = requester.get_workspace_tasks(access_token, ids, None, offset)
 
     status_code = request.status_code
     content = request.json().get(CommonStruct.content)
@@ -128,7 +128,7 @@ def test_not_normal_offset(config_limit_offset_test_db, set_config, requester: T
 def test_over_offset(config_limit_offset_test_db, set_config, requester: TestRequester, access_token: str, offset: int):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
-    request = requester.get_workflow_tasks(access_token, ids, None, offset)
+    request = requester.get_workspace_tasks(access_token, ids, None, offset)
 
     content = request.json().get(CommonStruct.content)
 
@@ -139,7 +139,7 @@ def test_over_offset(config_limit_offset_test_db, set_config, requester: TestReq
 def test_no_limit_offset(config_limit_offset_test_db, set_config, requester: TestRequester, access_token: str):
     get_ids_request = requester.get_user_info(access_token)
     ids = get_ids_request.json().get(CommonStruct.content)[0].get(DBFields.assigned_to_user_tasks)
-    request = requester.get_workflow_tasks(access_token, ids, None, None)
+    request = requester.get_workspace_tasks(access_token, ids, None, None)
 
     length = len(request.json().get(CommonStruct.content))
 

@@ -14,7 +14,7 @@ class WFRole(Base):
     __tablename__ = 'wf_role'
 
     id: int
-    workflow_id: int
+    workspace_id: int
     name: str = Field(max_length=30)
     color: str = Field(max_length=30)
 

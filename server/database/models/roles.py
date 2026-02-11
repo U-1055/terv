@@ -11,14 +11,14 @@ class WFRole(Base):
     __tablename__ = 'wf_role'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    workflow_id: Mapped[int] = mapped_column(ForeignKey('workflow.id'))
+    workspace_id: Mapped[int] = mapped_column(ForeignKey('workspace.id'))
     name: Mapped[str] = mapped_column(String[30])
     color: Mapped[str] = mapped_column(String[30], default='#FFFFFF')
 
     permissions: Mapped[list['Permission']] = relationship(secondary='wf_role_permission', back_populates='roles')
     users: Mapped[list[cm.User]] = relationship(secondary='user_wf_role', back_populates='roles')
 
-    fields = ['workflow_id', 'name', 'color']
+    fields = ['workspace_id', 'name', 'color']
     many_links = ['users', 'permissions']
 
 

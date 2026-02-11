@@ -7,7 +7,7 @@
         style: <style>
     }
 
-    userflow_widgets: {
+    userspace_widgets: {
         <widget_name>: {'x': int, 'y': int, 'x_size': int, 'y_size': int}
     }
     note: <Текст локальной заметки>
@@ -29,7 +29,7 @@ from pathlib import Path
 from client.src.base import DataStructConst
 import client.src.client_model.resources_rc
 
-userflow_widget = {'x': 0, 'y': 0, 'x_size': 0, 'y_size': 0}
+userspace_widget = {'x': 0, 'y': 0, 'x_size': 0, 'y_size': 0}
 
 
 class Model:
@@ -41,7 +41,7 @@ class Model:
         DataStructConst.note: '',
         DataStructConst.settings: {DataStructConst.style: ''},
         DataStructConst.reminders: [],
-        DataStructConst.userflow_widgets: dict()
+        DataStructConst.userspace_widgets: dict()
                       }
 
     def __init__(self, storage: Path, data_root: Path, data_struct_const: DataStructConst = DataStructConst()):
@@ -133,25 +133,25 @@ class Model:
                     self._ds_const.y_size: y_size
                 }
             }
-            dict_ = storage[self._ds_const.userflow_widgets]
+            dict_ = storage[self._ds_const.userspace_widgets]
             dict_.update(struct_)
-            storage[self._ds_const.userflow_widgets] = dict_
+            storage[self._ds_const.userspace_widgets] = dict_
 
     def get_widget_settings(self, wdg_type: str) -> dict | None:
         """
         Возвращает настройки виджета. Если виджета нет в настройках (не настроен или неверный тип) - возвращает None.
         """
         with shelve.open(self._storage) as storage:
-            settings = storage[self._ds_const.userflow_widgets].get(wdg_type)
+            settings = storage[self._ds_const.userspace_widgets].get(wdg_type)
             return settings
 
     def delete_widget_settings(self, wdg_type: str):
         """Удаляет настройки виджета."""
         with shelve.open(self._storage, 'w') as storage:
-            dict_ = storage[self._ds_const.userflow_widgets]
+            dict_ = storage[self._ds_const.userspace_widgets]
             if wdg_type in dict_:
                 dict_.pop(wdg_type)
-            storage[self._ds_const.userflow_widgets] = dict_
+            storage[self._ds_const.userspace_widgets] = dict_
 
     def add_reminder(self, reminder: str):
         """Добавляет напоминание."""

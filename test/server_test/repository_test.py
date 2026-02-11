@@ -6,14 +6,14 @@ import datetime
 
 from server.database.repository import DataRepository
 from common.base import CommonStruct, DBFields, get_datetime_now
-from server.database.models.common_models import Workflow, User
+from server.database.models.common_models import Workspace, User
 from test.server_test.utils.test_database.base import DatabaseManager
 from server.database.schemes.common_schemes import UserSchema
 
 test_database_path = 'sqlite:///utils/test_database/database'
 
 TEST_LOGIN = 'username'
-TEST_WF_NAME = 'workflow'
+TEST_WF_NAME = 'workspace'
 
 
 @pytest.fixture(scope='session')
@@ -37,8 +37,8 @@ def user(repository) -> dict:
     ['exp_len'],
     [[1]]
 )
-def test_get_workflow(repository: DataRepository, exp_len: int):
-    result = repository.get_workflows([1])
+def test_get_workspace(repository: DataRepository, exp_len: int):
+    result = repository.get_workspaces([1])
 
     assert len(result.content) == exp_len
     assert type(result.content[0]) == dict
@@ -61,37 +61,37 @@ def test_date_format(repository: DataRepository):
 
 def test_serializing_links(repository: DataRepository):
     """Проверяет сериализацию связей между моделями."""
-    workflow = repository.get_workflows([1])
+    workspace = repository.get_workspaces([1])
     users = repository.get_users_by_username()
-    workflow_users = workflow.content[0].get(DBFields.users)
+    workspace_users = workspace.content[0].get(DBFields.users)
 
-    assert workflow_users == [user.get(DBFields.id) for user in users.content], \
-        f'All of users must be the users of workflow. Workflow: {workflow.content[0]}'
+    assert workspace_users == [user.get(DBFields.id) for user in users.content], \
+        f'All of users must be the users of workspace. Workspace: {workspace.content[0]}'
 
 
 def test_deserializing_links(repository: DataRepository):
     """Проверяет десериализацию связей между моделями."""
-    workflow = repository.get_workflows([1]).content[0]
-    serialized_users = workflow.get(DBFields.users)
+    workspace = repository.get_workspaces([1]).content[0]
+    serialized_users = workspace.get(DBFields.users)
     schema = UserSchema()
 
     with repository._session_maker() as session, session.begin():  # Получаем модели
-        result = session.execute(select(Workflow)).scalars()
-        workflows = [wf for wf in result]
-        deserialized_users_before = [schema.dump(user) for user in workflows[0].users]  # До перезаписи
+        result = session.execute(select(Workspace)).scalars()
+        workspaces = [wf for wf in result]
+        deserialized_users_before = [schema.dump(user) for user in workspaces[0].users]  # До перезаписи
 
-    repository.update_workflows([workflow])  # Перезаписываем
+    repository.update_workspaces([workspace])  # Перезаписываем
 
-    workflow = repository.get_workflows([1]).content[0]
-    rewritten_users = workflow.get(DBFields.users)
+    workspace = repository.get_workspaces([1]).content[0]
+    rewritten_users = workspace.get(DBFields.users)
 
     with repository._session_maker() as session, session.begin():
-        result = session.execute(select(Workflow)).scalars()
-        workflows = [wf for wf in result]
-        deserialized_users_after = [schema.dump(user) for user in workflows[0].users]  # После перезаписи
+        result = session.execute(select(Workspace)).scalars()
+        workspaces = [wf for wf in result]
+        deserialized_users_after = [schema.dump(user) for user in workspaces[0].users]  # После перезаписи
 
         assert deserialized_users_after == deserialized_users_before, (f'Deserialized users before: {deserialized_users_before}.'
-                                                                       f'After: {deserialized_users_after}. Workflow: {workflow}')
+                                                                       f'After: {deserialized_users_after}. Workspace: {workspace}')
     assert serialized_users == rewritten_users
 
 

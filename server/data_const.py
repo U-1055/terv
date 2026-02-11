@@ -67,7 +67,7 @@ default_config = {
 
 
 class Permissions(enum.Enum):
-    # Базовые доступы роли в Workflow
+    # Базовые доступы роли в Workspace
     del_wf = 'del_wf'
     del_project = 'del_project'
     create_event = 'create_event'
@@ -84,7 +84,7 @@ class Permissions(enum.Enum):
     edit_doc = 'edit_doc'
 
     set_project = 'set_project'
-    set_workflow = 'set_workflow'
+    set_workspace = 'set_workspace'
     set_roles = 'set_roles'
     view_analytics = 'view_analytics'
     set_analytics = 'set_analytics'

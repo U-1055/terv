@@ -72,7 +72,7 @@ class Requester:
         error_code = response.error_id
         message = response.message
 
-        if error_code != ErrorCodes.ok.value:  # Вызов исключения по коду
+        if error_code:  # Вызов исключения по коду
             logging.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. InternalRequest:'
                             f'{request}. Response: {response}.')
             exc = err.exceptions_error_ids.get(error_code)
@@ -171,7 +171,7 @@ class Requester:
                     result = await client.put(request.path, headers=request.headers, params=request.query_params,
                                                json=request.json)
                 else:
-                   raise err.RequesterError(f'Unknown method: {request.method}')
+                    raise err.RequesterError(f'Unknown method: {request.method}')
                 self._requests.append(request)  # Добавляем запрос в список
 
             # Обработка запроса и его возврат в виде Response

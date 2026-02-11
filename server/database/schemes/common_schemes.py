@@ -22,9 +22,9 @@ class UserSchema(BaseSchema):
         load_only = ('hashed_password', )
 
 
-class WorkflowSchema(BaseSchema):
+class WorkspaceSchema(BaseSchema):
     class Meta(BaseMeta):
-        model = cm.Workflow
+        model = cm.Workspace
 
 
 class WFTaskSchema(BaseSchema):

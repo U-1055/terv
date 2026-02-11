@@ -8,32 +8,31 @@ from pathlib import Path
 from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
-from server.database.models.db_utils import launch_db
+from server.database.models.db_utils import launch_db, init_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
 from common.base import CommonStruct, check_password, ErrorCodes as ErCodes, DBFields
 from server.utils.data_checkers import check_email
-from server.utils.api_utils import form_response, exceptions_handler
+from server.utils.api_utils import form_response, exceptions_handler, form_success_response
 import server.api.crud_handlers as handlers
 # ToDo: заголовок с Authorization на Authorization Bearer
 
-logging.basicConfig(level=logging.WARN)
-logging.debug('Module app.py is running')
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 config = Config('../config.json')
 database_path = config.database_path
-engine = launch_db(database_path)
+engine = init_db(database_path)
 
-logging.debug(f'Module app.py is running. Environment: {config.env}')
+logging.info(f'Module app.py is running. Environment: {config.env}. DB path: {database_path}.'
+             f'Access lifetime: {config.access_token_lifetime}. Refresh lifetime: {config.refresh_token_lifetime}')
 
 session = sessionmaker(bind=engine)
 repo = DataRepository(session)
 model = Model(Path('../storage/storage'))
 ds_const = DataStruct()
 common_struct = CommonStruct()
-
 authenticator = Authenticator(
     repo,
     model,
@@ -153,7 +152,7 @@ def auth_login():
 @exceptions_handler
 @app.route('/auth/refresh', methods=['POST'])
 def auth_refresh():
-    refresh_token = request.json.get(common_struct.refresh_token)
+    refresh_token = request.json.get(CommonStruct.refresh_token)
     if not refresh_token:
         return form_response(400, APIAn.no_params_error(common_struct.refresh_token, request.endpoint), error_id=ErCodes.no_refresh.value)
     try:
@@ -200,10 +199,10 @@ def personal_tasks():
 @app.route('/personal_tasks/<int:task_id>/status', methods=['GET', 'PUT'])
 def personal_task_status(task_id: int):
 
-    access_token = request.args.get('Authorization')
+    access_token = request.headers.get('Authorization')
     request_sender_id = authenticator.get_user_id(access_token)
 
-    response = None
+    response = form_success_response()
 
     if request.method == 'GET':
         pass   # ToDo: реализация изменения статуса + проверка авторизации в crud-handler'е
@@ -320,79 +319,101 @@ def wf_tasks_search():
 
 
 @exceptions_handler
-@app.route('/workflow/<int:workflow_id>/users', methods=['DELETE', 'POST', 'GET'])
-def workflow_users(workflow_id: int):  # ToDo: протестировать
+@app.route('/workspace/<int:workspace_id>/users', methods=['DELETE', 'POST', 'GET'])
+def workspace_users(workspace_id: int):  # ToDo: протестировать
     response = None
 
     if request.method == 'POST':
-        response = handlers.add_users_to_workflow(request, repo)
+        response = handlers.add_users_to_workspace(request, repo)
     if request.method == 'DELETE':
-        response = handlers.delete_users_from_workflow(request, repo)
+        response = handlers.delete_users_from_workspace(request, repo)
     if request.method == 'GET':
-        request.args.update({DBFields.workflow_id: workflow_id})
+        request.args.update({DBFields.workspace_id: workspace_id})
         response = handlers.get_users(request, repo, authenticator)
 
     return response
 
 
 @exceptions_handler
-@app.route('/workflows/<int:workflow_id>/wf_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def wfl_daily_events(workflow_id: int):
+@app.route('/workspaces/<int:workspace_id>/wf_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def wf_daily_events(workspace_id: int):
     response = None
 
     if request.method == 'GET':
         response = handlers.get_wf_daily_events(request, repo)
     if request.method == 'POST':
-        response = handlers.add_wf_daily_events(request, workflow_id, repo)
+        response = handlers.add_wf_daily_events(request, workspace_id, repo)
     if request.method == 'PUT':
-        response = handlers.update_wf_daily_events(request, workflow_id, repo)
+        response = handlers.update_wf_daily_events(request, workspace_id, repo)
     if request.method == 'DELETE':
-        response = handlers.delete_wf_daily_events(request, workflow_id, repo)
+        response = handlers.delete_wf_daily_events(request, workspace_id, repo)
 
     return response
 
 
 @exceptions_handler
-@app.route('/workflows/<int:workflow_id>/wf_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def wf_many_days_events(workflow_id: int):
+@app.route('/workspaces/<int:workspace_id>/wf_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def wf_many_days_events(workspace_id: int):
     response = None
 
     if request.method == 'GET':
         response = handlers.get_wf_daily_events(request, repo)
     if request.method == 'POST':
-        response = handlers.add_wf_daily_events(request, workflow_id, repo)
+        response = handlers.add_wf_daily_events(request, workspace_id, repo)
     if request.method == 'PUT':
-        response = handlers.update_wf_daily_events(request, workflow_id, repo)
+        response = handlers.update_wf_daily_events(request, workspace_id, repo)
     if request.method == 'DELETE':
-        response = handlers.delete_wf_daily_events(request, workflow_id, repo)
+        response = handlers.delete_wf_daily_events(request, workspace_id, repo)
 
     return response
 
 
 @exceptions_handler
 @app.route('/users/<int:user_id>/wf_many_days_events', methods=['GET'])
-def get_users_wf_many_days_events():
+def user_wf_many_days_events(user_id: int):
     """Метод для получения многодневных событий, в которых участвует пользователь."""
-    pass
+    response = None
+
+    if request.method == 'GET':
+        response = handlers.get_wf_many_days_events(request, repo, user_id)
+
+    return response
 
 
 @exceptions_handler
 @app.route('/users/<int:user_id>/wf_daily_events', methods=['GET'])
-def get_users_wf_daily_events():
+def user_wf_daily_events(user_id: int):
     """Метод для получения однодневных событий, в которых участвует пользователь."""
-    pass
+    response = None
+
+    if request.method == 'GET':
+        response = handlers.get_wf_daily_events(request, repo, user_id=user_id)
+
+    return response
 
 
 @exceptions_handler
 @app.route('/personal_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
 def personal_daily_events():  # С фильтрацией по user_id и дате
-    pass
+    """Ресурс личных однодневных событий."""
+    response = None
+
+    if request.method == 'GET':
+        response = handlers.get_personal_daily_events(request, repo)
+
+    return response
 
 
 @exceptions_handler
 @app.route('/personal_many_days_events', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def personal_many_days_events():
-    pass
+    """Ресурс личных многодневных событий."""
+    response = None
+
+    if request.method == 'GET':
+        response = handlers.get_personal_many_days_events(request, repo)
+
+    return response
 
 
 def run():
