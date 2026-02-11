@@ -1,4 +1,4 @@
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QColor
 
 import dataclasses
@@ -18,6 +18,7 @@ from client.utils.data_tools import iterable_to_str, get_lasting
 
 
 class UserSpaceWindowHandler(BaseWindowHandler):
+    user_data_received = Signal()
 
     def __init__(
             self,
@@ -102,6 +103,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
     def _set_user(self, user_info: tuple[dict]):
         logging.debug(f'User info received: {user_info}')
         self._data_model.user = cm.User(**user_info[0])
+        self.receive_user_data()
 
     def _set_tasks_widget(self):
         """Обрабатывает данные для виджета задач."""
@@ -194,6 +196,12 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         request.finished.connect(lambda response: self._prepare_request(response, self._set_user))
         self._requests.user_request = request
         return request
+
+    def data_model(self) -> 'UserSpaceDataModel':
+        return self._data_model
+
+    def receive_user_data(self):
+        self.user_data_received.emit()
 
     def update_state(self):
         logging.debug('UserSpaceWInHandler state updated')

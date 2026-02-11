@@ -72,6 +72,9 @@ class Requester:
         error_code = response.error_id
         message = response.message
 
+        if message != 'OK':
+            assert error_code
+
         if error_code:  # Вызов исключения по коду
             logging.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. InternalRequest:'
                             f'{request}. Response: {response}.')
@@ -207,6 +210,13 @@ class Requester:
     async def update_tokens(self, refresh_token: str) -> Response:
         request = InternalRequest(f'{self._server}/auth/refresh', InternalRequest.POST,
                                   json_={CommonStruct.refresh_token: refresh_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def recall_tokens(self, *tokens: str) -> Response:
+        request = InternalRequest(f'{self._server}/auth/recall', InternalRequest.POST,
+                                  json_={CommonStruct.tokens: [tokens]})
         response = await self._make_request(request)
         return response
 

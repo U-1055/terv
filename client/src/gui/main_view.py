@@ -8,6 +8,7 @@ from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
 from client.src.gui.windows.userspace_window import UserSpaceWindow
 from client.src.gui.windows.windows import BaseWindow
+from client.src.gui.windows.settings_window import SettingsWindow
 from client.src.gui.windows.auth_window import PopUpAuthWindow
 from client.src.base import GUIStyles, GuiLabels
 import client.src.gui.view_utils as utils
@@ -28,6 +29,7 @@ class MainWindow(QMainWindow):
 
     btn_open_personal_tasks_window_pressed = Signal()
     btn_open_userspace_pressed = Signal()
+    btn_open_settings_pressed = Signal()
     btn_update_pressed = Signal()
 
     def __init__(self):
@@ -40,13 +42,14 @@ class MainWindow(QMainWindow):
         self._view = Ui_Form()
         self._view.setupUi(container)
         self.setCentralWidget(container)
-        self._view.pushButton.setText(GuiLabels.tasks)
-        self._view.pushButton_2.setText(GuiLabels.userspace)
-        self._view.pushButton_3.setText(GuiLabels.calendar)
-        self._view.pushButton_4.setText(GuiLabels.workspaces)
-        self._view.pushButton_5.setText(GuiLabels.settings)
-        self._view.pushButton.clicked.connect(self.press_btn_open_personal_tasks_window)
-        self._view.pushButton_2.clicked.connect(self.press_btn_open_userspace)
+        self._view.btn_tasks.setText(GuiLabels.tasks)
+        self._view.btn_userspace.setText(GuiLabels.userspace)
+        self._view.btn_calendar.setText(GuiLabels.calendar)
+        self._view.btn_worspaces.setText(GuiLabels.workspaces)
+        self._view.btn_settings.setText(GuiLabels.settings)
+
+        self._view.btn_settings.clicked.connect(self.press_btn_open_settings)
+        self._view.btn_userspace.clicked.connect(self.press_btn_open_userspace)
 
         self._opened_dialog_windows: list[QDialog] = []
         self._opened_message_windows: list[QMessageBox] = []
@@ -86,6 +89,9 @@ class MainWindow(QMainWindow):
     def press_btn_open_userspace(self):
         self.btn_open_userspace_pressed.emit()
 
+    def press_btn_open_settings(self):
+        self.btn_open_settings_pressed.emit()
+
     def press_btn(self):
         self.btn_pressed.emit()
 
@@ -93,7 +99,6 @@ class MainWindow(QMainWindow):
         base_widget = BaseWidget()
         base_widget.set_class_style_sheet(style)
         self.setStyleSheet(style)
-        assert base_widget._style_sheet == style
 
     def show_error(self, title: str, message: str):
         pass
@@ -172,11 +177,14 @@ class MainWindow(QMainWindow):
     def open_personal_tasks_window(self) -> BaseWindow:
         return self._open_window(PersonalTasksWindow)
 
-    def open_userspace_window(self) -> BaseWindow:
+    def open_userspace_window(self) -> UserSpaceWindow:
         return self._open_window(UserSpaceWindow)
 
     def open_calendar_window(self) -> BaseWindow:
         return self._open_window(CalendarWindow)
+
+    def open_settings(self) -> SettingsWindow:
+        return self._open_window(SettingsWindow)
 
     def open_window(self, window: BaseWindow):
         """Переключает окно в стековом виджете на указанное."""
@@ -210,21 +218,5 @@ def setup_gui(root: MainWindow, app: QApplication):
 
 
 if __name__ == '__main__':
-    def open_all_dialog_windows():  # Вывод диалоговых окон одного и того же типа
-        menu = WidgetSettingsMenu(['1', '2', '3'], ['1'])
-        auth_window = PopUpAuthWindow('', '', title='TITLE')
-        auth_window_1 = PopUpAuthWindow('', '', title='TITLE_1')
-        window.show_dialog_window(auth_window)
-        window.show_dialog_window(auth_window_1, showing_type=MainWindow.DialogShowingType.unique)
-
-    from PySide6.QtCore import QTimer
-
-    from test.client_test.utils.window import setup_gui
-    from client.src.gui.widgets_view.userspace_view import WidgetSettingsMenu
-    from client.src.gui.windows.auth_window import PopUpAuthWindow
-
-    window = MainWindow()
-    QTimer.singleShot(100, open_all_dialog_windows)
-
-    setup_gui(window)
+    pass
 

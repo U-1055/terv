@@ -10,14 +10,21 @@ class DataStructConst:
     userspace_widgets = 'userspace_widgets'
     settings = 'settings'
     style = 'style'
+    styles = 'styles'
 
     styles_paths = {
         'style_1': r'..\data\resources\ui\styles\light_theme.qss',
         'style_2': r'..\data\resources\ui\styles\dark_theme.qss'
     }
 
-    light_style = ':\\styles\\light'  # Пути к стилям
-    dark_style = ':\\styles\\dark'
+    light = 'light'  # Названия стилей
+    dark = 'dark'
+
+    light_main_color = '#B2F0FF'  # Основные цвета стилей
+    dark_main_color = '#051a39'
+
+    light_style = f':\\styles\\{light}'  # Пути к стилям
+    dark_style = f':\\styles\\{dark}'
 
     gui_date_format = '%d %b. %Y г.'
     gui_day_date_format = '%a, %d %b.'
@@ -57,6 +64,7 @@ class ObjectNames:
     btn_show_details = 'btn_show_details'
     btn_exit = 'btn_exit'
     wdg_border = 'wdg_border'  # Виджет с границей
+    btn_log_in = 'btn_log_in'
 
 
 class GuiLabels:
@@ -70,6 +78,7 @@ class GuiLabels:
     email = 'Email'
     userspace_settings = 'Настройки пространства'
     label_userspace_settings = 'Выберите виджеты, которые хотите разместить в пространстве'
+    change_theme = 'Сменить тему'
 
     tasks_widget = 'Задачи на сегодня'
     notes_widget = 'Заметки'
@@ -123,6 +132,8 @@ class GuiLabels:
     workspaces = 'Рабочие пространства'
     projects = 'Проекты'
     settings = 'Настройки'
+    account_leaved = 'Вы вышли из аккаунта'
+    message = 'Сообщение'
 
 
 class GUIStyles:
@@ -143,5 +154,9 @@ widgets_labels = {  # Соответствие названий виджетов
 
 labels_widgets = {widgets_labels[key]: key for key in widgets_labels}  # Соответствие надписей на виджетах их названиям
 
+styles_paths = {
+    DataStructConst.light: DataStructConst.light_style,
+    DataStructConst.dark: DataStructConst.dark_style
+                }
 
 

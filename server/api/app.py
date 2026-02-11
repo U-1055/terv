@@ -8,7 +8,7 @@ from pathlib import Path
 from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
-from server.database.models.db_utils import launch_db, init_db
+from server.database.models.db_utils import launch_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 config = Config('../config.json')
 database_path = config.database_path
-engine = init_db(database_path)
+engine = launch_db(database_path)
 
 logging.info(f'Module app.py is running. Environment: {config.env}. DB path: {database_path}.'
              f'Access lifetime: {config.access_token_lifetime}. Refresh lifetime: {config.refresh_token_lifetime}')

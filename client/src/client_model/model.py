@@ -13,11 +13,16 @@
     note: <Текст локальной заметки>
     reminders: [] <Список напоминаний пользователя>
 
+    styles: {<style>: <цвет стиля>}
+
     access_token: <access_token>
 
     refresh_token: <refresh_token>
 
 }
+
+Примечание: простой текст - параметр, <текст в треугольных скобках> - значение.
+Например, параметр по схеме style: <style> в хранилище будеть выглядеть как style: "dark".
 
 """
 from PySide6.QtCore import QFile
@@ -73,6 +78,9 @@ class Model:
                                 f'"{self._ds_const.settings}" has been set to default value: '
                                 f'{self.default_struct[self._ds_const.settings]}.')
 
+            if self._ds_const.styles not in storage:  # Проверка наличия поля стилей в хранилище
+                storage[self._ds_const.styles] = dict()
+
     def set_note(self, text: str):
         with shelve.open(self._storage, 'w') as storage:
             storage[self._ds_const.note] = text
@@ -82,12 +90,10 @@ class Model:
             return storage.get(self._ds_const.note)
 
     def set_access_token(self, token_: str):
-        logging.info(f'Set new access token: {token_}.')
         with shelve.open(self._storage, 'w') as storage:
             storage[self._ds_const.access_token] = token_
 
     def set_refresh_token(self, token_: str):
-        logging.info(f'Set new refresh token: {token_}.')
         with shelve.open(self._storage, 'w') as storage:
             storage[self._ds_const.refresh_token] = token_
 
@@ -179,11 +185,22 @@ class Model:
         with shelve.open(self._storage, 'w') as storage:
             storage[self._ds_const.reminders] = []
 
+    def set_style(self, style_name: str, style_color: str):
+        with shelve.open(self._storage, 'w') as storage:
+            styles = storage[self._ds_const.styles]
+            styles[style_name] = style_color
+            storage[self._ds_const.styles] = styles
+
+    def get_style_color(self, style_name: str) -> str:
+        with shelve.open(self._storage) as storage:
+            color = storage[self._ds_const.styles].get(style_name)
+        return color
+
 
 if __name__ == '__main__':
     model = Model(Path('..\\..\\data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst())
-    model.put_widget_settings(DataStructConst.tasks_widget, 0, 0, 0, 0)
+    model.set_style(DataStructConst.dark, '#051a39')
+    model.set_style(DataStructConst.light, DataStructConst.light_main_color)
 
-    reminders = [f'reminder_{i}' for i in range(100)]
-    model.set_reminders(reminders)
+    print(model.get_style_color(DataStructConst.light))
 
