@@ -4,7 +4,7 @@ from PySide6.QtGui import QColor, QImage
 
 import logging
 
-from client.src.base import GuiLabels, ObjectNames
+from client.src.base import GuiLabels, ObjectNames, GUIStyles
 from client.src.gui.windows.windows import BaseWindow
 from client.src.ui.ui_settings_window import Ui_Form
 from client.src.gui.widgets_view.settings_view import QThemeSwitcher
@@ -21,6 +21,7 @@ class SettingsWindow(BaseWindow):
         super().__init__()
         self._view = Ui_Form()
         self._view.setupUi(self)
+        self._view.label.setFont(GUIStyles.title_font)
         self._theme_switcher = QThemeSwitcher()
 
         self._is_connections = False
@@ -43,6 +44,7 @@ class SettingsWindow(BaseWindow):
         self.btn_log_in_pressed.emit()
 
     def set_mode_log_in(self):
+        self._view.label.setText(GuiLabels.enter_account)
         self._view.btn_account_ops.setText(GuiLabels.authorize)
         self._view.btn_account_ops.setObjectName(ObjectNames.btn_log_in)
         if self._is_connections:
@@ -63,6 +65,7 @@ class SettingsWindow(BaseWindow):
 
     def set_image(self, image: QImage):
         self._place_image(image)
+
 
 
 if __name__ == '__main__':

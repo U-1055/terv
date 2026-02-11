@@ -106,6 +106,9 @@ class Logic:
 
     def _on_log_in_completed(self):
         self._view.show_message(self._labels.op_complete, self._labels.authentication_complete)
+        self._auth_window_handler.close()
+        self._opened_now.set_access_token_status(True)
+        self._opened_now.set_refresh_token_status(True)
         if isinstance(self._opened_now, SettingsWindowHandler):
             self._opened_now.set_mode_log_in()
 

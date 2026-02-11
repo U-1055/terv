@@ -134,6 +134,7 @@ class GuiLabels:
     settings = 'Настройки'
     account_leaved = 'Вы вышли из аккаунта'
     message = 'Сообщение'
+    enter_account = 'Войдите в аккаунт'
 
 
 class GUIStyles:
@@ -142,6 +143,7 @@ class GUIStyles:
     error_style = ''
     base_font = QFont('Arial', 10, 2, False)
     bold_font = QFont('Arial', 10, 2, False)
+    title_font = QFont('Arial', 20, 2, False)
     bold_font.setBold(True)
 
 
