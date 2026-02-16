@@ -14,20 +14,22 @@ import time
 import typing as tp
 import asyncio
 import threading
-from queue import Queue
 
 import client.src.requester.errors as err
 from common.base import CommonStruct, ErrorCodes
 from client.src.requester.requester_interface import IRequests
 from client.utils.timeout_list import TimeoutList
+from common_utils.log_utils.request_time_logger import RequestsTimeHandler
 
+CHECK_TIME = True  # ToDo: при попытке импорта из точки входа возникает круговой импорт
+request_time_handler = RequestsTimeHandler('../log/requests_time.txt')
 
 def run_loop(loop: asyncio.AbstractEventLoop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
 
 
-def synchronized_request(func) -> tp.Callable[..., Request]:  # ToDo: разобраться с аннотациями и переписать тесты реквестера
+def synchronized_request(func) -> tp.Callable[..., Request]:
     def prepare(*args) -> Request:
         try:
             loop = asyncio.get_running_loop()
@@ -40,6 +42,10 @@ def synchronized_request(func) -> tp.Callable[..., Request]:  # ToDo: разоб
         future = asyncio.run_coroutine_threadsafe(func(*args), loop)
 
         request = Request(future, loop)
+        if CHECK_TIME:  # Замер времени выполнения
+            request_time_handler.start_request(func, request)
+            request.finished.connect(lambda _: request_time_handler.finish_request(func, request))
+
         return request
 
     return prepare

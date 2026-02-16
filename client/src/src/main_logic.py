@@ -5,7 +5,11 @@ import logging
 
 from client.src.gui.main_view import MainWindow
 from client.src.gui.sub_widgets.base import BaseWidget
-from client.src.requester.requester import Requester
+if tp.TYPE_CHECKING:
+    from client.src.requester.requester import Requester
+else:
+    Requester = ''
+
 from client.utils.timeout_list import TimeoutList
 from client.src.src.handlers.window_handlers.userspace_handler import UserSpaceWindowHandler
 from client.src.src.handlers.window_handlers.settings_window_handler import SettingsWindowHandler

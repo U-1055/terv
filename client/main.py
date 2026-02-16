@@ -15,10 +15,14 @@ from client.src.gui.main_view import MainWindow, setup_gui
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst
 from client.src.client_model.links_handler import LinksHandler
-from client.src.requester.cash_manager import CashManager
+from common_utils.log_utils.request_time_logger import RequestsTimeHandler
 
 logging.basicConfig(level=logging.INFO)
 locale.setlocale(locale.LC_TIME, 'Russian')
+
+
+CHECK_TIME = True
+request_time_handler = RequestsTimeHandler('../log/requests_time.txt')
 
 
 def launch(model_class, model_params: tuple, view_class, view_params: tuple, presenter_class, presenter_params: tuple):
@@ -36,7 +40,7 @@ def run_main_config(check_ram: bool = False):
     if check_ram:
         thread = threading.Thread(target=check_memory, args=[Path('../log/memory_client.txt')], daemon=True)
         thread.start()
-    requester = Requester('http://localhost:5000')
+    requester = Requester('http://localhost:80')
 
     launch(
         Model, (Path('data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst()),
