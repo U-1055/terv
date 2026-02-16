@@ -1,8 +1,11 @@
 """Обобщённые Qt-подобные виджеты."""
-from PySide6.QtWidgets import QWidget, QGridLayout, QLabel, QScrollArea, QVBoxLayout, QSizePolicy, QMenu, QWidgetAction
+import time
+
+from PySide6.QtWidgets import (QWidget, QGridLayout, QLabel, QScrollArea, QVBoxLayout, QSizePolicy, QMenu, QWidgetAction,
+                               QProgressBar)
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
-from PySide6.QtCore import Qt, QPoint
+from PySide6.QtCore import Qt, QPoint, QThread, QObject, QTimer
 
 import typing as tp
 
@@ -205,8 +208,155 @@ class QToolTipLabel(QLabel):
             self._structured_text = None
 
 
+class QProgressWidget(QWidget):
+    """
+    Виджет обновления прогресса.
+
+    :var finished: Сигнал, испускаемый после достижения макс. значения прогресс-бара.
+
+    :param text: Текст, показываемый во время работы прогресс-бара.
+    :param minimum: Начальное значение.
+    :param maximum: Конечное значение.
+    :param interval: Шаг значения.
+    :param time_interval: Время (в мс) между изменением значения.
+    :param show_text: Показывать процентные значения прогресс-бара?
+    :param ready_text: Текст, выводимый после достижения максимального значения прогресс-бара.
+
+    """
+
+    finished = Signal()
+
+    def __init__(self, text: str | None = None, minimum: int | None = None, maximum: int | None = None,
+                 interval: int | None = None, time_interval: int = 0, show_text: bool = True, ready_text: str = ''):
+        super().__init__()
+        self._is_running = False
+        self._worker = ProgressWorker(minimum, maximum, interval, time_interval)
+        self._worker.updated.connect(self._on_updated)
+        self._worker.finished.connect(self._on_finished)
+        self._ready_text = ready_text
+
+        main_layout = QVBoxLayout()
+        self._lbl_text = QLabel(text=text, wordWrap=True)
+        self._progress_bar = QProgressBar(self)
+        self._progress_bar.setTextVisible(show_text)
+        if not minimum:
+            minimum = 0
+        if not maximum:
+            maximum = 100
+        self._progress_bar.setMinimum(minimum)
+        self._progress_bar.setMaximum(maximum)
+        self._progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+
+        main_layout.addWidget(self._progress_bar, alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
+        main_layout.addWidget(self._lbl_text, alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self._progress_bar.setRange(minimum, maximum)
+        self._progress_bar.setValue(0)
+        self.setLayout(main_layout)
+        self._worker.cycle()
+
+    def _on_finished(self):
+        if self._ready_text:
+            self._lbl_text.setText(self._ready_text)
+        self.finished.emit()
+
+    def _on_updated(self, value: int):
+        self._progress_bar.setValue(value)
+
+    def start(self):
+        """Запускает прогресс-бар."""
+        self._worker.start()
+
+    def stop(self):
+        """Останавливает прогресс-бар."""
+        self._worker.stop()
+
+    def set_time_interval(self, time_interval: int):
+        """Устанавливает временной интервал (в мс) между изменениями значений."""
+        self._worker.set_interval(time_interval)
+
+    def time_interval(self) -> int:
+        return self._worker.time_interval()
+
+    def interval(self) -> int:
+        return self._worker.interval()
+
+    def set_interval(self, interval: int):
+        self._worker.set_interval(interval)
+
+    def text(self) -> str:
+        return self._lbl_text.text()
+
+    def set_text(self, text: str):
+        self._lbl_text.setText(text)
+
+
+class ProgressWorker(QObject):
+    """
+    Обработчик прогресс-бара.
+
+    :var updated: Сигнал, испускаемый при обновлении значения прогресс-бара.
+    :var finished: Сигнал, испускаемый при достижнии максимального значения прогресс-бара.
+
+    :param minimum: Начальное значение.
+    :param maximum: Конечное значение.
+    :param interval: Шаг значения.
+    :param time_interval: Время (в мс) между изменением значения.
+
+    """
+    updated = Signal(int)
+    finished = Signal()
+
+    def __init__(self, minimum: int | None = None, maximum: int | None = None, interval: int | None = None,
+                 time_interval: int = 0):
+        super().__init__()
+        self._is_running = False
+        if not minimum:
+            minimum = 0
+        if not maximum:
+            maximum = 100
+        if not interval:
+            interval = 1
+        self._value = minimum
+        self._minimum = minimum
+        self._maximum = maximum
+        self._interval = interval
+        self._time_interval = time_interval
+
+    def cycle(self):
+        if self._is_running:
+            self._value += self._interval
+            self.updated.emit(self._value)
+        if self._value < self._maximum:
+            QTimer.singleShot(self._time_interval, self.cycle)
+        else:
+            self.finished.emit()
+
+    def value(self) -> int:
+        return self._value
+
+    def time_interval(self) -> int:
+        return self._time_interval
+
+    def set_time_interval(self, time_interval: int):
+        """Устанавливает временной интервал (в мс) между изменениями значения прогресс-бара."""
+        self._time_interval = time_interval
+
+    def interval(self) -> int:
+        return self._interval
+
+    def set_interval(self, interval: int):
+        self._interval = interval
+
+    def start(self):
+        self._is_running = True
+
+    def stop(self):
+        self._is_running = False
+
+
 if __name__ == '__main__':
     from test.client_test.utils.window import setup_gui
-    wdg = QToolTipLabel('LABEL')
+    wdg = QProgressWidget('Загрузка...', time_interval=10, ready_text='Готово!')
+    wdg.start()
 
     setup_gui(wdg)

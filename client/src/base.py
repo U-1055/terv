@@ -53,6 +53,8 @@ class DataStructConst:
     max_requests = 10  # Максимальное число хранимых запросов в реквестере
     max_request_id = max_requests * 10  # Максимальное ID запроса
 
+    userspace_loading_time = 1000  # Число миллисекунд, в течение которых работает окно загрузки перед открытием окна ПП
+
     char_plus = '+'
 
 
@@ -136,6 +138,8 @@ class GuiLabels:
     message = 'Сообщение'
     enter_account = 'Войдите в аккаунт'
 
+    loading = 'Загрузка...'
+    ready = 'Готово!'
 
 class GUIStyles:
 

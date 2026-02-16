@@ -4,6 +4,7 @@ from PySide6.QtCore import Signal, Qt
 import logging
 
 from client.src.ui.ui_main_window import Ui_Form
+from client.src.gui.sub_widgets.common_widgets import QProgressWidget
 from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
 from client.src.gui.windows.userspace_window import UserSpaceWindow
@@ -37,7 +38,9 @@ class MainWindow(QMainWindow):
 
         container = QWidget()
 
-        self._auth_window: PopUpAuthWindow = None
+        self._auth_window: PopUpAuthWindow | None = None
+        self._wdg_progress: QProgressWidget | None = None  # Окно загрузки
+        self._before_loading_window: BaseWindow | None = None  # Окно, которое отображалось до виджета загрузки
 
         self._view = Ui_Form()
         self._view.setupUi(container)
@@ -53,6 +56,27 @@ class MainWindow(QMainWindow):
 
         self._opened_dialog_windows: list[QDialog] = []
         self._opened_message_windows: list[QMessageBox] = []
+
+    def _show_progress_window(self, loading_time: int | None):
+        """
+        Показывает окно загрузки.
+
+        :param loading_time: Время загрузки. (Работы окна загрузки)
+        """
+        if not loading_time:
+            return
+        self._before_loading_window = self._view.wdg_window.currentWidget()
+        self._wdg_progress = QProgressWidget(text=GuiLabels.loading, minimum=0, maximum=100, time_interval=10, show_text=False, ready_text=GuiLabels.ready)
+        self._wdg_progress.finished.connect(self._close_progress_window)
+        self._view.wdg_window.insertWidget(-1, self._wdg_progress)
+        self._view.wdg_window.setCurrentWidget(self._wdg_progress)
+        self._wdg_progress.start()
+
+    def _close_progress_window(self):
+        if self._wdg_progress:
+            self._view.wdg_window.setCurrentWidget(self._before_loading_window)
+            self._view.wdg_window.removeWidget(self._wdg_progress)
+            self._wdg_progress = None
 
     def _destroy_window(self, idx: int):
         self._view.wdg_window.removeWidget(idx)
@@ -112,16 +136,16 @@ class MainWindow(QMainWindow):
         Предупреждение: не следует создавать сразу несколько модальных окон (лучше вообще избегать одновременного
         вывода нескольких окон), т.к. это может привести к сложностям в работе пользователя с ними.
 
-        :param window: Выводимое окно (QDialog). Обязательно должно иметь возможность закрыться (иметь для этого кнопку
-                       или что-то другое) каким-либо другим способом, кроме как средствами системы, т.к. шапка окна
-                       удаляется.
+        :param window: Выводимое окно (QDialog).
         :param title: Заголовок окна. Не будет отображаться, если frameless = True.
         :param showing_type: Тип показа окна (MainWindow.DialogShowingType). Если DialogShowingType.unique - то окно не будет выведено,
                             если уже выведены другие окна этого типа. Если DialogShowingType.add - выводится в любом случае.
                             Если DialogShowingType.replace - выводится с заменой всех остальных окон.
                             (По умолчанию - DataShowingType.unique).
         :param modality: Является ли окно модальным?
-        :param frameless: Является ли окно безрамочным?
+        :param frameless: Является ли окно безрамочным? Если да, то должна быть
+                          возможность закрытия окна каким-либо способом, кроме средств системы 
+                          (т.к. шапка окна удаляется) (Если вообще требуется возможность закрытия).
         """
 
         if showing_type == self.DialogShowingType.unique:  # Проверка уникальности
@@ -174,23 +198,35 @@ class MainWindow(QMainWindow):
         self._auth_window = window
         return window
 
-    def open_personal_tasks_window(self) -> BaseWindow:
-        return self._open_window(PersonalTasksWindow)
+    def open_personal_tasks_window(self, loading_time: int | None = None) -> BaseWindow:
+        window = self._open_window(PersonalTasksWindow)
+        self._show_progress_window(loading_time)
+        return window
+        
+    def open_userspace_window(self, loading_time: int | None = None) -> UserSpaceWindow:
+        window = self._open_window(UserSpaceWindow)
+        self._show_progress_window(loading_time)
+        return window
 
-    def open_userspace_window(self) -> UserSpaceWindow:
-        return self._open_window(UserSpaceWindow)
+    def open_calendar_window(self, loading_time: int | None = None) -> BaseWindow:
+        window = self._open_window(CalendarWindow)
+        self._show_progress_window(loading_time)
+        return window
 
-    def open_calendar_window(self) -> BaseWindow:
-        return self._open_window(CalendarWindow)
-
-    def open_settings(self) -> SettingsWindow:
-        return self._open_window(SettingsWindow)
+    def open_settings(self, loading_time: int | None = None) -> SettingsWindow:
+        window = self._open_window(SettingsWindow)
+        self._show_progress_window(loading_time)
+        return window
 
     def open_window(self, window: BaseWindow):
         """Переключает окно в стековом виджете на указанное."""
         self._view.wdg_window.setCurrentWidget(window)
         logging.debug(f'{window} opened')
-
+    
+    def show_progress_window(self, loading_time: int):
+        """Показывает окно загрузки в виджете окон."""
+        self._show_progress_window(loading_time)
+    
     def close(self):
         super().close()
 

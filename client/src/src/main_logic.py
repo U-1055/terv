@@ -166,7 +166,9 @@ class Logic:
         self._opened_now.network_error_occurred.connect(self._on_network_error_occurred)
 
     def _open_userspace(self):
-        self._open_base_window(UserSpaceWindowHandler, self._open_userspace, self._view.open_userspace_window)
+        if type(self._opened_now) is UserSpaceWindowHandler:
+            return
+        self._open_base_window(UserSpaceWindowHandler, self._open_userspace, lambda: self._view.open_userspace_window(DataStructConst.userspace_loading_time))
         self._opened_now.user_data_received.connect(lambda: self._on_user_data_received(self._opened_now))
         self._opened_now.update_state()
 
