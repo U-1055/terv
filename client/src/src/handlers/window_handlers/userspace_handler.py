@@ -7,7 +7,7 @@ import logging
 import threading
 
 from client.src.src.handlers.window_handlers.base import (BaseWindowHandler, MainWindow, Requester, Model, Request)
-from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels
+from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels, db_fields_labels
 from client.src.gui.windows.userspace_window import UserSpaceWindow
 from client.src.gui.widgets_view.userspace_view import (TaskWidgetView, ScheduleWidgetView, NotesWidgetView,
                                                        WidgetSettingsMenu)
@@ -15,6 +15,8 @@ from client.src.src.handlers.widgets_view_handlers.userspace_handlers import (No
 import client.models.common_models as cm
 from common.base import ObjectTypes, TasksStatuses
 from client.utils.data_tools import iterable_to_str, get_lasting
+from client.src.gui.sub_widgets.common_widgets import QStructuredText
+from client.src.client_model.links_handler import LinksHandler
 
 
 class UserSpaceWindowHandler(BaseWindowHandler):
@@ -26,10 +28,13 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             main_view: MainWindow,
             requester: Requester,
             model: Model,
-            data_const: DataStructConst = DataStructConst()
+            links_handler: LinksHandler,
+            data_const: DataStructConst = DataStructConst(),
     ):
         super().__init__(window, main_view, requester, model)
-        self._window, self._main_view, self._requester, self._model, self._data_const = window, main_view, requester, model, data_const
+        self._window, self._main_view, self._requester, self._model, self._links_handler, self._data_const =\
+            window, main_view, requester, model, links_handler, data_const
+
         self._data_model: 'UserSpaceDataModel' = UserSpaceDataModel()
         self._requests: 'UserSpaceRequests' = UserSpaceRequests()
 
@@ -80,13 +85,25 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
         request.finished.connect(lambda request_: self._prepare_request(request_))
 
-    def _on_id_in_schedule_clicked(self, id_: int, type_: str, field: str):
-        """Обрабатывает нажатие на id объекта в ScheduleWidget. Выводит информацию об объекте."""
-        logging.debug(f'Field: {field} of object (ID: {id_}, type: {type_}) clicked.')
-
-    def _on_id_clicked(self, type_: str, field: str):
+    def _on_id_clicked(self, field: str, structured_text: QStructuredText):
         """Обрабатывает нажатие на ID объекта."""
-        logging.debug(f'Field: {field} of object (type: {type_}) clicked in EventsTodayWidget.')
+        logging.debug(f'Field: {field} in {structured_text}. Content: {structured_text.content(field)} has been pressed')
+        if field == GuiLabels.workspace:
+            workspace_id = structured_text.content(field)[1:]  # Первым символом является "#"
+            workspace = self._links_handler.get_workspace(workspace_id)
+            if isinstance(workspace, cm.Workspace):
+                self._show_info_to_tooltip(structured_text, workspace, field)
+            elif isinstance(workspace, Request):
+                workspace.finished.connect(lambda request: self._prepare_request(request, lambda content: self._show_info_to_tooltip(structured_text, content, field)))
+        elif field == GuiLabels.creator:
+            creator_id = structured_text.content(field)[1:]
+            creator = self._links_handler.get_user(creator_id)
+            if isinstance(creator, cm.User):
+                self._show_info_to_tooltip(structured_text, creator, field)
+            elif isinstance(creator, Request):
+                creator.finished.connect(lambda request: self._prepare_request(request, lambda content: self._show_info_to_tooltip(
+                                                                                     structured_text, content,
+                                                                                     field)))
 
     def _set_widgets_settings(self, widgets: tuple[str, ...]):
         """Устанавливает настройки виджетов (Изменяет список отображаемых виджетов)."""
@@ -104,6 +121,15 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         logging.debug(f'User info received: {user_info}')
         self._data_model.user = cm.User(**user_info[0])
         self.receive_user_data()
+
+    def _show_info_to_tooltip(self, tooltip: QStructuredText, info: [dict], field: str):
+        info = info[0]
+        structured_tooltip = {}
+        for key in info:
+            if key in db_fields_labels:
+                structured_tooltip[db_fields_labels.get(key)] = info.get(key)
+
+        tooltip.show_structured_tooltip(field, structured_tooltip, False)
 
     def _set_tasks_widget(self):
         """Обрабатывает данные для виджета задач."""
@@ -139,8 +165,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 fact_start_work_date = task.fact_start_work_date.date().strftime(DataStructConst.gui_date_format)
                 description.update({GuiLabels.fact_start_work_date: fact_start_work_date})
 
-            # ToDo: подвязка на нажатие на ID'ы в QStructuredText
             self._task_widget.add_task(task.name, task.id, task.__tablename__, description)
+        self._task_widget.task_tooltip_content_clicked.connect(self._on_id_clicked)
 
     def _place_settable_widgets(self):
         self._window.delete_notes_widget()
@@ -251,15 +277,15 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             time_start = event.time_start.strftime('%H:%M')
             time_end = event.time_end.strftime('%H:%M')
             description = {
-                f'{GuiLabels.title}:': f'{time_start}-{time_end}.',
+                f'{GuiLabels.title}': f'{time_start}-{time_end}.',
                 f'{GuiLabels.description}': event.description,
-                f'{GuiLabels.lasting}:': get_lasting(event.time_start, event.time_end)
+                f'{GuiLabels.lasting}': get_lasting(event.time_start, event.time_end)
             }
 
             if event.__tablename__ == ObjectTypes.wf_daily_event:
                 event: cm.WFDailyEvent
                 description.update({
-                    f'{GuiLabels.title}:': f'{time_start}-{time_end}.',
+                    f'{GuiLabels.title}': f'{time_start}-{time_end}.',
                     f'{GuiLabels.workspace}': f'#{event.workspace_id}',
                     f'{GuiLabels.creator}': f'#{event.creator_id}',
                     f'{GuiLabels.description}': event.description,
@@ -275,21 +301,20 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             lasting = event.datetime_end.date() - event.datetime_start.date()
 
             description = {
-                f'{GuiLabels.title}:': event.name,
-                f'{GuiLabels.lasting}:': f'{lasting.days} {GuiLabels.days}'
+                f'{GuiLabels.title}': event.name,
+                f'{GuiLabels.lasting}': f'{lasting.days} {GuiLabels.days}'
                            }
 
             if event.__tablename__ == ObjectTypes.wf_many_days_event:
                 description.update({
                     f'{GuiLabels.workspace}': f'#{event.workspace_id}',
-                    f'{GuiLabels.creator}:': f'#{event.creator_id}',
-                    f'{GuiLabels.notifieds}:': f'{iterable_to_str(event.notified, ',', '#')}'
+                    f'{GuiLabels.creator}': f'#{event.creator_id}',
+                    f'{GuiLabels.notifieds}': f'{iterable_to_str(event.notified, ',', '#')}'
                 })
 
             wdg_event = self._events_today_widget.add_event(event.name, date_start, date_end, description)
 
-            if event.__tablename__ == ObjectTypes.wf_many_days_event:
-                wdg_event.tooltip_content_clicked.connect(lambda field: self._on_id_clicked(ObjectTypes.wf_many_days_event, field))
+        self._events_today_widget.event_tooltip_content_clicked.connect(self._on_id_clicked)
 
     def _set_personal_tasks(self, tasks: tuple[dict, ...]):
         self._data_model.personal_tasks = [cm.PersonalTask(**task) for task in tasks]

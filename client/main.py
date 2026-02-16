@@ -14,6 +14,8 @@ from client.src.requester.requester import Requester
 from client.src.gui.main_view import MainWindow, setup_gui
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst
+from client.src.client_model.links_handler import LinksHandler
+from client.src.requester.cash_manager import CashManager
 
 logging.basicConfig(level=logging.INFO)
 locale.setlocale(locale.LC_TIME, 'Russian')
@@ -27,15 +29,19 @@ def launch(model_class, model_params: tuple, view_class, view_params: tuple, pre
     setup_gui(root, app)
 
 
+# ToDo: переделать параметры в точке входа, чтобы можно было отметить cash_manager обязательным
+
+
 def run_main_config(check_ram: bool = False):
     if check_ram:
         thread = threading.Thread(target=check_memory, args=[Path('../log/memory_client.txt')], daemon=True)
         thread.start()
+    requester = Requester('http://localhost:5000')
 
     launch(
         Model, (Path('data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst()),
         MainWindow, (),
-        Logic, (Requester('http://localhost:5000'), 0.1)
+        Logic, (LinksHandler(Path('data/config_data/records_storage')), requester, 0.1)
     )
 
 

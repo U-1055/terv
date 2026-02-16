@@ -14,6 +14,8 @@ from client.src.client_model.model import Model
 from client.src.base import DataStructConst, GuiLabels, styles_paths
 from client.src.src.handlers.window_handlers.main_auth_window_handler import MainAuthWindowHandler
 import client.models.common_models as cm
+from client.src.client_model.links_handler import LinksHandler
+from client.src.requester.cash_manager import CashManager
 
 logging.basicConfig(level=logging.CRITICAL)
 logging.debug('Module main_logic.py is running')
@@ -26,6 +28,7 @@ class Logic:
             self,
             view: MainWindow,
             model: Model,
+            links_handler: LinksHandler,
             requester: Requester,
             timeout: int,
             data_const: DataStructConst = DataStructConst(),
@@ -38,6 +41,9 @@ class Logic:
         self._labels = labels
         self._timer = QTimer()
         self._user: cm.User | None = None
+        self._links_handler = links_handler
+        self._cash_manager = CashManager(requester, model)
+        self._links_handler.set_cash_manager(self._cash_manager)
 
         self._opened_now: BaseWindowHandler = None
         self._current_open_method: tp.Callable = self._open_userspace
@@ -158,7 +164,10 @@ class Logic:
             self._view.open_window(current_handler.get_window())
         else:
             window = window_open_method()
-            win_handler = window_class(window, self._view, self._requester, self._model)
+            if window_class is UserSpaceWindowHandler:
+                win_handler = window_class(window, self._view, self._requester, self._model, self._links_handler)
+            else:
+                win_handler = window_class(window, self._view, self._requester, self._model)
             self._win_handlers.append(win_handler)
             self._opened_now = win_handler
             win_handler.incorrect_tokens_update.connect(self._authorize)

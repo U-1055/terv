@@ -1,7 +1,8 @@
-import logging
-
 from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QMenu, QWidgetAction, QFrame
 from PySide6.QtCore import Signal, QObject, Qt, QPoint
+
+import logging
+import typing as tp
 
 from client.src.base import DataStructConst, GuiLabels, ObjectNames
 from client.src.ui.ui_event_widget import Ui_Form as EventView
@@ -20,11 +21,14 @@ class UserSpaceTask(QWidget):
 
     """
     completed = Signal(str, int)  # Вызывается при нажатии на кнопку выполнения задачи. Возвращает тип задачи и её ID.
+    tooltip_content_clicked = Signal(str, tp.Any)  # Вызывается при нажатии на содержимое поля подсказки (QStructuredText).
+                                                          # Возвращает название поля и экземпляр QStructuredText.
 
     def __init__(self, name: str, type_: str, id_: int, wdg_description: dict = None):
         super().__init__()
         if wdg_description:
             self._structured_text = QStructuredText(wdg_description)
+            self._structured_text.content_clicked.connect(self._on_content_clicked)
         else:
             self._structured_text = None
         self._id = id_
@@ -51,6 +55,9 @@ class UserSpaceTask(QWidget):
         action.setDefaultWidget(self._structured_text)
         menu.addAction(action)
         menu.exec(self._lbl_name.mapToGlobal(pos))  # Переводим координаты виджета в абсолютные
+
+    def _on_content_clicked(self, field: str, wdg: QStructuredText):
+        self.tooltip_content_clicked.emit(field, wdg)
 
     def complete_task(self):
         self.completed.emit(self._type, self._id)
@@ -117,12 +124,12 @@ class QEventWidget(QWidget):
     :param time_end: время окончания.
     :param wdg_description: словарь, содержащий описание структурированного текста (как в QStructuredText),
                             который выводится при нажатии на событие. Словарь вида: {<название поля>: <текст>}.
-    :param lasting_label: надпись, показываемая перед длительностью.
     :param start_end_label: надпись, показываемая перед временем начала и окончания события.
+
     """
 
-    tooltip_field_clicked = Signal(str)  # Вызывается при нажатии на поле wdg_description. Возвращает название поля
-    tooltip_content_clicked = Signal(str)  # Вызывается при нажатии на текст поля wdg_description. Возвращает название поля
+    tooltip_field_clicked = Signal(str, tp.Any)  # Вызывается при нажатии на поле wdg_description. Возвращает название поля и экземпляр виджета QStructuredText
+    tooltip_content_clicked = Signal(str, tp.Any)  # Вызывается при нажатии на текст поля wdg_description. Возвращает название поля и экзмпляр виджета QStructuredText
 
     def __init__(self, title: str, time_start: str, time_end: str,
                  wdg_description: dict = None, time_separator: str = GuiLabels.default_time_separator,
@@ -167,11 +174,11 @@ class QEventWidget(QWidget):
         """Показать подробности (wdg_description)."""
         self._view.btn_show_details.menu()
 
-    def _on_tooltip_field_clicked(self, field: str):
-        self.tooltip_field_clicked.emit(field)
+    def _on_tooltip_field_clicked(self, field: str, wdg: QStructuredText):
+        self.tooltip_field_clicked.emit(field, wdg)
 
-    def _on_tooltip_content_clicked(self, field: str):
-        self.tooltip_content_clicked.emit(field)
+    def _on_tooltip_content_clicked(self, field: str, wdg: QStructuredText):
+        self.tooltip_content_clicked.emit(field, wdg)
 
     def _setup_widgets(self):
         self._view.lbl_start_end.setText(f'{self._start_end_label}{self._time_start}{self._time_separator}{self._time_end}')

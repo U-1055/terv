@@ -1,23 +1,29 @@
 """Обобщённые Qt-подобные виджеты."""
-import time
+import logging
 
 from PySide6.QtWidgets import (QWidget, QGridLayout, QLabel, QScrollArea, QVBoxLayout, QSizePolicy, QMenu, QWidgetAction,
                                QProgressBar)
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QCursor
 from PySide6.QtCore import Qt, QPoint, QThread, QObject, QTimer
 
 import typing as tp
 
 from client.src.base import GUIStyles
-from client.utils.qt_utils import filled_rows_count
 from client.src.gui.sub_widgets.util_widgets import QClickableLabel
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 class QStructuredText(QWidget):
     """
     Виджет, представляющий собой структурированный по полям текст. Структура преобразуется из словаря (Ключи будут
     названиями полей, значения - их содержимым).
+
+    :var content_clicked: Сигнал, испускаемый при нажатии на содержимое поля. Передаёт название поля и экземпляр
+                          QStructuredText.
+    :var field_clicked: Сигнал, испускаемый при нажатии на поле. Передаёт название поля и экземпляр
+                        QStructuredText.
 
     :param structure: словарь, по которому будет создана структура виджета (ключи - поля, значения - содержимое полей).
     :param field_font: шрифт текста полей.
@@ -27,9 +33,8 @@ class QStructuredText(QWidget):
     :param field_suffix: окончание, добавляемое к названиям полей. По умолчанию отсутствует.
 
     """
-    # ToDo: передача содержимого поля в сигнале content_clicked
-    content_clicked = Signal(str)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
-    field_clicked = Signal(str)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
+    content_clicked = Signal(str, tp.Any)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
+    field_clicked = Signal(str, tp.Any)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
 
     field_column = 0  # Столбцы, в которых размещаются виджеты
     content_column = 1
@@ -50,6 +55,8 @@ class QStructuredText(QWidget):
         self._labels_size_policy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
         self._field_suffix = field_suffix
 
+        self._tooltip_fields = {}
+
         main_layout = QVBoxLayout()
         main_layout.setSizeConstraint(QGridLayout.SizeConstraint.SetFixedSize)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -68,12 +75,12 @@ class QStructuredText(QWidget):
         self._place_fields()
 
     def _place_field(self, field: str, content: str, row: int):
-        lbl_field = QClickableLabel(field, alignment=self._field_align)
+        lbl_field = QToolTipLabel(field, alignment=self._field_align)
         lbl_field.setFont(self._field_font)
         lbl_field.setSizePolicy(self._labels_size_policy)
         lbl_field.clicked.connect(lambda: self.click_field(field))
 
-        lbl_content = QClickableLabel(content, wordWrap=True, alignment=self._content_align)
+        lbl_content = QToolTipLabel(content, wordWrap=True, alignment=self._content_align)
         lbl_content.setFont(self._content_font)
         lbl_content.setSizePolicy(self._labels_size_policy)
         lbl_content.clicked.connect(lambda: self.click_content(field))
@@ -94,10 +101,10 @@ class QStructuredText(QWidget):
         self._place_fields()
 
     def click_field(self, field: str):
-        self.field_clicked.emit(field)
+        self.field_clicked.emit(field, self)
 
     def click_content(self, field: str):
-        self.field_clicked.emit(field)
+        self.content_clicked.emit(field, self)
 
     def delete_field(self, field: str):
         self._structure.pop(field)
@@ -168,24 +175,43 @@ class QStructuredText(QWidget):
     def field_suffix(self) -> str:
         return self._field_suffix
 
+    def show_structured_tooltip(self, field: str, tooltip: dict, on_field: bool = True):
+        menu = QMenu()
+        wdg_action = QWidgetAction(menu)
+        wdg_structured_text = QStructuredText(tooltip)
+        wdg_structured_text.setStyleSheet(self.styleSheet())
+        wdg_action.setDefaultWidget(wdg_structured_text)
+        menu.addAction(wdg_action)
 
-class QToolTipLabel(QLabel):
+        for i in range(self._layout.rowCount()):
+            widget = self._layout.itemAtPosition(i, self.field_column).widget()
+            logging.warning(f'Iter: {i}. Text: {widget.text()}. Field: {field}')
+            if isinstance(widget, QLabel) and widget.text() == field:
+                menu.exec(QCursor.pos())
+                logging.warning(f'Menu placed by coordinates: {QCursor.pos()}')
+
+
+class QToolTipLabel(QClickableLabel):
     """
-    QLabel, по нажатию на который выводится QStucturedText.
+    QLabel, по нажатию на который выводится QStructuredText.
 
     :var tooltip_field_clicked: Сигнал, вызывающийся при нажатии на поле подсказки виджета. Передаёт название поля.
     :var tooltip_content_clicked: Сигнал, вызывающийся при нажатии на текст поля подсказки виджета. Передаёт название поля.
 
     """
 
-    tooltip_field_clicked = Signal(str)
-    tooltip_content_clicked = Signal(str)
+    tooltip_field_clicked = Signal(str, tp.Any)
+    tooltip_content_clicked = Signal(str, tp.Any)
 
-    def __init__(self, text: str = '', structured_text: dict | None = None):
-        super().__init__(text)
+    def __init__(self, text: str = '', structured_text: dict | None = None, wordWrap: bool = False,
+                 alignment: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignHCenter):
+        super().__init__(text, alignment=alignment, wordWrap=wordWrap)
         self._structured_text = structured_text
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._on_context_menu_requested)
+
+    def _on_tooltip_content_clicked(self, field: str, wdg: QStructuredText):
+        self.tooltip_content_clicked.emit(field, wdg)
 
     def _on_context_menu_requested(self, pos: QPoint):
         if not self._structured_text:
@@ -194,6 +220,7 @@ class QToolTipLabel(QLabel):
         menu = QMenu()
         action = QWidgetAction(menu)
         wdg_structured_text = QStructuredText(self._structured_text)
+        wdg_structured_text.content_clicked.connect(self._on_tooltip_content_clicked)
         action.setDefaultWidget(wdg_structured_text)
         menu.addAction(action)
         menu.exec(self.mapToGlobal(pos))
@@ -227,7 +254,8 @@ class QProgressWidget(QWidget):
     finished = Signal()
 
     def __init__(self, text: str | None = None, minimum: int | None = None, maximum: int | None = None,
-                 interval: int | None = None, time_interval: int = 0, show_text: bool = True, ready_text: str = ''):
+                 interval: int | None = None, time_interval: int = 0, show_text: bool = True, ready_text: str = '',
+                 text_font: QFont | None = None):
         super().__init__()
         self._is_running = False
         self._worker = ProgressWorker(minimum, maximum, interval, time_interval)
@@ -237,6 +265,8 @@ class QProgressWidget(QWidget):
 
         main_layout = QVBoxLayout()
         self._lbl_text = QLabel(text=text, wordWrap=True)
+        if text_font:
+            self._lbl_text.setFont(text_font)
         self._progress_bar = QProgressBar(self)
         self._progress_bar.setTextVisible(show_text)
         if not minimum:
@@ -245,9 +275,9 @@ class QProgressWidget(QWidget):
             maximum = 100
         self._progress_bar.setMinimum(minimum)
         self._progress_bar.setMaximum(maximum)
-        self._progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.MinimumExpanding)
+        self._progress_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-        main_layout.addWidget(self._progress_bar, alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
+        main_layout.addWidget(self._progress_bar, alignment=Qt.AlignmentFlag.AlignVCenter)
         main_layout.addWidget(self._lbl_text, alignment=Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._progress_bar.setRange(minimum, maximum)
         self._progress_bar.setValue(0)
@@ -288,6 +318,12 @@ class QProgressWidget(QWidget):
 
     def set_text(self, text: str):
         self._lbl_text.setText(text)
+
+    def text_font(self) -> QFont:
+        return self._lbl_text.font()
+
+    def set_text_font(self, font: QFont):
+        self._lbl_text.setFont(font)
 
 
 class ProgressWorker(QObject):
@@ -356,7 +392,7 @@ class ProgressWorker(QObject):
 
 if __name__ == '__main__':
     from test.client_test.utils.window import setup_gui
-    wdg = QProgressWidget('Загрузка...', time_interval=10, ready_text='Готово!')
-    wdg.start()
 
+    wdg = QStructuredText({'field#1': '13241434234234'})
+    QTimer.singleShot(3000, lambda: wdg.show_structured_tooltip('field#1', {'TOOLTIP': "ASTR"}))
     setup_gui(wdg)

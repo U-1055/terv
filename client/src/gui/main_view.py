@@ -66,7 +66,8 @@ class MainWindow(QMainWindow):
         if not loading_time:
             return
         self._before_loading_window = self._view.wdg_window.currentWidget()
-        self._wdg_progress = QProgressWidget(text=GuiLabels.loading, minimum=0, maximum=100, time_interval=10, show_text=False, ready_text=GuiLabels.ready)
+        self._wdg_progress = QProgressWidget(text=GuiLabels.loading, minimum=0, maximum=100, time_interval=10, show_text=False, ready_text=GuiLabels.ready,
+                                             text_font=GUIStyles.title_font)
         self._wdg_progress.finished.connect(self._close_progress_window)
         self._view.wdg_window.insertWidget(-1, self._wdg_progress)
         self._view.wdg_window.setCurrentWidget(self._wdg_progress)

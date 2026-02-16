@@ -18,7 +18,7 @@ from queue import Queue
 
 import client.src.requester.errors as err
 from common.base import CommonStruct, ErrorCodes
-from client.src.base import DataStructConst
+from client.src.requester.requester_interface import IRequests
 from client.utils.timeout_list import TimeoutList
 
 
@@ -45,7 +45,7 @@ def synchronized_request(func) -> tp.Callable[..., Request]:  # ToDo: разоб
     return prepare
 
 
-class Requester:
+class Requester(IRequests):
     """
     Слой API.
 
@@ -235,6 +235,13 @@ class Requester:
         return response
 
     @synchronized_request
+    async def get_users(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = None) -> Response:
+        request = InternalRequest(f'{self._server}/users', InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset, CommonStruct.ids: ids})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
     async def get_personal_tasks(self, user_id: int, access_token: str, on_date: datetime.date, tasks_ids: list[int] = None,
                                  limit: int = None, offset: int = None) -> Response:
         """
@@ -249,6 +256,36 @@ class Requester:
         path = f'{self._server}/users/{user_id}/personal_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                           query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+
+        return response
+
+    @synchronized_request
+    async def get_personal_tasks_by_id(self, ids: tp.Iterable[int], access_token: str,
+                                       limit: int = None, offset: int = None) -> Response:
+        path = f'{self._server}/personal_tasks'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset, CommonStruct.ids: ids})
+        response = await self._choose_request_type(request, limit)
+
+        return response
+
+    @synchronized_request
+    async def get_wf_tasks_by_id(self, ids: tp.Iterable[int], access_token: str,
+                                       limit: int = None, offset: int = None) -> Response:
+        path = f'{self._server}/wf_tasks'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset, CommonStruct.ids: ids})
+        response = await self._choose_request_type(request, limit)
+
+        return response
+
+    @synchronized_request
+    async def get_workspaces(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = None):
+        path = f'{self._server}/workspaces'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset,
+                                                CommonStruct.ids: ids})
         response = await self._choose_request_type(request, limit)
 
         return response

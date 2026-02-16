@@ -20,7 +20,7 @@ from client.src.ui.ui_userspace_schedule_widget import Ui_Form as UserSpaceSched
 from client.src.gui.sub_widgets.widgets import UserSpaceTask, Reminder, QEventWidget
 from client.src.base import GuiLabels, DataStructConst, ObjectNames
 from client.utils.data_tools import parse_time
-from client.src.gui.sub_widgets.common_widgets import QToolTipLabel
+from client.src.gui.sub_widgets.common_widgets import QToolTipLabel, QStructuredText
 
 MultiSelection = QAbstractItemView.SelectionMode.MultiSelection
 
@@ -45,6 +45,8 @@ class TaskWidgetView(BaseUserSpaceWidget):
     """
 
     task_completed = Signal(str, int)  # Вызывается при выполнении задачи. Возвращает тип задачи и её ID.
+    task_tooltip_content_clicked = Signal(str, tp.Any)  # Вызывается при нажатии на содержимое поля в подсказке задачи.
+                                                               # Передаёт название поля и экземпляр QStructuredText
 
     def __init__(self):
         super().__init__(DataStructConst.tasks_widget)
@@ -59,9 +61,11 @@ class TaskWidgetView(BaseUserSpaceWidget):
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Ignored)
         self._tasks_struct: dict[str, dict] = dict()
 
+    def _on_tooltip_content_clicked(self, field: str, wdg: QStructuredText):
+        self.task_tooltip_content_clicked.emit(field, wdg)
+
     def complete_task(self, type_: str, id_: int):
         widget = self._tasks_struct[type_][id_]
-
         widget.hide()
         self.task_completed.emit(type_, id_)
 
@@ -78,7 +82,7 @@ class TaskWidgetView(BaseUserSpaceWidget):
 
         """
         widget = UserSpaceTask(name, type_, id_, task_description)
-
+        widget.tooltip_content_clicked.connect(self._on_tooltip_content_clicked)
         if type_ not in self._tasks_struct:  # Обновление структуры задач
             self._tasks_struct[type_] = {id_: widget}
         else:
@@ -142,14 +146,14 @@ class ScheduleWidgetView(BaseView):
     Виджет расписания.
 
     :var event_tooltip_field_clicked: Сигнал, вызывающийся при нажатии на поле подсказки события. Передаёт аргументами:
-                                      id_ события, тип события, название поля.
+                                      название поля, виджет, содержащий поле (QStructuredText).
     :var event_tooltip_content_clicked: Сигнал, вызывающийся при нажатии на текст поля подсказки события.
-                                        Передаёт аргументами: id_ события, тип события, название поля.
+                                        Передаёт аргументами: id_ события, виджет, содержащий поле (QStructuredText).
     :param marking_color: Цвет элементов разметки (линий и подписей времени).
     """
 
-    event_tooltip_field_clicked = Signal(int, str, str)
-    event_tooltip_content_clicked = Signal(int, str, str)
+    event_tooltip_field_clicked = Signal(str, tp.Any)
+    event_tooltip_content_clicked = Signal(str, tp.Any)
 
     def __init__(self, title: str = GuiLabels.schedule_widget, marking_color: QColor = QColor('black'),
                  events_style_sheet: str | None = None):
@@ -177,11 +181,11 @@ class ScheduleWidgetView(BaseView):
         self._set_marking()  # С задержкой, т.к. иначе виджет не успевает отрисоваться и будет некорректный размер
         QTimer.singleShot(50, self._reset_scene)  # Перерисовка сцены после окончательной отрисовки виджета (когда будут определены реальные размеры)
 
-    def _on_event_tooltip_field_clicked(self, id_: int, type_: str, field: str):
-        self.event_tooltip_field_clicked.emit(id_, type_, field)
+    def _on_event_tooltip_field_clicked(self, field: str, wdg: QStructuredText):
+        self.event_tooltip_field_clicked.emit(field, wdg)
 
-    def _on_event_tooltip_content_clicked(self, id_: int, type_: str, field: str):
-        self.event_tooltip_content_clicked.emit(id_, type_, field)
+    def _on_event_tooltip_content_clicked(self, field: str, wdg: QStructuredText):
+        self.event_tooltip_content_clicked.emit(field, wdg)
 
     def _set_marking(self):
         """Устанавливает разметку. Создаёт новую сцену."""
@@ -248,13 +252,17 @@ class ScheduleWidgetView(BaseView):
         event.setWindowOpacity(1)
         # Виджет создаётся заново, потому что хранимые виджеты не настраиваются, т.к. их родителем является ScheduleWidget
         # Если виджеты будут без родителя, они удаляются Qt.
+        wdg_desc = None
+        if event.wdg_description():
+            wdg_desc = event.wdg_description().structure()
 
         event = QEventWidget(event.title(), event.time_start(), event.time_end(),
-                             event.wdg_description().structure(), event.time_separator(),
+                             wdg_desc, event.time_separator(),
                              event.start_end_label(), event.btn_show_details_label())
-        event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_field_clicked(id_, type_, field))
-        event.tooltip_field_clicked.connect(lambda field: self._on_event_tooltip_content_clicked(id_, type_, field))
-        event.wdg_description().setStyleSheet(self._events_style_sheet)
+        event.tooltip_field_clicked.connect(lambda field, wdg: self._on_event_tooltip_field_clicked(field, wdg))
+        event.tooltip_content_clicked.connect(lambda field, wdg: self._on_event_tooltip_content_clicked(field, wdg))
+        if event.wdg_description():
+            event.wdg_description().setStyleSheet(self._events_style_sheet)
         if self._events_style_sheet:
             event.setStyleSheet(self._events_style_sheet)
 
@@ -407,7 +415,9 @@ class ReminderWidgetView(BaseUserSpaceWidget):
         return self._max_reminder_length
 
 
-class EventsTodayWidget(QWidget):
+class EventsTodayWidget(BaseWidget):
+
+    event_tooltip_content_clicked = Signal(str, tp.Any)
 
     def __init__(self, title: str = GuiLabels.events_today):
         super().__init__()
@@ -425,9 +435,14 @@ class EventsTodayWidget(QWidget):
 
         self.setLayout(main_layout)
 
+    def _on_event_content_clicked(self, field: str, wdg: QStructuredText):
+        self.event_tooltip_content_clicked.emit(field, wdg)
+
     def add_event(self, title: str, date_start: str, date_end: str, wdg_description: dict = None) -> QToolTipLabel:
         """Добавляет событие в виджет."""
         wdg = QToolTipLabel(f'{title} ({date_start} - {date_end})', wdg_description)
+        wdg.setStyleSheet(self.styleSheet())
+        wdg.tooltip_content_clicked.connect(self._on_event_content_clicked)
         self._wdg_layout.addWidget(wdg)
         return wdg
 
@@ -492,9 +507,10 @@ if __name__ == '__main__':
         'Участвуют': 'Тот и этот'
     }
 
-    widget = EventsTodayWidget()
-    for i in range(0, 20, 2):
-        widget.add_event(1, '', '1:1', {'1': 'DER'})
+    widget = TaskWidgetView()
+    for i in range(1):
+        widget.add_task('1', 12, '1:1', {'STREVAS':"ASASDASD"})
+    widget.task_tooltip_content_clicked.connect(lambda field, _: print(field))
 
     setup_gui(widget)
 

@@ -205,7 +205,7 @@ def personal_task_status(task_id: int):
     response = form_success_response()
 
     if request.method == 'GET':
-        pass   # ToDo: реализация изменения статуса + проверка авторизации в crud-handler'е
+        pass
     elif request.method == 'PUT':
         pass
 
