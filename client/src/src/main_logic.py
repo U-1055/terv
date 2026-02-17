@@ -4,7 +4,6 @@ import typing as tp
 import logging
 
 from client.src.gui.main_view import MainWindow
-from client.src.gui.sub_widgets.base import BaseWidget
 if tp.TYPE_CHECKING:
     from client.src.requester.requester import Requester
 else:
@@ -121,6 +120,7 @@ class Logic:
         self._opened_now.set_refresh_token_status(True)
         if isinstance(self._opened_now, SettingsWindowHandler):
             self._opened_now.set_mode_log_in()
+            self._opened_now.set_user_data(self._user)
 
     def _on_btn_log_in_pressed(self):
         logging.debug("Opening authorize window by user's request")

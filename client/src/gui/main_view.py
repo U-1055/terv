@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QDialog, QMessageBox
 from PySide6.QtCore import Signal, Qt
+from PySide6.QtGui import QPixmap
 
 import logging
 
@@ -37,7 +38,6 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         container = QWidget()
-
         self._auth_window: PopUpAuthWindow | None = None
         self._wdg_progress: QProgressWidget | None = None  # Окно загрузки
         self._before_loading_window: BaseWindow | None = None  # Окно, которое отображалось до виджета загрузки

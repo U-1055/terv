@@ -90,9 +90,13 @@ class GuiLabels:
 
     new_reminder = 'Новое напоминание'
 
+    authorization = 'Авторизация'
+
     default_dialog_window_title = 'terv'
     registration_window = 'Регистрация'
     widgets_settings_window = 'Настройки виджетов ПП'
+
+    hide_password = 'Скрыть'
 
     incorrect_credentials = 'Неверный логин или пароль'
     incorrect_login = f'Логин должен быть длиной от {CommonStruct.min_login_length} до {CommonStruct.max_login_length} символов'
@@ -137,6 +141,7 @@ class GuiLabels:
     account_leaved = 'Вы вышли из аккаунта'
     message = 'Сообщение'
     enter_account = 'Войдите в аккаунт'
+    executors = 'Исполнители'
 
     loading = 'Загрузка...'
     ready = 'Готово!'

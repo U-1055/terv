@@ -14,21 +14,22 @@ class PopUpAuthWindow(QDialog):
     auth_win_num = 0  # Номер окна в стековом виджете QStackLayout
     register_win_num = 1
 
-    def __init__(self, normal_style: str, error_style: str, labels: GuiLabels = GuiLabels(), title: str = GuiLabels.registration_window):
+    def __init__(self, normal_style: str, error_style: str, labels: GuiLabels = GuiLabels(), title: str = GuiLabels.authorization):
         super().__init__()
         self._stacked_widget = QStackedWidget()
         main_layout = QVBoxLayout()
         register_window = RegisterView(normal_style, error_style, labels)
         auth_window = AuthView(normal_style, error_style, labels)
-        lbl = QLabel(title)
-        lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self._lbl = QLabel(title)
+        self._lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+
         btn_exit = QPushButton(GuiLabels.exit)
         btn_exit.setObjectName(ObjectNames.btn_exit)
         btn_exit.clicked.connect(self.press_btn_exit)
 
         self._stacked_widget.addWidget(auth_window)
         self._stacked_widget.addWidget(register_window)
-        main_layout.addWidget(lbl)
+        main_layout.addWidget(self._lbl)
         main_layout.addWidget(self._stacked_widget)
         main_layout.addWidget(btn_exit, alignment=Qt.AlignmentFlag.AlignLeft)
 
@@ -40,9 +41,11 @@ class PopUpAuthWindow(QDialog):
 
     def choose_auth_window(self):
         self._stacked_widget.setCurrentIndex(self.auth_win_num)
+        self._lbl.setText(GuiLabels.authorization)
 
     def choose_register_window(self):
         self._stacked_widget.setCurrentIndex(self.register_win_num)
+        self._lbl.setText(GuiLabels.registration_window)
 
     def register_window(self) -> RegisterView:
         return self._stacked_widget.widget(self.register_win_num)

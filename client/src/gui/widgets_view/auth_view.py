@@ -1,5 +1,5 @@
-from PySide6.QtWidgets import QWidget, QFormLayout, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QLabel
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QWidget, QFormLayout, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QLabel, QRadioButton
+from PySide6.QtCore import Signal, Qt
 
 from client.src.base import GuiLabels
 from client.src.gui.widgets_view.base_view import BaseView
@@ -35,8 +35,13 @@ class AuthView(BaseView):
         self._line_edit_password = QLineEdit()
         self._line_edit_login = QLineEdit()
 
+        self._check_echo = QRadioButton(GuiLabels.hide_password)
+        self._check_echo.clicked.connect(self._on_btn_change_echo_mode_pressed)
+        self._check_echo.click()
+
         self._form_layout.addRow(self._labels.login, self._line_edit_login)
         self._form_layout.addRow(self._labels.password, self._line_edit_password)
+        self._form_layout.addRow(self._check_echo)
 
         self._main_layout.addLayout(self._form_layout, 5)
 
@@ -48,6 +53,12 @@ class AuthView(BaseView):
         self._main_layout.addWidget(btn_to_register, 1)
 
         self.setLayout(self._main_layout)
+
+    def _on_btn_change_echo_mode_pressed(self):
+        if self._check_echo.isChecked():
+            self._line_edit_password.setEchoMode(QLineEdit.EchoMode.Password)
+        else:
+            self._line_edit_password.setEchoMode(QLineEdit.EchoMode.Normal)
 
     def press_btn_auth(self):
         self.btn_auth_pressed.emit()

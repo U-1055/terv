@@ -2,6 +2,7 @@
 Точка входа
 """
 from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QPixmap
 
 from pathlib import Path
 import threading
@@ -19,7 +20,6 @@ from common_utils.log_utils.request_time_logger import RequestsTimeHandler
 
 logging.basicConfig(level=logging.INFO)
 locale.setlocale(locale.LC_TIME, 'Russian')
-
 
 CHECK_TIME = True
 request_time_handler = RequestsTimeHandler('../log/requests_time.txt')
