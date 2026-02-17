@@ -21,8 +21,9 @@ from client.src.requester.requester_interface import IRequests
 from client.utils.timeout_list import TimeoutList
 from common_utils.log_utils.request_time_logger import RequestsTimeHandler
 
-CHECK_TIME = True  # ToDo: при попытке импорта из точки входа возникает круговой импорт
-request_time_handler = RequestsTimeHandler('../log/requests_time.txt')
+CHECK_TIME = True  # ToDo: при попытке импорта из точки входа возникает круговой импорт !!!МЕНЯТЬ ПУТЬ ПРИ ЗАПУСКЕ НАГРУЗОЧНОГО ТЕСТА!!!
+request_time_handler = RequestsTimeHandler('../../../log/requests_time.txt')
+
 
 def run_loop(loop: asyncio.AbstractEventLoop):
     asyncio.set_event_loop(loop)
@@ -575,7 +576,7 @@ class Request(QObject):
         вызванные в ходе выполнения запроса.
         """
         asyncio.wait(self._future)
-        self._finished = True
+        self._finish()
         return self.result()
 
 

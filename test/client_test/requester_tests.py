@@ -13,7 +13,7 @@ from test.conftest import launch_test_server, client_requester, REQUEST_LIMIT, L
 # Исключение ошибок с кодами статуса вместо ID
 unique_errors = [error_id.value for error_id in ErrorCodes if error_id != ErrorCodes.server_error and error_id != ErrorCodes.ok]
 
-server_url = 'http://127.0.0.1:5000'
+server_url = 'http://127.0.0.1:80'
 
 
 @pytest.fixture()

@@ -21,11 +21,24 @@ class RequestsTimeHandler:
     def __init__(self, requests_file_path: pathlib.Path):
         self._path = requests_file_path
 
-    def _format_string(self, requester_func: tp.Callable, request: Request, time_status: str,
+    @staticmethod
+    def _format_string(requester_func: tp.Callable, request: Request, time_status: str,
                        time_: datetime.datetime) -> str:
         converted_time = time_.minute * 60 * 1000 + time_.second * 1000  # Считаем с миллисекундах
 
-        return f'Method: {requester_func}|Request-object: {request}|{time_status}: {converted_time}\n'
+        return f'Method: {requester_func}|Request-object: {request}|{time_status}: {converted_time}|[{datetime.datetime.now()}]\n'
+
+    @staticmethod
+    def _get_percentile(percentile_value: int, array: list) -> float:
+        array = sorted(array)
+        less_count = 0
+        total = len(array)
+
+        for val in array:
+            if val > percentile_value:
+                break
+            less_count += 1
+        return round(less_count / total, 4) * 100
 
     def start_request(self, requester_func: tp.Callable, request: Request):
         with open(self._path, 'a') as file:
@@ -45,12 +58,10 @@ class RequestsTimeHandler:
         """
         with open(self._path) as file:
             lines = file.readlines(10000)
-            less_count = 0  # Число значений, меньших чем указанное время
-            val_count = 0  # Общее число значений
+            times = []
 
             while lines:
                 requests = dict()
-                times = []
 
                 for line in lines:  # Составляем словарь
                     line = LogLine(line)
@@ -67,15 +78,9 @@ class RequestsTimeHandler:
                     time_ = request[1] - request[0]
                     times.append(time_)
 
-                times_ = sorted(times)
-                for time_ in times_:  # Находим, сколько запросов попадают под перцентиль
-                    if time_ > percentile_time:
-                        break
-                    less_count += 1
-                val_count += len(times_)
                 lines = file.readlines(10000)
 
-            percentile = round(less_count / val_count, 4) * 100
+            percentile = self._get_percentile(percentile_time, times)
             return percentile
 
     def clear(self):
@@ -87,6 +92,9 @@ class LogLine:
 
     def __init__(self, line: str):
         spl_line = line.split('|')
+        if len(spl_line[0].split(':')) != 2:
+            print(line)
+
         self._requester_method = spl_line[0].split(':')[1].strip()
         self._request = spl_line[1].split(':')[1].strip()
         self._time = int(spl_line[2].split(':')[1])
@@ -112,5 +120,5 @@ class LogLine:
 if __name__ == '__main__':
     path = '../../log/requests_time.txt'
     util = RequestsTimeHandler(path)
-    print(util.get_time_of_requests(1020))
+    print(util.get_time_of_requests(1000))
 
