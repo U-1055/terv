@@ -3,4 +3,8 @@
     <file alias="light">styles/light_theme.qss</file>
     <file alias="dark">styles/dark_theme.qss</file>
   </qresource>
+  <qresource prefix="">
+    <file>icons/checked.png</file>
+    <file>icons/unchecked.png</file>
+  </qresource>
 </RCC>

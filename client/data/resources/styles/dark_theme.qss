@@ -19,7 +19,7 @@ QWidget
 QFrame
 {
     border-width: 1px;
-	border-color: #051a39;
+	border-color: #121212;
 }
 
 
@@ -33,7 +33,6 @@ QEventWidget
 	border-width: 2px;
 	border-radius: 3px
 }
-
 
 
 /*-----QLabel-----*/
@@ -559,33 +558,18 @@ QCheckBox::indicator:disabled
 /*-----QRadioButton-----*/
 QRadioButton::indicator::unchecked
 {
-	border: 2px inset gray;
-	border-radius: 5px;
-	background-color:  #fff;
-	width: 9px;
-	height: 9px;
-
-}
-
-
-QRadioButton::indicator::unchecked:hover
-{
-	border: 2px solid #607cff;
-	border-radius: 5px;
-	background-color:  #fff;
-	width: 9px;
-	height: 9px;
+	width: 20px;
+	height: 20px;
+    image: url(:icons/unchecked.png)
 
 }
 
 
 QRadioButton::indicator::checked
 {
-	border: 2px inset darkgray;
-	border-radius: 5px;
-	background-color: #4969ff;
-	width: 9px;
-	height: 9px;
+	width: 20px;
+	height: 20px;
+	image: url(:icons/checked.png)
 
 }
 
@@ -1199,5 +1183,4 @@ QStatusBar
 	border-color: #051a39;
 
 }
-
 
