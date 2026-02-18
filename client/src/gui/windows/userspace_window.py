@@ -77,9 +77,9 @@ class UserSpaceWindow(BaseWindow):
         self._last_y, self._last_x = y, x  # Новая позиция последнего виджета
         return y, x
 
-    def place_task_widget(self) -> TaskWidgetView:
+    def place_task_widget(self, tooltip_style_sheet: str = '') -> TaskWidgetView:
         """Размещает виджет задач."""
-        self._tasks_widget = TaskWidgetView()
+        self._tasks_widget = TaskWidgetView(tooltip_style_sheet)
         self._tasks_widget_pos = self._place_settable_widget(self._tasks_widget)
         return self._tasks_widget
 
@@ -102,9 +102,9 @@ class UserSpaceWindow(BaseWindow):
         self._reminder_widget_pos = self._place_settable_widget(self._reminder_widget)
         return self._reminder_widget
 
-    def place_events_today_widget(self) -> EventsTodayWidget:
+    def place_events_today_widget(self, tooltip_style_sheet: str) -> EventsTodayWidget:
         """Размещает виджет многодневных событий."""
-        self._events_today_widget = EventsTodayWidget()
+        self._events_today_widget = EventsTodayWidget(tooltip_style_sheet=tooltip_style_sheet)
         self._schedule_layout.insertWidget(0, self._events_today_widget, 1)
         return self._events_today_widget
 

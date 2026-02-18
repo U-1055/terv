@@ -178,6 +178,7 @@ class QStructuredText(QWidget):
     def show_structured_tooltip(self, field: str, tooltip: dict, on_field: bool = True):
         menu = QMenu()
         wdg_action = QWidgetAction(menu)
+        menu.setStyleSheet(self.styleSheet())
         wdg_structured_text = QStructuredText(tooltip)
         wdg_structured_text.setStyleSheet(self.styleSheet())
         wdg_action.setDefaultWidget(wdg_structured_text)
@@ -221,6 +222,8 @@ class QToolTipLabel(QClickableLabel):
         action = QWidgetAction(menu)
         wdg_structured_text = QStructuredText(self._structured_text)
         wdg_structured_text.content_clicked.connect(self._on_tooltip_content_clicked)
+        wdg_structured_text.setStyleSheet(self.styleSheet())
+        menu.setStyleSheet(self.styleSheet())
         action.setDefaultWidget(wdg_structured_text)
         menu.addAction(action)
         menu.exec(self.mapToGlobal(pos))

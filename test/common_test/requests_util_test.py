@@ -7,7 +7,7 @@ from common_utils.log_utils.request_time_logger import RequestsTimeHandler
 
 @pytest.fixture()
 def requests_time_handler() -> RequestsTimeHandler:
-    return RequestsTimeHandler('../../log/requests_time.txt')
+    return RequestsTimeHandler('../../log/requests_time_load.txt')
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QHBoxLayout, QGridLayout, QVBoxLayout, QPushButton, QGraphicsScene
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QColor, QImage
+from PySide6.QtGui import QColor, QImage, QPixmap
 
 import logging
 
@@ -8,6 +8,7 @@ from client.src.base import GuiLabels, ObjectNames, GUIStyles
 from client.src.gui.windows.windows import BaseWindow
 from client.src.ui.ui_settings_window import Ui_Form
 from client.src.gui.widgets_view.settings_view import QThemeSwitcher
+import client.src.client_model.resources_rc
 
 logging.basicConfig(level=logging.DEBUG)
 

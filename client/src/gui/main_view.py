@@ -51,6 +51,10 @@ class MainWindow(QMainWindow):
         self._view.btn_worspaces.setText(GuiLabels.workspaces)
         self._view.btn_settings.setText(GuiLabels.settings)
 
+        self._view.btn_tasks.setEnabled(False)
+        self._view.btn_worspaces.setEnabled(False)
+        self._view.btn_calendar.setEnabled(False)
+
         self._view.btn_settings.clicked.connect(self.press_btn_open_settings)
         self._view.btn_userspace.clicked.connect(self.press_btn_open_userspace)
 

@@ -375,6 +375,6 @@ if __name__ == '__main__':
     engine = launch_db('sqlite:///database')
     s_maker = sessionmaker(engine)
     repo = DataRepository(s_maker)
-    print(repo.get_wf_daily_events_by_id(notified_id=1).content)
+    print(repo.get_wf_daily_events_by_id(notified_id=1, ids=[]).content)
 
 

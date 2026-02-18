@@ -48,8 +48,10 @@ class TaskWidgetView(BaseUserSpaceWidget):
     task_tooltip_content_clicked = Signal(str, tp.Any)  # Вызывается при нажатии на содержимое поля в подсказке задачи.
                                                                # Передаёт название поля и экземпляр QStructuredText
 
-    def __init__(self):
+    def __init__(self, tooltip_style_sheet: str = ''):
         super().__init__(DataStructConst.tasks_widget)
+        self._tooltip_style_sheet = tooltip_style_sheet
+
         self._view = UserSpaceTaskWidget()
         self._view.setupUi(self)
         self._view.label.setText(GuiLabels.tasks_widget)
@@ -82,6 +84,7 @@ class TaskWidgetView(BaseUserSpaceWidget):
 
         """
         widget = UserSpaceTask(name, type_, id_, task_description)
+        widget.setStyleSheet(self._tooltip_style_sheet)
         widget.tooltip_content_clicked.connect(self._on_tooltip_content_clicked)
         if type_ not in self._tasks_struct:  # Обновление структуры задач
             self._tasks_struct[type_] = {id_: widget}
@@ -419,8 +422,10 @@ class EventsTodayWidget(BaseWidget):
 
     event_tooltip_content_clicked = Signal(str, tp.Any)
 
-    def __init__(self, title: str = GuiLabels.events_today):
+    def __init__(self, title: str = GuiLabels.events_today, tooltip_style_sheet: str = ''):
         super().__init__()
+        self._tooltip_style_sheet = tooltip_style_sheet
+
         main_layout = QVBoxLayout()
         lbl = QLabel(title)
         self._wdg_layout = QVBoxLayout()
@@ -441,7 +446,7 @@ class EventsTodayWidget(BaseWidget):
     def add_event(self, title: str, date_start: str, date_end: str, wdg_description: dict = None) -> QToolTipLabel:
         """Добавляет событие в виджет."""
         wdg = QToolTipLabel(f'{title} ({date_start} - {date_end})', wdg_description)
-        wdg.setStyleSheet(self.styleSheet())
+        wdg.setStyleSheet(self._tooltip_style_sheet)
         wdg.tooltip_content_clicked.connect(self._on_event_content_clicked)
         self._wdg_layout.addWidget(wdg)
         return wdg

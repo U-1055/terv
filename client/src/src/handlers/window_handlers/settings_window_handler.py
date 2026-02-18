@@ -53,7 +53,7 @@ class SettingsWindowHandler(BaseWindowHandler):
     def _on_btn_log_out_pressed(self):
         access, refresh = self._model.get_access_token(), self._model.get_refresh_token()
         request = self._requester.recall_tokens(access, refresh)
-        request.finished.connect(lambda req: self._prepare_request(req, lambda _: self.press_btn_log_out))
+        self.press_btn_log_out()
         self._model.set_access_token('')
         self._model.set_refresh_token('')
         self._window.set_mode_log_in()

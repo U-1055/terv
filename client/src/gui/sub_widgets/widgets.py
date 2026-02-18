@@ -26,6 +26,7 @@ class UserSpaceTask(QWidget):
 
     def __init__(self, name: str, type_: str, id_: int, wdg_description: dict = None):
         super().__init__()
+        self._structured_text: QStructuredText | None
         if wdg_description:
             self._structured_text = QStructuredText(wdg_description)
             self._structured_text.content_clicked.connect(self._on_content_clicked)
@@ -43,9 +44,10 @@ class UserSpaceTask(QWidget):
 
         self._btn_complete = QPushButton()
         self._btn_complete.clicked.connect(self.complete_task)
+        self._btn_complete.setObjectName(ObjectNames.small_btn_complete)
 
-        main_layout.addWidget(self._lbl_name, 5)
         main_layout.addWidget(self._btn_complete, 1)
+        main_layout.addWidget(self._lbl_name, 5)
 
         self.setLayout(main_layout)
 
@@ -54,6 +56,7 @@ class UserSpaceTask(QWidget):
         action = QWidgetAction(menu)
         action.setDefaultWidget(self._structured_text)
         menu.addAction(action)
+        menu.setStyleSheet(self.styleSheet())
         menu.exec(self._lbl_name.mapToGlobal(pos))  # Переводим координаты виджета в абсолютные
 
     def _on_content_clicked(self, field: str, wdg: QStructuredText):
@@ -80,6 +83,11 @@ class UserSpaceTask(QWidget):
     def set_id(self, id_: int):
         self._id = id_
 
+    def setStyleSheet(self, styleSheet, /):
+        if self._structured_text:
+            self._structured_text.setStyleSheet(styleSheet)
+        super().setStyleSheet(styleSheet)
+
 
 class Reminder(QWidget):
     """Виджет напоминания."""
@@ -95,6 +103,7 @@ class Reminder(QWidget):
         self._line_edit_lbl.editingFinished.connect(self.edit)
         btn_complete = QPushButton()
         btn_complete.clicked.connect(self.complete)
+        btn_complete.setObjectName(ObjectNames.small_btn_complete)
 
         self._main_layout.addWidget(btn_complete)
         self._main_layout.addWidget(self._line_edit_lbl)
@@ -167,8 +176,10 @@ class QEventWidget(QWidget):
         self._menu = QMenu()  # Настройка меню (wdg_description, которое показывается при нажатии на кнопку)
         widget_action = QWidgetAction(self._menu)  # self._menu, а не просто локальная переменная, т.к иначе сборщик мусора удаляет её
         widget_action.setDefaultWidget(self._wdg_description)
+        self._menu.setStyleSheet(self.styleSheet())
         self._menu.addAction(widget_action)
         self._view.btn_show_details.setMenu(self._menu)
+        self._view.btn_show_details.setProperty('showMenuIndicator', False)
 
     def _on_btn_show_details_clicked(self):
         """Показать подробности (wdg_description)."""
@@ -240,6 +251,10 @@ class QEventWidget(QWidget):
 
     def btn_show_details_label(self) -> str:
         return self._btn_show_details_label
+    
+    def setStyleSheet(self, styleSheet: str, /):
+        self._menu.setStyleSheet(styleSheet)
+        super().setStyleSheet(styleSheet)
 
 
 if __name__ == '__main__':

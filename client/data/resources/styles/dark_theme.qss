@@ -1,7 +1,7 @@
 /*-----QWidget-----*/
 QWidget#wdg_border
 {
-	background-color: #121212;
+	background-color: #394996;
 	color: #ffffff;
 	border-color: #ffffff;
 	border-style: solid;
@@ -20,18 +20,6 @@ QFrame
 {
     border-width: 1px;
 	border-color: #121212;
-}
-
-
-/*-----QEventWidget-----*/
-QEventWidget
-{
-	background-color: #3893FF;
-	color: #ffffff;
-	border-color: #ffffff;
-	border-style: solid;
-	border-width: 2px;
-	border-radius: 3px
 }
 
 
@@ -161,6 +149,109 @@ QPushButton
 	border-radius: 3px;
 	border-color: #051a39;
 	padding: 5px;
+	cursor: hand2;
+}
+
+QPushButton#btn_show_details
+{
+    background-color: #394996;  /* Замена на этот цвет - костыль, подробнее в светлой теме */
+	color: #ffffff;
+	border-style: solid;
+	border-width: 0px;
+	border-radius: 3px;
+	border-color: #051a39;
+	padding: 5px;
+    image: url(:icons/dark_btn_show_details.png);
+
+}
+
+QPushButton::menu_indicator,
+QPushButton#btn_show_details::menu_indicator
+{
+    image: url(:icons/dark_square.png);
+}
+
+QPushButton#btn_show_details::pressed
+{
+    background-color:#394996;
+	color: #ffffff;
+	border-style: solid;
+	border-width: 0px;
+	border-radius: 3px;
+	border-color: #051a39;
+	padding: 5px;
+    image: url(:icons/dark_btn_show_details_pressed.png);
+
+}
+
+
+QPushButton#btn_show_details
+{
+    background-color: #394996;
+	color: #ffffff;
+	border-style: solid;
+	border-width: 0px;
+	border-radius: 3px;
+	border-color: #051a39;
+	padding: 5px;
+    image: url(:icons/dark_btn_show_details.png);
+
+}
+
+
+QPushButton#btn_show_details::hover
+{
+    background-color:#394996;
+	color: #ffffff;
+	border-style: solid;
+	border-width: 0px;
+	border-radius: 3px;
+	border-color: #051a39;
+	padding: 5px;
+    image: url(:icons/dark_btn_show_details_pressed.png);
+
+}
+
+
+QPushButton#small_btn_complete::pressed
+{
+    background-color:#121212;
+	color: #ffffff;
+	border-style: solid;
+	border-width: 0px;
+	border-radius: 3px;
+	border-color: #051a39;
+	padding: 5px;
+    image: url(:icons/dark_checked.png);
+
+}
+
+
+QPushButton#small_btn_complete
+{
+    background-color: #121212;
+	color: #ffffff;
+	border-style: solid;
+	border-width: 0px;
+	border-radius: 3px;
+	border-color: #051a39;
+	padding: 5px;
+    image: url(:icons/dark_unchecked.png);
+
+}
+
+
+QPushButton#small_btn_complete::hover
+{
+    background-color:#121212;
+	color: #ffffff;
+	border-style: solid;
+	border-width: 0px;
+	border-radius: 3px;
+	border-color: #051a39;
+	padding: 5px;
+    image: url(:icons/dark_checked.png);
+
 }
 
 
@@ -197,13 +288,6 @@ QPushButton::pressed
 	border-color: #051a39;
 	padding: 5px;
 
-}
-
-QPushButton::menu_indicator
-{
-    image: url(empty.png);
-    width: 0px;
-    height: 0px;
 }
 
 
@@ -560,7 +644,7 @@ QRadioButton::indicator::unchecked
 {
 	width: 20px;
 	height: 20px;
-    image: url(:icons/unchecked.png)
+    image: url(:icons/dark_unchecked.png)
 
 }
 
@@ -569,7 +653,7 @@ QRadioButton::indicator::checked
 {
 	width: 20px;
 	height: 20px;
-	image: url(:icons/checked.png)
+	image: url(:icons/dark_checked.png)
 
 }
 

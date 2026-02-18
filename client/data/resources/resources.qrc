@@ -4,7 +4,15 @@
     <file alias="dark">styles/dark_theme.qss</file>
   </qresource>
   <qresource prefix="">
-    <file>icons/checked.png</file>
-    <file>icons/unchecked.png</file>
+    <file>icons/light_checked.png</file>
+    <file>icons/light_unchecked.png</file>
+    <file>icons/dark_checked.png</file>
+    <file>icons/dark_unchecked.png</file>
+    <file>icons/light_btn_show_details.png</file>
+    <file>icons/dark_btn_show_details.png</file>
+    <file>icons/dark_btn_show_details_pressed.png</file>
+    <file>icons/light_btn_show_details_pressed.png</file>
+    <file>icons/dark_square.png</file>
+    <file>icons/light_square.png</file>
   </qresource>
 </RCC>

@@ -1,27 +1,37 @@
 from client.src.client_model.model import Model
 
 
-class TestModel(Model):
+class TestModel:
     """Класс для работы с файлами клиента."""
 
     def __init__(self, storage: str, data_root: str):
-        super().__init__(storage, data_root)
-        self._access_token = None
-        self._refresh_token = None
+        pass
+
+    def set_note(self, text: str):
+        pass
+
+    def get_note(self) -> str:
+        pass
 
     def set_access_token(self, token_: str):
-        self._access_token = token_
+        pass
 
     def set_refresh_token(self, token_: str):
-        self._refresh_token = token_
+        pass
 
     def get_access_token(self) -> str:
-        return self._access_token
+        pass
 
     def get_refresh_token(self) -> str:
-        return self._refresh_token
+        pass
 
-    def get_style(self) -> str:
+    def get_current_style(self) -> str:
+        pass
+
+    def set_current_style(self, style_name: str):
+        pass
+
+    def get_style(self, style_path: str) -> str:
         pass
 
     def put_widget_settings(self, wdg_type: str, x: int, y: int, x_size: int, y_size: int):
@@ -36,6 +46,28 @@ class TestModel(Model):
 
     def delete_widget_settings(self, wdg_type: str):
         """Удаляет настройки виджета."""
+        pass
+
+    def add_reminder(self, reminder: str):
+        """Добавляет напоминание."""
+        pass
+
+    def get_reminders(self) -> tuple[str, ...]:
+        pass
+
+    def delete_reminder(self, reminder: str):
+        pass
+
+    def set_reminders(self, reminders: tuple[str, ...] | list[str]):
+        pass
+
+    def clear_reminders(self):
+        pass
+
+    def set_style(self, style_name: str, style_color: str):
+        pass
+
+    def get_style_color(self, style_name: str) -> str:
         pass
 
 

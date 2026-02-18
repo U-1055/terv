@@ -1,6 +1,7 @@
 """Представление виджета регистрации"""
 
-from PySide6.QtWidgets import QWidget, QFormLayout, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QLabel
+from PySide6.QtWidgets import (QWidget, QFormLayout, QVBoxLayout, QPushButton, QHBoxLayout, QLineEdit, QLabel,
+                               QRadioButton, QCheckBox)
 from PySide6.QtCore import Signal
 
 from client.src.base import GuiLabels

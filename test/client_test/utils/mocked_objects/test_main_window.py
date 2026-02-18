@@ -14,6 +14,7 @@ class TestMainWindow(QObject):
 
     btn_open_personal_tasks_window_pressed = Signal()
     btn_open_userspace_pressed = Signal()
+    btn_open_settings_pressed = Signal()
     btn_update_pressed = Signal()
 
     def __init__(self):
@@ -51,15 +52,18 @@ class TestMainWindow(QObject):
         self.auth_window_sent.emit(auth_window)
         return auth_window
 
-    def open_personal_tasks_window(self) -> TestPersonalTasksWindow:
+    def open_personal_tasks_window(self, _) -> TestPersonalTasksWindow:
         return TestPersonalTasksWindow()
 
-    def open_userspace_window(self) -> TestUserSpaceWindow:
+    def open_userspace_window(self, _) -> TestUserSpaceWindow:
         return TestUserSpaceWindow()
 
-    def open_calendar_window(self) -> TestBaseWindow:
+    def open_calendar_window(self, _) -> TestBaseWindow:
         pass
 
     def open_window(self, window: TestBaseWindow):
         """Переключает окно в стековом виджете на указанное."""
+        pass
+
+    def set_style(self, style: str):
         pass

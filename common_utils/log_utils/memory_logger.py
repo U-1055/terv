@@ -19,6 +19,8 @@ def plot(path: str | Path):
         lines = file.readlines()
         data = []
         for line in lines:
+            if 'START CHECKING' in line:
+                continue
             spl_line = line.split('MEMORY: ')[1]
             spl_line = spl_line.split()[0]
             data.append(float(spl_line))
@@ -28,13 +30,55 @@ def plot(path: str | Path):
         pyplot.show()
 
 
-def check_memory(file_path: Path):
+def get_memory_data(path: str | Path) -> tuple[float, float, float]:
+    """
+    Возвращает данные о потребляемой памяти: (<среднее значение памяти>, <минимальное>, <максимальное>).
+
+    :param path: Путь к файлу с данными о памяти
+
+    """
+    with open(path) as file:
+        lines = file.readlines(10000)
+        memory_values = []
+
+        while lines:
+            for line in lines:
+                if ':' not in line or 'START CHECKING' in line:
+                    continue
+
+                memory = line.split(':')[-1].split()[0].strip()
+                memory_values.append(float(memory))
+
+            lines = file.readlines(10000)
+
+    middle = round(sum(memory_values) / len(memory_values), 2)
+    max_ = max(memory_values)
+    min_ = min(memory_values)
+
+    return middle, min_, max_
+
+
+def check_memory(file_path: Path, late: int = 2):
+    """
+    :param file_path: Путь к файлу.
+    :param late: Задержка между записями (в сек.). По умолчанию: 2.
+    """
     process = psutil.Process(os.getpid())
+
+    with open(file_path, 'a') as file:
+        file.write(f'START CHECKING: [{datetime.datetime.now()}]\n')
+
     while True:
-        time.sleep(2)
+        time.sleep(late)
         with open(file_path, 'a') as file:
             file.write(f'{datetime.datetime.now()}| MEMORY: {round(process.memory_info().rss / 1024 / 1024, 2)} MB\n')
 
 
 if __name__ == '__main__':
-    plot(Path('../../log/memory_server.txt'))
+    data = get_memory_data('../../log/memory_client.txt')
+    print(
+        f'MIDDLE: {data[0]} MB | MIN: {data[1]} MB | MAX: {data[2]} MB'
+    )
+    plot('../../log/memory_client.txt')
+
+

@@ -10,6 +10,7 @@ class TestBaseWindow(QObject):
 
 
 class TestUserSpaceWindow(TestBaseWindow):
+    btn_set_widgets_pressed = Signal()
 
     def place_task_widget(self) -> TestTaskWidgetView:
         return TestTaskWidgetView()

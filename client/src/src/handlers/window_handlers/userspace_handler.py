@@ -95,7 +95,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 self._show_info_to_tooltip(structured_text, workspace, field)
             elif isinstance(workspace, Request):
                 workspace.finished.connect(lambda request: self._prepare_request(request, lambda content: self._show_info_to_tooltip(structured_text, content, field)))
-        elif field == GuiLabels.creator:
+        elif field == GuiLabels.creator or field == GuiLabels.entrusted:
             creator_id = structured_text.content(field)[1:]
             creator = self._links_handler.get_user(creator_id)
             if isinstance(creator, cm.User):
@@ -150,6 +150,10 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                     description.update({GuiLabels.project: f'#{task.project_id}'})
                 if task.responsible:
                     description.update({GuiLabels.responsible: iterable_to_str(task.responsible, ',', '#')})
+                if task.entrusted_id:
+                    description.update({GuiLabels.entrusted: f'#{task.entrusted_id}'})
+                if task.executors:
+                    description.update({GuiLabels.executors: iterable_to_str(task.executors, ',', '#')})
 
             elif task.__tablename__ == ObjectTypes.personal_task:
                 task: cm.PersonalTask
@@ -175,13 +179,20 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._window.delete_schedule_widget()
         self._window.delete_events_today_widget()
 
+        current_style = self._model.get_current_style()
+        style = self._model.get_style(current_style)
+        if current_style == DataStructConst.dark_style:
+            marking_color = DataStructConst.light_marking_color
+        else:
+            marking_color = DataStructConst.dark_marking_color
+
         for widget_type in self._data_const.names_widgets:
             result = self._model.get_widget_settings(widget_type)
             if not result:
                 continue
 
             if widget_type == self._data_const.tasks_widget:
-                self._task_widget = self._window.place_task_widget()
+                self._task_widget = self._window.place_task_widget(style)
                 self._task_widget.task_completed.connect(self._on_task_completed)
                 self._get_task_handler_data()
                 logging.debug('Tasks widget placed.')
@@ -193,15 +204,9 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 self._notes_widget.text_changed.connect(self._on_note_changed)
                 logging.debug('Notes widget placed')
             if widget_type == self._data_const.schedule_widget:
-                current_style = self._model.get_current_style()
-                style = self._model.get_style(current_style)
-                if current_style == DataStructConst.dark_style:
-                    marking_color = DataStructConst.light_marking_color
-                else:
-                    marking_color = DataStructConst.dark_marking_color
 
                 schedule_widget = self._window.place_schedule_widget(marking_color, style)
-                events_today_widget = self._window.place_events_today_widget()
+                events_today_widget = self._window.place_events_today_widget(style)
                 self._schedule_view_handler = schedule_widget
                 self._events_today_widget = events_today_widget
                 self._get_schedule_widget_data()
@@ -277,7 +282,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             time_start = event.time_start.strftime('%H:%M')
             time_end = event.time_end.strftime('%H:%M')
             description = {
-                f'{GuiLabels.title}': f'{time_start}-{time_end}.',
+                f'{GuiLabels.title}': event.name,
                 f'{GuiLabels.description}': event.description,
                 f'{GuiLabels.lasting}': get_lasting(event.time_start, event.time_end)
             }
@@ -285,7 +290,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             if event.__tablename__ == ObjectTypes.wf_daily_event:
                 event: cm.WFDailyEvent
                 description.update({
-                    f'{GuiLabels.title}': f'{time_start}-{time_end}.',
+                    f'{GuiLabels.title}': event.name,
                     f'{GuiLabels.workspace}': f'#{event.workspace_id}',
                     f'{GuiLabels.creator}': f'#{event.creator_id}',
                     f'{GuiLabels.description}': event.description,
@@ -302,7 +307,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
             description = {
                 f'{GuiLabels.title}': event.name,
-                f'{GuiLabels.lasting}': f'{lasting.days} {GuiLabels.days}'
+                f'{GuiLabels.lasting}': f'{lasting.days} {GuiLabels.days}',
+                f'{GuiLabels.description}': event.description,
                            }
 
             if event.__tablename__ == ObjectTypes.wf_many_days_event:

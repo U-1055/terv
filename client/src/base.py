@@ -142,6 +142,7 @@ class GuiLabels:
     message = 'Сообщение'
     enter_account = 'Войдите в аккаунт'
     executors = 'Исполнители'
+    username = 'Имя пользователя'
 
     loading = 'Загрузка...'
     ready = 'Готово!'
@@ -151,8 +152,8 @@ class GUIStyles:
 
     normal_style = ''
     error_style = ''
-    base_font = QFont('Segoe UI', 9, 2, False)
-    bold_font = QFont('Segoe UI', 9, 2, False)
+    base_font = QFont('Segoe UI', 11, 4, False)
+    bold_font = QFont('Segoe UI', 11, 2, False)
     title_font = QFont('Segoe UI', 15, 2, False)
     bold_font.setBold(True)
 
@@ -175,5 +176,6 @@ db_fields_labels = {  # Соответствие между полями БД и
     DBFields.workspace: GuiLabels.workspace,
     DBFields.creator: GuiLabels.creator,
     DBFields.email: GuiLabels.email,
+    DBFields.username: GuiLabels.username
 }
 
