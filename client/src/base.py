@@ -105,7 +105,7 @@ class GuiLabels:
     used_login = 'Имя пользователя должно быть уникальным'
     fill_all = 'Необходимо заполнить все поля'
     incorrect_password = (f'Пароль должен быть длиной от {CommonStruct.min_password_length} до '
-                          f'{CommonStruct.max_password_length} символов и включать в себя буквы латинского алфавита, цифры и другие символы')
+                          f'{CommonStruct.max_password_length} символов \nи включать в себя буквы латинского \nалфавита, цифры и другие символы')
 
     register_complete = 'Регистрация прошла успешно. Теперь войдите в аккаунт'
     authentication_complete = 'Аутентификация прошла успешно!'
@@ -152,10 +152,14 @@ class GUIStyles:
 
     normal_style = ''
     error_style = ''
-    base_font = QFont('Segoe UI', 11, 4, False)
-    bold_font = QFont('Segoe UI', 11, 2, False)
+    base_font = QFont('Calibri', 12, 40, False)
+    bold_font = QFont('Calibri', 12, 22, False)
     title_font = QFont('Segoe UI', 15, 2, False)
     bold_font.setBold(True)
+
+    base_font_style = "'{font-family: 'Calibri'; font-size: 12pt;}'"
+    bold_font_style = "'{font-family: 'Calibri'; font-size: 12pt; font-weight: bold;}'"
+    title_font_style = "'{font-family: 'Calibri'; font-size: 20pt;}'"
 
 
 widgets_labels = {  # Соответствие названий виджетов надписям на них

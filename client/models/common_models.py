@@ -12,7 +12,7 @@ class User(Base):
 
     id: int
     username: str = Field(max_length=30)
-    email: str = Field(max_length=30)
+    email: str = Field(max_length=60)
 
     # РП и проекты
     created_workspaces: list[int]
@@ -51,7 +51,7 @@ class Workspace(Base):
 
     id: int
     creator_id: int 
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
     projects: list[int]
@@ -68,7 +68,7 @@ class Project(Base):
     id: int 
     workspace_id: int
     creator_id: int
-    name: str = Field(max_length=30) 
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
 
@@ -83,7 +83,7 @@ class WFTask(Base):
     work_direction_id: int | None  # Направление работы
     parent_task_id: int | None  # Родительская задача
 
-    name: str = Field(max_length=30) 
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
     plan_deadline: datetime.datetime
     fact_deadline: datetime.datetime | None
@@ -104,7 +104,7 @@ class PersonalTask(Base):
     owner_id: int
     work_direction_id: int | None
 
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
     plan_deadline: datetime.datetime
     fact_deadline: datetime.datetime | None
@@ -131,7 +131,7 @@ class PersonalWorkDirection(Base):
 
     id: int
     owner_id: int
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
 
     owner: int
     tasks: list[int]
@@ -144,7 +144,7 @@ class PersonalDailyEvent(Base):
     id: int
     owner_id: int
 
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
     date: datetime.date
     time_start: datetime.time
@@ -157,7 +157,7 @@ class PersonalManyDaysEvent(Base):
 
     id: int
     owner_id: int
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
     datetime_start: datetime.datetime
     datetime_end: datetime.datetime
@@ -171,7 +171,7 @@ class WFDailyEvent(Base):
     workspace_id: int 
     creator_id: int 
 
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
     date: datetime.date
     time_start: datetime.time
@@ -188,7 +188,7 @@ class WFManyDaysEvent(Base):
     workspace_id: int
     creator_id: int
 
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
     datetime_start: datetime.datetime
     datetime_end: datetime.datetime
@@ -203,7 +203,7 @@ class WFBaseCategory(Base):
     id: int
     workspace_id: int
     parent_category_id: int
-    name: str = Field(max_length=30)
+    name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
     child_categories: list[int]

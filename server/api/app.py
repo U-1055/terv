@@ -118,7 +118,7 @@ def register():
                                  ),
                                  error_id=ErCodes.existing_login.value
                                  )
-        by_email = repo.get_users_by_email(emails=email)
+        by_email = repo.get_users_by_email(emails=[email])
         if by_email.content:  # Если есть пользователь с таким же email'ом
             return form_response(400,
                                  APIAn.invalid_data_error(
@@ -207,7 +207,7 @@ def personal_task_status(task_id: int):
     if request.method == 'GET':
         pass
     elif request.method == 'PUT':
-        pass
+        repo.delete_personal_tasks([task_id])
 
     return response
 
@@ -302,8 +302,8 @@ def wf_task_status(task_id: int):
 
     if request.method == 'GET':
         pass
-    elif request.method == 'PUT':
-        pass
+    elif request.method == 'PUT':  # ToDo: костыль, убрать
+        repo.delete_wf_tasks_by_id([task_id])
 
     return form_response(200, 'OK')
 

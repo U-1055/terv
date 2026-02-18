@@ -40,7 +40,7 @@ def run_main_config(check_ram: bool = False):
     if check_ram:
         thread = threading.Thread(target=check_memory, args=[Path('../log/memory_client.txt')], daemon=True)
         thread.start()
-    requester = Requester('http://localhost:80')
+    requester = Requester('http://localhost:5000')
 
     launch(
         Model, (Path('data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst()),

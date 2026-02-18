@@ -37,6 +37,9 @@ class SettingsWindowHandler(BaseWindowHandler):
         self._window.set_mode_log_in()
         self._set_theme_switcher()
 
+    def _set_user_data_from_request(self, user: tuple[dict, ...]):
+        self.set_user_data(cm.User(**user[0]))
+
     def _set_theme_switcher(self):
         self._theme_switcher.put_theme(DataStructConst.light, DataStructConst.light_main_color)
         self._theme_switcher.put_theme(DataStructConst.dark, DataStructConst.dark_main_color)
@@ -60,6 +63,11 @@ class SettingsWindowHandler(BaseWindowHandler):
 
     def _on_btn_log_in_pressed(self):
         self.press_btn_log_in()
+
+    def update_state(self):
+        access = self._model.get_access_token()
+        request = self._requester.get_user_info(access)
+        request.finished.connect(lambda request_: self._prepare_request(request_, self._set_user_data_from_request))
 
     def set_mode_log_in(self):
         self._window.set_mode_log_in()

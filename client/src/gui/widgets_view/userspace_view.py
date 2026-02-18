@@ -271,6 +271,7 @@ class ScheduleWidgetView(BaseView):
 
         rect = scene.addWidget(event)  # Настройка виджета
         rect.setPos(h_padding, v_padding)
+        rect.setGeometry(h_padding, v_padding, self._graphics_size.width() // 1.2, height_steps * self._sub_step)
 
         rect.setFlag(rect.GraphicsItemFlag.ItemIsPanel)
 
@@ -512,10 +513,9 @@ if __name__ == '__main__':
         'Участвуют': 'Тот и этот'
     }
 
-    widget = TaskWidgetView()
+    widget = ScheduleWidgetView()
     for i in range(1):
-        widget.add_task('1', 12, '1:1', {'STREVAS':"ASASDASD"})
-    widget.task_tooltip_content_clicked.connect(lambda field, _: print(field))
+        widget.add_event(1, '12', '1:1', '09:00', '14:00')
 
     setup_gui(widget)
 

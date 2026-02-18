@@ -63,6 +63,7 @@ class BaseWindowHandler(QObject):
             data_get_request.finished.connect(lambda _: calling_func())
 
     def _set_new_tokens(self, tokens: dict):
+
         access_token = tokens.get(CommonStruct.access_token)
         refresh_token = tokens.get(CommonStruct.refresh_token)
         self._model.set_access_token(access_token)

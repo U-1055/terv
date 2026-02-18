@@ -64,6 +64,8 @@ class RequestsTimeHandler:
                 requests = dict()
 
                 for line in lines:  # Составляем словарь
+                    if ':' not in line:
+                        continue
                     line = LogLine(line)
                     if line.request not in requests and line.type_ == self.started:
                         requests[line.request] = [line.time]
@@ -118,7 +120,7 @@ class LogLine:
 
 
 if __name__ == '__main__':
-    path = '../../log/requests_time.txt'
+    path = '../../log/requests_time_load.txt'
     util = RequestsTimeHandler(path)
     print(util.get_time_of_requests(1000))
 

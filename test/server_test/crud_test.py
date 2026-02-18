@@ -18,6 +18,7 @@ base_params = {
     EMAIL: 'test_email'
               }
 
+
 @pytest.fixture()
 def request_get(request: pytest.FixtureRequest) -> Request:
     endpoint = request.node.callspec.params.get('endpoint')
@@ -46,7 +47,9 @@ def wait(future: concurrent.futures.Future) -> tp.Any:
 })
 @pytest.mark.parametrize(
     ['endpoint'],
-    [['http://localhost:5000/wf_tasks']]
+    [['http://localhost:5000/wf_tasks', 'http://localhost:5000/personal_tasks', 'http://localhost:5000/wf_many_days_events',
+      'http://localhost:5000/personal_many_days_events', 'http://localhost:5000/wf_daile_events',
+      'http://localhost:5000/wf_many_days_events']]
 )
 def test_data_receiving(client_requester: Requester,
                         set_config,
@@ -55,8 +58,9 @@ def test_data_receiving(client_requester: Requester,
                         access_token: str,
                         endpoint: str):
 
-    future: asyncio.Future = client_requester.make_custom_request(request_get)
-    response = wait(future)
+    request = client_requester.make_custom_request(request_get)
+    request.wait_until_complete()
+    response = request.result()
 
     assert response.content is not None, (f'Request to endpoint: {endpoint} has not returned anything.'
                                           f'Request: {request_get}. Response: {response}.')

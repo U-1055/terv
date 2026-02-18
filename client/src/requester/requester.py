@@ -22,7 +22,7 @@ from client.utils.timeout_list import TimeoutList
 from common_utils.log_utils.request_time_logger import RequestsTimeHandler
 
 CHECK_TIME = True  # ToDo: при попытке импорта из точки входа возникает круговой импорт !!!МЕНЯТЬ ПУТЬ ПРИ ЗАПУСКЕ НАГРУЗОЧНОГО ТЕСТА!!!
-request_time_handler = RequestsTimeHandler('../../../log/requests_time.txt')
+request_time_handler = RequestsTimeHandler('../log/requests_time_load.txt')
 
 
 def run_loop(loop: asyncio.AbstractEventLoop):
@@ -81,6 +81,9 @@ class Requester(IRequests):
 
         if message != 'OK':
             assert error_code
+
+        if response.http_code == 502:
+            raise err.NetworkTimeoutError('Bad Gateway', request)
 
         if error_code:  # Вызов исключения по коду
             logging.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. InternalRequest:'
@@ -190,12 +193,17 @@ class Requester(IRequests):
 
             return Response(request, server_response.content, server_response.records_left,
                             server_response.last_record_num)
+        except err.NetworkTimeoutError as e:
+            logging.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
+            raise e
         except err.APIError as e:  # Обработка ошибок API
             logging.warning(f'Excepted error {e} during making request {str(InternalRequest)}')
             raise e
         except (httpx.ConnectError, httpx.ReadError, httpx.WriteError) as e:  # Обработка ошибок сети
             logging.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
             raise err.get_network_error(e, request)
+
+
 
     @synchronized_request
     async def make_custom_request(self, request: InternalRequest) -> Response:
@@ -303,12 +311,12 @@ class Requester(IRequests):
 
         path = f'{self._server}/users/{user_id}/wf_daily_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
-                              query_params={
-                              CommonStruct.limit: limit,
-                              CommonStruct.offset: offset,
-                              CommonStruct.ids: wf_daily_events_ids
-                          }
-                          )
+                                  query_params={
+                                      CommonStruct.limit: limit,
+                                      CommonStruct.offset: offset,
+                                      CommonStruct.ids: wf_daily_events_ids
+                                  }
+                                  )
         if date:
             request.query_params.update({CommonStruct.date: date})
 

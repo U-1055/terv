@@ -31,11 +31,16 @@ class RegisterView(BaseView):
         self._line_edit_login = QLineEdit()
         self._line_edit_email = QLineEdit()
 
+        self._check_hide = QRadioButton(GuiLabels.hide_password)
+        self._check_hide.clicked.connect(self._on_btn_hide_pressed)
+        self._check_hide.click()
+
         self._lbl_message = QLabel()
 
         self._form_layout.addRow(self._labels.login, self._line_edit_login)
         self._form_layout.addRow(self._labels.password, self._line_edit_password)
         self._form_layout.addRow(self._labels.email, self._line_edit_email)
+        self._form_layout.addRow(self._check_hide)
 
         self._main_layout.addLayout(self._form_layout, 5)
         self._main_layout.addWidget(self._lbl_message, 1)
@@ -44,6 +49,12 @@ class RegisterView(BaseView):
         self._main_layout.addWidget(btn_to_auth, 1, alignment=al.AlignLeft)
 
         self.setLayout(self._main_layout)
+
+    def _on_btn_hide_pressed(self):
+        if self._check_hide.isChecked():
+            self._line_edit_password.setEchoMode(QLineEdit.EchoMode.Password)
+        else:
+            self._line_edit_password.setEchoMode(QLineEdit.EchoMode.Normal)
 
     def press_btn_register(self):
         self.btn_register_pressed.emit()

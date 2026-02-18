@@ -10,6 +10,7 @@ from test.client_test.utils.mocked_objects.test_model import TestModel
 from test.client_test.utils.mocked_objects.test_requester import TestRequester
 from client.src.src.handlers.window_handlers.userspace_handler import UserSpaceWindowHandler
 from client.src.src.handlers.window_handlers.personal_tasks_handler import PersonalTasksWindowHandler
+from test.client_test.utils.mocked_objects.test_links_handler import TestLinksHandler, TestCashManager
 
 
 @pytest.mark.parametrize(
@@ -25,8 +26,8 @@ def test_windows_switching(timeout: int):
 
     view = TestMainWindow()
     requester = Requester('')
-    model = TestModel('', '', DataStructConst())
-    logic = Logic(view, model, requester, timeout)
+    model = TestModel('', '')
+    logic = Logic(view, model, TestLinksHandler('', TestCashManager), requester, timeout)
 
     view.press_btn_open_userspace()
     opened_handler = logic._opened_now

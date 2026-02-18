@@ -50,6 +50,7 @@ class MainWindow(QMainWindow):
         self._view.btn_calendar.setText(GuiLabels.calendar)
         self._view.btn_worspaces.setText(GuiLabels.workspaces)
         self._view.btn_settings.setText(GuiLabels.settings)
+        self._view.btn_userspace.setText('Мое пространство')
 
         self._view.btn_tasks.setEnabled(False)
         self._view.btn_worspaces.setEnabled(False)
