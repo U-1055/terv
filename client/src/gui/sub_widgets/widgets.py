@@ -101,6 +101,7 @@ class Reminder(QWidget):
         self._main_layout = QHBoxLayout()
         self._line_edit_lbl = QMouseActivatingLineEdit(label, max_length)
         self._line_edit_lbl.editingFinished.connect(self.edit)
+        self._line_edit_lbl.textEdited.connect(self.edit)
         btn_complete = QPushButton()
         btn_complete.clicked.connect(self.complete)
         btn_complete.setObjectName(ObjectNames.small_btn_complete)
@@ -111,6 +112,7 @@ class Reminder(QWidget):
 
     def edit(self):
         name = self._line_edit_lbl.text()
+        print(name)
         self.edited.emit(self.name, name)
         self.name = name
 
@@ -122,6 +124,9 @@ class Reminder(QWidget):
 
     def setReadOnly(self, arg: bool):
         self._line_edit_lbl.setReadOnly(arg)
+
+    def text(self) -> str:
+        return self._line_edit_lbl.text()
 
 
 class QEventWidget(QWidget):

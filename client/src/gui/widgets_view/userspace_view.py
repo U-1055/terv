@@ -379,6 +379,7 @@ class ReminderWidgetView(BaseUserSpaceWidget):
         reminder.setFocus()
         reminder.setReadOnly(False)
         self.reminder_added.emit(reminder.name)
+        reminder.edited.connect(self.reminder_edited)
 
     def edit_reminder(self, last_name: str, next_name: str):
         self.reminder_edited.emit(last_name, next_name)

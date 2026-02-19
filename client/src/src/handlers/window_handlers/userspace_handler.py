@@ -301,8 +301,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
         for event in many_days_events:
             event: cm.WFManyDaysEvent
-            date_start = event.datetime_start.date().strftime(DataStructConst.gui_month_date_format)
-            date_end = event.datetime_end.date().strftime(DataStructConst.gui_month_date_format)
+            date_start = event.datetime_start.date().strftime(DataStructConst.gui_day_date_format)
+            date_end = event.datetime_end.date().strftime(DataStructConst.gui_day_date_format)
             lasting = event.datetime_end.date() - event.datetime_start.date()
 
             description = {

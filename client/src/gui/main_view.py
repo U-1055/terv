@@ -254,7 +254,8 @@ def setup_gui(root: MainWindow, app: QApplication):
     root.setGeometry(padx, pady, root_width, root_height)
     root.setMinimumSize(root_width, root_height)
     root.setWindowTitle('terv')
-    root.show()
+
+    root.showMaximized()
 
     app.exec()
 

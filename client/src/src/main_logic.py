@@ -69,7 +69,7 @@ class Logic:
         self._view.btn_open_settings_pressed.connect(self._open_settings)
 
         self._timer.timeout.connect(self._update_current_window)
-        self._timer.start(1000 * 60)
+        self._timer.start(1000 * 18000)
         self._timer.singleShot(100, self._open_userspace)
 
     def _on_theme_changed(self, style_name: str):

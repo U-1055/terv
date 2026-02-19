@@ -170,7 +170,6 @@ if __name__ == '__main__':
                     wf_many_days_events_params=(('Окончательная доработка проекта', 'Оформить результаты', datetime.date(2026, 2, 14), datetime.date(2026, 2, 20)
                                                      ), ))
 
-
     repo = DataRepository(sessionmaker(bind=engine))
     print(repo.get_wf_daily_events_by_id())
 
