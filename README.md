@@ -4,6 +4,7 @@ Terv is a task-tracker for small working groups, like start-ups. It has been in 
 2. Show your tasks and events scheduled this day.
 3. Show information about tasks and events.
 4. Show information about an object by click on its ID.
+   
 Now I develop the task-list.
 
 The stack is Python 3.12,  Pyside (Qt Widgets), Flask, SQLAlchemy (with SQLite).
