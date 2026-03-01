@@ -13,13 +13,13 @@ from server.database.schemes.common_schemes import UserSchema
 test_database_path = 'sqlite:///utils/test_database/database'
 
 TEST_LOGIN = 'username'
-TEST_WF_NAME = 'workspace'
+TEST_ws_NAME = 'workspace'
 
 
 @pytest.fixture(scope='session')
 def config_db() -> sqlalchemy.orm.session.sessionmaker:  # Устанавливает конфиг БД для теста, возвращает sessionmaker
     db_manager = DatabaseManager(test_database_path)
-    db_manager.set_repository_test_config(TEST_LOGIN, TEST_WF_NAME, 15)
+    db_manager.set_repository_test_config(TEST_LOGIN, TEST_ws_NAME, 15)
     return db_manager.session_maker
 
 
@@ -45,17 +45,17 @@ def test_get_workspace(repository: DataRepository, exp_len: int):
 
 
 def test_date_format(repository: DataRepository):
-    wf_tasks = repository.get_wf_tasks_by_id()
-    for task in wf_tasks.content:
+    ws_tasks = repository.get_ws_tasks_by_id()
+    for task in ws_tasks.content:
         try:
             datetime.datetime.strptime(str(task.get(DBFields.created_at)), CommonStruct.datetime_format)
         except ValueError:
-            assert False, (f'Datetime format of {DBFields.created_at} field of WFTask (id: {task.get(DBFields.id)})'
+            assert False, (f'Datetime format of {DBFields.created_at} field of WSTask (id: {task.get(DBFields.id)})'
                            f'must be {CommonStruct.datetime_format}.')
         try:
             datetime.datetime.strptime(str(task.get(DBFields.updated_at)), CommonStruct.datetime_format)
         except ValueError:
-            assert False, (f'Datetime format of {DBFields.updated_at} field of WFTask (id: {task.get(DBFields.id)})'
+            assert False, (f'Datetime format of {DBFields.updated_at} field of WSTask (id: {task.get(DBFields.id)})'
                            f'must be {CommonStruct.datetime_format}.')
 
 
@@ -77,7 +77,7 @@ def test_deserializing_links(repository: DataRepository):
 
     with repository._session_maker() as session, session.begin():  # Получаем модели
         result = session.execute(select(Workspace)).scalars()
-        workspaces = [wf for wf in result]
+        workspaces = [ws for ws in result]
         deserialized_users_before = [schema.dump(user) for user in workspaces[0].users]  # До перезаписи
 
     repository.update_workspaces([workspace])  # Перезаписываем
@@ -87,7 +87,7 @@ def test_deserializing_links(repository: DataRepository):
 
     with repository._session_maker() as session, session.begin():
         result = session.execute(select(Workspace)).scalars()
-        workspaces = [wf for wf in result]
+        workspaces = [ws for ws in result]
         deserialized_users_after = [schema.dump(user) for user in workspaces[0].users]  # После перезаписи
 
         assert deserialized_users_after == deserialized_users_before, (f'Deserialized users before: {deserialized_users_before}.'

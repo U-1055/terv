@@ -286,9 +286,9 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_wf_tasks_by_id(self, ids: tp.Iterable[int], access_token: str,
+    async def get_ws_tasks_by_id(self, ids: tp.Iterable[int], access_token: str,
                                        limit: int = None, offset: int = None) -> Response:
-        path = f'{self._server}/wf_tasks'
+        path = f'{self._server}/ws_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={CommonStruct.limit: limit, CommonStruct.offset: offset, CommonStruct.ids: ids})
         response = await self._choose_request_type(request, limit)
@@ -306,15 +306,15 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_wf_daily_events_by_user(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
+    async def get_ws_daily_events_by_user(self, user_id: int, ws_daily_events_ids: list[int], access_token: str,
                                           date: datetime.date = None, limit: int = None, offset: int = 0):
 
-        path = f'{self._server}/users/{user_id}/wf_daily_events'
+        path = f'{self._server}/users/{user_id}/ws_daily_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={
                                       CommonStruct.limit: limit,
                                       CommonStruct.offset: offset,
-                                      CommonStruct.ids: wf_daily_events_ids
+                                      CommonStruct.ids: ws_daily_events_ids
                                   }
                                   )
         if date:
@@ -324,15 +324,15 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_wf_many_days_events_by_user(self, user_id: int, wf_many_days_events_ids: list[int], access_token: str,
+    async def get_ws_many_days_events_by_user(self, user_id: int, ws_many_days_events_ids: list[int], access_token: str,
                                               date: datetime.date = None, limit: int = None, offset: int = None):
 
-        path = f'{self._server}/users/{user_id}/wf_many_days_events'
+        path = f'{self._server}/users/{user_id}/ws_many_days_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                           query_params={
                               CommonStruct.limit: limit,
                               CommonStruct.offset: offset,
-                              CommonStruct.ids: wf_many_days_events_ids
+                              CommonStruct.ids: ws_many_days_events_ids
                           }
                           )
         if date:
@@ -375,17 +375,17 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_wf_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
+    async def get_ws_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
                                    offset: int = None):
-        path = f'{self._server}/users/{user_id}/wf_tasks'
+        path = f'{self._server}/users/{user_id}/ws_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={CommonStruct.limit: limit, CommonStruct: offset, CommonStruct.date: date})
         response = await self._choose_request_type(request, limit)
         return response
 
     @synchronized_request
-    async def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
-        path = f'{self._server}/wf_tasks'
+    async def get_ws_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
+        path = f'{self._server}/ws_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={
                                   CommonStruct.limit: limit,
@@ -395,9 +395,9 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def set_wf_task_status(self, wf_task_id: int, status: str, access_token: str):
+    async def set_ws_task_status(self, ws_task_id: int, status: str, access_token: str):
         """Изменяет статус задачи РП."""
-        path = f'{self._server}/wf_tasks/{wf_task_id}/status'
+        path = f'{self._server}/ws_tasks/{ws_task_id}/status'
         request = InternalRequest(path, InternalRequest.PUT, query_params={CommonStruct.task_status: status}, headers={'Authorization': access_token})
         response = await self._make_request(request)
         return response

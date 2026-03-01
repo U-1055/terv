@@ -149,25 +149,25 @@ class DataRepository:
             if result:
                 return result[0].hashed_password
 
-    def update_wf_roles(self, models: tp.Iterable[dict]):
-        self._execute_update(models, roles.WFRole)
+    def update_ws_roles(self, models: tp.Iterable[dict]):
+        self._execute_update(models, roles.wsRole)
 
-    def get_wf_daily_event_by_notified_id(self, notified_id: int, limit: int = None, offset: int = 0,
+    def get_ws_daily_event_by_notified_id(self, notified_id: int, limit: int = None, offset: int = 0,
                                           require_last_num: bool = False) -> 'RepoSelectResponse':
-        query = select(cm.WFDailyEvent).where(cm.WFDailyEvent.notified.contains(notified_id))
+        query = select(cm.WSDailyEvent).where(cm.WSDailyEvent.notified.contains(notified_id))
         return self._execute_select(query, limit, offset, require_last_num)
 
-    def get_wf_tasks_by_id(self, wf_tasks_ids: list[int] = None, limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoSelectResponse':
-        query = select(cm.WFTask)
-        if wf_tasks_ids:
-            query = query.where(cm.WFTask.id.in_(wf_tasks_ids))
+    def get_ws_tasks_by_id(self, ws_tasks_ids: list[int] = None, limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoSelectResponse':
+        query = select(cm.WSTask)
+        if ws_tasks_ids:
+            query = query.where(cm.WSTask.id.in_(ws_tasks_ids))
 
         return self._execute_select(query, limit, offset, require_last_num)
 
     def get_role_by_user_id(self, workspace_id: int, user_id: int):
         """Получает роль пользователя в проекте."""
-        query = (select(roles.WFRole).where(roles.WFRole.workspace_id == workspace_id).
-                 where(roles.WFRole.users.any(cm.User.id == user_id)))
+        query = (select(roles.wsRole).where(roles.wsRole.workspace_id == workspace_id).
+                 where(roles.wsRole.users.any(cm.User.id == user_id)))
         return self._execute_select(query)
 
     def get_workspace_default_role_id(self, workspace_id: int) -> int:
@@ -183,18 +183,18 @@ class DataRepository:
                         limit: int = None,
                         offset: int = None,
                         require_last_num: bool = False) -> 'RepoSelectResponse':
-        """Получает роль РП (WFRole) по её ID."""
-        query = select(roles.WFRole).where(roles.WFRole.id.in_(ids))
+        """Получает роль РП (wsRole) по её ID."""
+        query = select(roles.wsRole).where(roles.wsRole.id.in_(ids))
         return self._execute_select(query, limit, offset, require_last_num)
 
-    def update_wf_tasks(self, models: list[cm.WFTask]):
-        self._execute_update(models, cm.WFTask)
+    def update_ws_tasks(self, models: list[cm.WSTask]):
+        self._execute_update(models, cm.WSTask)
 
-    def delete_wf_tasks_by_id(self, ids: list[int]):
-        self._execute_delete(ids, cm.WFTask)
+    def delete_ws_tasks_by_id(self, ids: list[int]):
+        self._execute_delete(ids, cm.WSTask)
 
-    def update_personal_tasks(self, models: list[cm.WFTask]):
-        self._execute_update(models, cm.WFTask)
+    def update_personal_tasks(self, models: list[cm.WSTask]):
+        self._execute_update(models, cm.WSTask)
 
     def delete_workspaces(self, workspaces_ids: tp.Iterable[int]):
         self._execute_delete(workspaces_ids, cm.Workspace)
@@ -205,7 +205,7 @@ class DataRepository:
     def add_users(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
         return self._execute_insert(models, cm.User)
 
-    def add_wf_tasks(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+    def add_ws_tasks(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
         return self._execute_insert(models, cm.User)
 
     def delete_users(self, ids: tp.Iterable[int]):
@@ -221,30 +221,30 @@ class DataRepository:
         self._execute_delete(ids, cm.PersonalTask)
 
     def get_task_permissions(self, task_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WFRoleTask.permissions).
-                 where(roles.WFRoleTask.task_id == task_id).
-                 where(roles.WFRoleTask.role_id == role_id)
+        query = (select(roles.wsRoleTask.permissions).
+                 where(roles.wsRoleTask.task_id == task_id).
+                 where(roles.wsRoleTask.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     def get_project_permissions(self, project_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WFRoleProject.permissions).
-                 where(roles.WFRoleProject.project_id == project_id).
-                 where(roles.WFRoleProject.role_id == role_id)
+        query = (select(roles.wsRoleProject.permissions).
+                 where(roles.wsRoleProject.project_id == project_id).
+                 where(roles.wsRoleProject.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     def get_document_permissions(self, document_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WFRoleDocument.permissions).
-                 where(roles.WFRoleDocument.document_id == document_id).
-                 where(roles.WFRoleDocument.role_id == role_id)
+        query = (select(roles.wsRoleDocument.permissions).
+                 where(roles.wsRoleDocument.document_id == document_id).
+                 where(roles.wsRoleDocument.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     def get_daily_event_permissions(self, daily_event_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WFRoleDailyEvent.permissions).
-                 where(roles.WFRoleDailyEvent.daily_event_id == daily_event_id).
-                 where(roles.WFRoleDailyEvent.role_id == role_id)
+        query = (select(roles.wsRoleDailyEvent.permissions).
+                 where(roles.wsRoleDailyEvent.daily_event_id == daily_event_id).
+                 where(roles.wsRoleDailyEvent.role_id == role_id)
                  )
         return self._get_permissions(query)
 
@@ -255,45 +255,45 @@ class DataRepository:
             query = query.where(cm.PersonalTask.id.in_(ids))
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
-    def get_wf_daily_events_by_id(self, ids: tp.Iterable[int] | list[int] = None, notified_id: int = None,
+    def get_ws_daily_events_by_id(self, ids: tp.Iterable[int] | list[int] = None, notified_id: int = None,
                                   limit: int = None, offset: int = None, require_last_num: bool = False,
                                   serialize: bool = True) -> 'RepoSelectResponse':
-        query = select(cm.WFDailyEvent)
+        query = select(cm.WSDailyEvent)
         if ids:
-            query = query.where(cm.WFDailyEvent.id.in_(ids))
+            query = query.where(cm.WSDailyEvent.id.in_(ids))
         if notified_id:
-            query = query.where(cm.WFDailyEvent.notified.any(cm.User.id == notified_id))
+            query = query.where(cm.WSDailyEvent.notified.any(cm.User.id == notified_id))
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
-    def add_wf_daily_events(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
-        return self._execute_insert(models, cm.WFDailyEvent)
+    def add_ws_daily_events(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.WSDailyEvent)
 
-    def delete_wf_daily_events(self, ids: tp.Iterable[int]):
-        self._execute_delete(ids, cm.WFDailyEvent)
+    def delete_ws_daily_events(self, ids: tp.Iterable[int]):
+        self._execute_delete(ids, cm.WSDailyEvent)
 
-    def update_wf_daily_events(self, models: tp.Iterable[dict]):
-        self._execute_update(models, cm.WFDailyEvent)
+    def update_ws_daily_events(self, models: tp.Iterable[dict]):
+        self._execute_update(models, cm.WSDailyEvent)
 
-    def get_wf_many_days_events_by_id(self, ids: tp.Iterable[int] = None, notified_id: int = None, limit: int = None,
+    def get_ws_many_days_events_by_id(self, ids: tp.Iterable[int] = None, notified_id: int = None, limit: int = None,
                                       offset: int = None, require_last_num: bool = False,
                                       serialize: bool = True) -> 'RepoSelectResponse':
-        query = select(cm.WFManyDaysEvent)
+        query = select(cm.WSManyDaysEvent)
         if ids:
-            query = query.where(cm.WFManyDaysEvent.id.in_(ids))
+            query = query.where(cm.WSManyDaysEvent.id.in_(ids))
         if notified_id:
-            query = query.where(cm.WFManyDaysEvent.notified.any(cm.User.id == notified_id))
+            query = query.where(cm.WSManyDaysEvent.notified.any(cm.User.id == notified_id))
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
-    def add_wf_many_days_events(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
-        return self._execute_insert(models, cm.WFManyDaysEvent)
+    def add_ws_many_days_events(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.WSManyDaysEvent)
 
-    def delete_wf_many_days_events(self, ids: tp.Iterable[int]):
-        self._execute_delete(ids, cm.WFManyDaysEvent)
+    def delete_ws_many_days_events(self, ids: tp.Iterable[int]):
+        self._execute_delete(ids, cm.WSManyDaysEvent)
 
-    def update_wf_many_days_events(self, models: tp.Iterable[dict]):
-        self._execute_update(models, cm.WFManyDaysEvent)
+    def update_ws_many_days_events(self, models: tp.Iterable[dict]):
+        self._execute_update(models, cm.WSManyDaysEvent)
 
     def get_personal_daily_events_by_id(self, ids: tp.Iterable[int], owner_id: int = None, limit: int = None,
                                         offset: int = None, require_last_num: bool = False,
@@ -335,21 +335,21 @@ class DataRepository:
         self._execute_update(models, cm.PersonalManyDaysEvent)
 
     def get_many_days_event_permissions(self, many_days_event_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WFRoleManyDaysEvent.permissions).
-                 where(roles.WFRoleManyDaysEvent.many_days_event_id == many_days_event_id).
-                 where(roles.WFRoleManyDaysEvent.role_id == role_id)
+        query = (select(roles.wsRoleManyDaysEvent.permissions).
+                 where(roles.wsRoleManyDaysEvent.many_days_event_id == many_days_event_id).
+                 where(roles.wsRoleManyDaysEvent.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     def get_role_by_id_workspace(self, id_: int, workspace_id: int) -> 'RepoSelectResponse':
-        query = select(roles.WFRole).where(roles.WFRole.id == id_).where(roles.WFRole.workspace_id == workspace_id)
+        query = select(roles.wsRole).where(roles.wsRole.id == id_).where(roles.wsRole.workspace_id == workspace_id)
         return self._execute_select(query)
 
     def update_workspaces(self, models: list[dict]):
         self._execute_update(models, cm.Workspace)
 
-    def add_wf_roles(self, models: list[dict]) -> 'RepoInsertResponse':
-        return self._execute_insert(models, roles.WFRole)
+    def add_ws_roles(self, models: list[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, roles.wsRole)
 
 
 @dataclass
@@ -375,6 +375,6 @@ if __name__ == '__main__':
     engine = launch_db('sqlite:///database')
     s_maker = sessionmaker(engine)
     repo = DataRepository(s_maker)
-    print(repo.get_wf_daily_events_by_id(notified_id=1, ids=[]).content)
+    print(repo.get_ws_daily_events_by_id(notified_id=1, ids=[]).content)
 
 

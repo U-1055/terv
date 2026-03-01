@@ -47,9 +47,9 @@ def wait(future: concurrent.futures.Future) -> tp.Any:
 })
 @pytest.mark.parametrize(
     ['endpoint'],
-    [['http://localhost:5000/wf_tasks', 'http://localhost:5000/personal_tasks', 'http://localhost:5000/wf_many_days_events',
-      'http://localhost:5000/personal_many_days_events', 'http://localhost:5000/wf_daile_events',
-      'http://localhost:5000/wf_many_days_events']]
+    [['http://localhost:5000/ws_tasks', 'http://localhost:5000/personal_tasks', 'http://localhost:5000/ws_many_days_events',
+      'http://localhost:5000/personal_many_days_events', 'http://localhost:5000/ws_daile_events',
+      'http://localhost:5000/ws_many_days_events']]
 )
 def test_data_receiving(client_requester: Requester,
                         set_config,
@@ -67,6 +67,6 @@ def test_data_receiving(client_requester: Requester,
 
 
 @pytest.mark.parametrize.f_data(base_params)
-def test_get_wf_tasks(client_requester: Requester, set_config, access_token):
-    request = Request('http://localhost:5000/wf_tasks', 'GET')
+def test_get_ws_tasks(client_requester: Requester, set_config, access_token):
+    request = Request('http://localhost:5000/ws_tasks', 'GET')
 

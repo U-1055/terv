@@ -27,9 +27,9 @@ class WorkspaceSchema(BaseSchema):
         model = cm.Workspace
 
 
-class WFTaskSchema(BaseSchema):
+class WSTaskSchema(BaseSchema):
     class Meta(BaseMeta):
-        model = cm.WFTask
+        model = cm.WSTask
 
 
 class PersonalTaskSchema(BaseSchema):
@@ -37,9 +37,9 @@ class PersonalTaskSchema(BaseSchema):
         model = cm.PersonalTask
 
 
-class WFRoleSchema(BaseSchema):
+class wsRoleSchema(BaseSchema):
     class Meta(BaseMeta):
-        model = roles.WFRole
+        model = roles.wsRole
 
 
 class PersonalDailyEventSchema(BaseSchema):
@@ -62,29 +62,29 @@ class ProjectSchema(BaseSchema):
         model = cm.Project
 
 
-class WFBaseCategorySchema(BaseSchema):
+class WSBaseCategorySchema(BaseSchema):
     class Meta(BaseMeta):
-        model = cm.WFBaseCategory
+        model = cm.WSBaseCategory
 
 
-class WFDailyEventSchema(BaseSchema):
+class WSDailyEventSchema(BaseSchema):
     class Meta(BaseMeta):
-        model = cm.WFDailyEvent
+        model = cm.WSDailyEvent
 
 
-class WFDocumentSchema(BaseSchema):
+class WSDocumentSchema(BaseSchema):
     class Meta(BaseMeta):
-        model = cm.WFDocument
+        model = cm.WSDocument
 
 
-class WFManyDaysEventSchema(BaseSchema):
+class WSManyDaysEventSchema(BaseSchema):
     class Meta(BaseMeta):
-        model = cm.WFManyDaysEvent
+        model = cm.WSManyDaysEvent
 
 
-class WFWorkDirectionSchema(BaseSchema):
+class WSWorkDirectionSchema(BaseSchema):
     class Meta(BaseMeta):
-        model = cm.WFWorkDirection
+        model = cm.WSWorkDirection
 
 
 if __name__ == '__main__':

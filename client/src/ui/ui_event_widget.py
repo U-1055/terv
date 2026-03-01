@@ -43,14 +43,14 @@ class Ui_Form(object):
         sizePolicy1.setHeightForWidth(self.lbl_title.sizePolicy().hasHeightForWidth())
         self.lbl_title.setSizePolicy(sizePolicy1)
 
-        self.horizontalLayout.addWidget(self.lbl_title, 0, Qt.AlignHCenter)
+        self.horizontalLayout.addWidget(self.lbl_title, 0, Qt.AlignLeft|Qt.AlignTop)
 
         self.lbl_start_end = QLabel(Form)
         self.lbl_start_end.setObjectName(u"lbl_start_end")
         sizePolicy1.setHeightForWidth(self.lbl_start_end.sizePolicy().hasHeightForWidth())
         self.lbl_start_end.setSizePolicy(sizePolicy1)
 
-        self.horizontalLayout.addWidget(self.lbl_start_end)
+        self.horizontalLayout.addWidget(self.lbl_start_end, 0, Qt.AlignLeft|Qt.AlignTop)
 
         self.btn_show_details = QPushButton(Form)
         self.btn_show_details.setObjectName(u"btn_show_details")
@@ -60,7 +60,7 @@ class Ui_Form(object):
         sizePolicy2.setHeightForWidth(self.btn_show_details.sizePolicy().hasHeightForWidth())
         self.btn_show_details.setSizePolicy(sizePolicy2)
 
-        self.horizontalLayout.addWidget(self.btn_show_details)
+        self.horizontalLayout.addWidget(self.btn_show_details, 0, Qt.AlignRight|Qt.AlignTop)
 
         self.horizontalLayout.setStretch(0, 5)
 

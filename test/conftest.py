@@ -56,7 +56,7 @@ def set_config(request: pytest.FixtureRequest):
             json.dump(config, file)
 
     with contextlib.chdir(params.get(SERVER_WORKING_DIR)):
-        import server.api.app as app
+        import server.api.routes as app
         app.launch()
 
         yield

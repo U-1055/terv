@@ -9,9 +9,9 @@ from pydantic import Field
 import server.database.models.common_models as db
 
 
-class WFRole(Base):
+class wsRole(Base):
     """Роль рабочего пространства."""
-    __tablename__ = 'wf_role'
+    __tablename__ = 'ws_role'
 
     id: int
     workspace_id: int
@@ -37,48 +37,48 @@ class Permission(Base):
     document_roles: list[int]
 
 
-class WFRoleTask(Base):
+class wsRoleTask(Base):
     """Роль РП - задача."""
-    __tablename__ = 'wf_role_task'
+    __tablename__ = 'ws_role_task'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
-    role_id: int = mapped_column(ForeignKey('wf_role.id'))
-    task_id: int = mapped_column(ForeignKey('wf_task.id'))
+    role_id: int = mapped_column(ForeignKey('ws_role.id'))
+    task_id: int = mapped_column(ForeignKey('ws_task.id'))
     permissions: list[int]
 
 
-class WFRoleProject(Base):
-    __tablename__ = 'wf_role_project'
+class wsRoleProject(Base):
+    __tablename__ = 'ws_role_project'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
-    role_id: int = mapped_column(ForeignKey('wf_role.id'))
+    role_id: int = mapped_column(ForeignKey('ws_role.id'))
     project_id: int = mapped_column(ForeignKey('project.id'))
     permissions: list[int]
 
 
-class WFRoleDailyEvent(Base):
-    __tablename__ = 'wf_role_daily_event'
+class wsRoleDailyEvent(Base):
+    __tablename__ = 'ws_role_daily_event'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
-    role_id: int = mapped_column(ForeignKey('wf_role.id'))
-    daily_event_id: int = mapped_column(ForeignKey('wf_daily_event.id'))
+    role_id: int = mapped_column(ForeignKey('ws_role.id'))
+    daily_event_id: int = mapped_column(ForeignKey('ws_daily_event.id'))
     permissions: list[int]
 
 
-class WFRoleManyDaysEvent(Base):
-    __tablename__ = 'wf_role_many_days_event'
+class wsRoleManyDaysEvent(Base):
+    __tablename__ = 'ws_role_many_days_event'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
-    role_id: int = mapped_column(ForeignKey('wf_role.id'))
-    many_days_event_id: int = mapped_column(ForeignKey('wf_many_days_event.id'))
+    role_id: int = mapped_column(ForeignKey('ws_role.id'))
+    many_days_event_id: int = mapped_column(ForeignKey('ws_many_days_event.id'))
     permissions: list[int]
 
 
-class WFRoleDocument(Base):
-    __tablename__ = 'wf_role_document'
+class wsRoleDocument(Base):
+    __tablename__ = 'ws_role_document'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
-    role_id: int = mapped_column(ForeignKey('wf_role.id'))
-    document_id: int = mapped_column(ForeignKey('wf_document.id'))
+    role_id: int = mapped_column(ForeignKey('ws_role.id'))
+    document_id: int = mapped_column(ForeignKey('ws_document.id'))
     permissions: list[int]
 

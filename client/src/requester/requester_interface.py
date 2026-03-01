@@ -39,11 +39,11 @@ class IRequests(ABC):
         :param tasks_ids: ID задач.
         """
 
-    def get_wf_daily_events_by_user(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
+    def get_ws_daily_events_by_user(self, user_id: int, ws_daily_events_ids: list[int], access_token: str,
                                           date: datetime.date = None, limit: int = None, offset: int = 0):
         pass
 
-    def get_wf_many_days_events_by_user(self, user_id: int, wf_many_days_events_ids: list[int], access_token: str,
+    def get_ws_many_days_events_by_user(self, user_id: int, ws_many_days_events_ids: list[int], access_token: str,
                                               date: datetime.date = None, limit: int = None, offset: int = None):
         pass
 
@@ -55,14 +55,14 @@ class IRequests(ABC):
                                   offset: int = None):
         pass
 
-    def get_wf_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
+    def get_ws_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
                              offset: int = None):
         pass
 
-    def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
+    def get_ws_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
         pass
 
-    def set_wf_task_status(self, wf_task_id: int, status: str, access_token: str):
+    def set_ws_task_status(self, ws_task_id: int, status: str, access_token: str):
         """Изменяет статус задачи РП."""
         pass
 

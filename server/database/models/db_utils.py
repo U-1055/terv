@@ -13,7 +13,7 @@ def init_db(path: str) -> Engine:
     """Создаёт базу заново и возвращает её движок."""
     engine = create_engine(path)
     cm.Base.metadata.drop_all(bind=engine)
-    cm.Base.metadata.create_all(bind=engine)  # ToDo: в app.py ошибка при добавлении permissions через add_permissions
+    cm.Base.metadata.create_all(bind=engine)  # ToDo: в routes.py ошибка при добавлении permissions через add_permissions
     add_permissions(engine)
     return engine
 

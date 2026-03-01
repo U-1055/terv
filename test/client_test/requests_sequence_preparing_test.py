@@ -15,7 +15,7 @@ from test.conftest import launch_test_server, client_requester, REQUEST_LIMIT, L
 )
 def test_data_receiving(client_requester, launch_test_server, limit: int, offset: int):
 
-    future: concurrent.futures.Future = client_requester.get_wf_tasks([i for i in range(100)], 'access', limit, offset)
+    future: concurrent.futures.Future = client_requester.get_ws_tasks([i for i in range(100)], 'access', limit, offset)
     loop = asyncio.get_event_loop()
     future = asyncio.wrap_future(future, loop=loop)
     loop.run_until_complete(future)

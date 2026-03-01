@@ -28,7 +28,7 @@ def repository(config_db):
 
 @pytest.fixture(scope='function')
 def workspace_id(repository) -> int:
-    return WorkspaceService.create({DBFields.name: 'wf_2'}, 2, repository)
+    return WorkspaceService.create({DBFields.name: 'ws_2'}, 2, repository)
 
 
 @pytest.fixture(scope='function')
@@ -39,18 +39,18 @@ def workspace_with_users_id(repository, workspace_id: int) -> tuple[int, tuple[i
 
 @pytest.mark.parametrize(
     ['name', 'description', 'creator_id'],
-    [['wf_2', 'desc', 1], ['wf_3', 'desc', 2], ['wf_4', 'desc', 3], ['wf_3', 'desc', 4], ['wf_5', 'desc', 6]]
+    [['ws_2', 'desc', 1], ['ws_3', 'desc', 2], ['ws_4', 'desc', 3], ['ws_3', 'desc', 4], ['ws_5', 'desc', 6]]
 )
 def test_creating_normal_workspace(repository: DataRepository, name: str, description: str, creator_id: int):
     workspace = {DBFields.name: name, DBFields.description: description}
-    wf_id = WorkspaceService.create(workspace, creator_id, repository)
-    db_workspace = repository.get_workspaces([wf_id]).content[0]  # Проверка установки связей
-    db_wf_name = db_workspace.get(DBFields.name)
-    db_wf_description = db_workspace.get(DBFields.description)
+    ws_id = WorkspaceService.create(workspace, creator_id, repository)
+    db_workspace = repository.get_workspaces([ws_id]).content[0]  # Проверка установки связей
+    db_ws_name = db_workspace.get(DBFields.name)
+    db_ws_description = db_workspace.get(DBFields.description)
     db_users = db_workspace.get(DBFields.users)
 
-    assert name == db_wf_name
-    assert description == db_wf_description
+    assert name == db_ws_name
+    assert description == db_ws_description
     assert db_users == [creator_id]
 
 

@@ -68,7 +68,7 @@ default_config = {
 
 class Permissions(enum.Enum):
     # Базовые доступы роли в Workspace
-    del_wf = 'del_wf'
+    del_ws = 'del_ws'
     del_project = 'del_project'
     create_event = 'create_event'
     del_event = 'del_event'

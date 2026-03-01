@@ -1,3 +1,4 @@
+"""Основной файл сервера. Содержит слой перенаправления."""
 import logging
 
 from flask import Flask, request
@@ -8,14 +9,14 @@ from pathlib import Path
 from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
-from server.database.models.db_utils import launch_db
+from server.database.models.db_utils import launch_db, init_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
 from common.base import CommonStruct, check_password, ErrorCodes as ErCodes, DBFields
 from server.utils.data_checkers import check_email
 from server.utils.api_utils import form_response, exceptions_handler, form_success_response
-import server.api.crud_handlers as handlers
+import server.api.controllers.controllers as handlers
 # ToDo: заголовок с Authorization на Authorization Bearer
 
 logging.basicConfig(level=logging.INFO)
@@ -23,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 config = Config('../config.json')
 database_path = config.database_path
-engine = launch_db(database_path)
+engine = init_db(database_path)
 
 logging.info(f'Module app.py is running. Environment: {config.env}. DB path: {database_path}.'
              f'Access lifetime: {config.access_token_lifetime}. Refresh lifetime: {config.refresh_token_lifetime}')
@@ -184,13 +185,13 @@ def personal_tasks():
     response = None  # Только чтобы не ругалась IDE на возможное отсутствие объявления
 
     if request.method == 'GET':
-        response = handlers.get_personal_tasks(request, repo)
+        response = handlers.PersonalTaskController.get_personal_tasks(request, repo)
     elif request.method == 'POST':
-        response = handlers.add_personal_tasks(request, repo)
+        response = handlers.PersonalTaskController.add_personal_tasks(request, repo)
     elif request.method == 'PUT':
-        response = handlers.update_personal_tasks(request, repo)
+        response = handlers.PersonalTaskController.update_personal_tasks(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.delete_personal_tasks(request, repo)
+        response = handlers.PersonalTaskController.delete_personal_tasks(request, repo)
 
     return response
 
@@ -213,27 +214,17 @@ def personal_task_status(task_id: int):
 
 
 @exceptions_handler
-@app.route('/personal_tasks/search', methods=['POST'])
-def personal_tasks_search():
-    """Запрос для поиска по параметрам."""
-    auth = request.headers.get('Authorization')
-    if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
-    return handlers.search_wf_tasks(request, repo)
-
-
-@exceptions_handler
 @app.route('/users', methods=['GET', 'PUT', 'DELETE'])
 def users():
 
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_users(request, repo, authenticator)
+        response = handlers.UserController.get_users(request, repo, authenticator)
     elif request.method == 'PUT':
-        response = handlers.update_users(request, repo)
+        response = handlers.UserController.update_users(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.delete_users(request, repo)
+        response = handlers.UserController.delete_users(request, repo)
 
     return response
 
@@ -249,73 +240,63 @@ def user_personal_tasks(user_id: int):
                              error_id=ErCodes.forbidden_access_to_personal_object.value)
 
     if request.method == 'GET':
-        response = handlers.get_personal_tasks(request, repo, user_id)
+        response = handlers.PersonalTaskController.get_personal_tasks(request, repo, user_id)
     elif request.method == 'PUT':
-        response = handlers.update_personal_tasks(request, repo)
+        response = handlers.PersonalTaskController.update_personal_tasks(request, repo)
     elif request.method == 'POST':
-        response = handlers.add_personal_tasks(request, repo)
+        response = handlers.PersonalTaskController.add_personal_tasks(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.delete_personal_tasks(request, repo)
+        response = handlers.PersonalTaskController.delete_personal_tasks(request, repo)
 
     return response
 
 
 @exceptions_handler
-@app.route('/users/<int:user_id>/wf_tasks', methods=['GET'])
-def user_wf_tasks(user_id: int):
+@app.route('/users/<int:user_id>/ws_tasks', methods=['GET'])
+def user_ws_tasks(user_id: int):
 
     request_sender_id = authenticator.get_user_id(request.headers.get('Authorization'))
     if not authorizer.pre_check_access_to_personal_objects(request_sender_id, user_id):
         return form_response(403, f"You haven't access to personal objects of user (ID: {user_id})",
                              error_id=ErCodes.forbidden_access_to_personal_object.value)
 
-    response = handlers.get_wf_tasks(request, repo, user_id)
+    response = handlers.WSTaskController.get_ws_tasks(request, repo, user_id)
 
     return response
 
 
 @exceptions_handler
-@app.route('/wf_tasks', methods=['GET', 'PUT', 'POST', 'DELETE'])
-def wf_tasks():
+@app.route('/ws_tasks', methods=['GET', 'PUT', 'POST', 'DELETE'])
+def ws_tasks():
     """
-    Ресурс задач РП. Запроса вида: server://wf_tasks
+    Ресурс задач РП. Запроса вида: server://ws_tasks
     """
 
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_wf_tasks(request, repo)
+        response = handlers.WSTaskController.get_ws_tasks(request, repo)
     elif request.method == 'POST':
-        response = handlers.add_wf_tasks(request, repo)
+        response = handlers.WSTaskController.add_ws_tasks(request, repo)
     elif request.method == 'PUT':
-        response = handlers.update_wf_tasks(request, repo)
+        response = handlers.WSTaskController.update_ws_tasks(request, repo)
     elif request.method == 'DELETE':
-        response = handlers.delete_wf_tasks(request, repo)
+        response = handlers.WSTaskController.delete_ws_tasks(request, repo)
 
     return response
 
 
 @exceptions_handler
-@app.route('/wf_tasks/<int:task_id>/status', methods=['GET', 'PUT'])
-def wf_task_status(task_id: int):
+@app.route('/ws_tasks/<int:task_id>/status', methods=['GET', 'PUT'])
+def ws_task_status(task_id: int):
     response = None
 
     if request.method == 'GET':
         pass
     elif request.method == 'PUT':  # ToDo: костыль, убрать
-        repo.delete_wf_tasks_by_id([task_id])
+        repo.delete_ws_tasks_by_id([task_id])
 
     return form_response(200, 'OK')
-
-
-@exceptions_handler
-@app.route('/wf_tasks/search', methods=['POST'])
-def wf_tasks_search():
-    auth = request.headers.get('Authorization')
-    if not authenticator.check_token_valid(auth, DataStruct.access_token):
-        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
-
-    return handlers.search_wf_tasks(request, repo)
 
 
 @exceptions_handler
@@ -324,70 +305,70 @@ def workspace_users(workspace_id: int):  # ToDo: протестировать
     response = None
 
     if request.method == 'POST':
-        response = handlers.add_users_to_workspace(request, repo)
+        response = handlers.WorkspaceController.add_users_to_workspace(request, repo)
     if request.method == 'DELETE':
-        response = handlers.delete_users_from_workspace(request, repo)
+        response = handlers.WorkspaceController.delete_users_from_workspace(request, repo)
     if request.method == 'GET':
-        request.args.update({DBFields.workspace_id: workspace_id})
-        response = handlers.get_users(request, repo, authenticator)
+        request.args.update({DBFields.workspace_id: workspace_id})  # Не заработает, ToDo: убрать
+        response = handlers.UserController.get_users(request, repo, authenticator)
 
     return response
 
 
 @exceptions_handler
-@app.route('/workspaces/<int:workspace_id>/wf_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def wf_daily_events(workspace_id: int):
+@app.route('/workspaces/<int:workspace_id>/ws_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def ws_daily_events(workspace_id: int):
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_wf_daily_events(request, repo)
+        response = handlers.WSDailyEventController.get_ws_daily_events(request, repo)
     if request.method == 'POST':
-        response = handlers.add_wf_daily_events(request, workspace_id, repo)
+        response = handlers.WSDailyEventController.add_ws_daily_events(request, workspace_id, repo)
     if request.method == 'PUT':
-        response = handlers.update_wf_daily_events(request, workspace_id, repo)
+        response = handlers.WSDailyEventController.update_ws_daily_events(request, workspace_id, repo)
     if request.method == 'DELETE':
-        response = handlers.delete_wf_daily_events(request, workspace_id, repo)
+        pass
 
     return response
 
 
 @exceptions_handler
-@app.route('/workspaces/<int:workspace_id>/wf_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def wf_many_days_events(workspace_id: int):
+@app.route('/workspaces/<int:workspace_id>/ws_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def ws_many_days_events(workspace_id: int):
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_wf_daily_events(request, repo)
+        response = handlers.WSManyDaysEventController.get_ws_many_days_events(request, repo)
     if request.method == 'POST':
-        response = handlers.add_wf_daily_events(request, workspace_id, repo)
+        response = handlers.WSDailyEventController.add_ws_daily_events(request, workspace_id, repo)
     if request.method == 'PUT':
-        response = handlers.update_wf_daily_events(request, workspace_id, repo)
+        response = handlers.WSDailyEventController.update_ws_daily_events(request, workspace_id, repo)
     if request.method == 'DELETE':
-        response = handlers.delete_wf_daily_events(request, workspace_id, repo)
+        pass
 
     return response
 
 
 @exceptions_handler
-@app.route('/users/<int:user_id>/wf_many_days_events', methods=['GET'])
-def user_wf_many_days_events(user_id: int):
+@app.route('/users/<int:user_id>/ws_many_days_events', methods=['GET'])
+def user_ws_many_days_events(user_id: int):
     """Метод для получения многодневных событий, в которых участвует пользователь."""
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_wf_many_days_events(request, repo, user_id)
+        response = handlers.WSManyDaysEventController.get_ws_many_days_events(request, repo, user_id)
 
     return response
 
 
 @exceptions_handler
-@app.route('/users/<int:user_id>/wf_daily_events', methods=['GET'])
-def user_wf_daily_events(user_id: int):
+@app.route('/users/<int:user_id>/ws_daily_events', methods=['GET'])
+def user_ws_daily_events(user_id: int):
     """Метод для получения однодневных событий, в которых участвует пользователь."""
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_wf_daily_events(request, repo, user_id=user_id)
+        response = handlers.WSDailyEventController.get_ws_daily_events(request, repo, user_id=user_id)
 
     return response
 
@@ -399,7 +380,7 @@ def personal_daily_events():  # С фильтрацией по user_id и дат
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_personal_daily_events(request, repo)
+        response = handlers.PersonalDailyEventController.get_personal_daily_events(request, repo)
 
     return response
 
@@ -411,7 +392,7 @@ def personal_many_days_events():
     response = None
 
     if request.method == 'GET':
-        response = handlers.get_personal_many_days_events(request, repo)
+        response = handlers.PersonalManyDaysEventController.get_personal_many_days_events(request, repo)
 
     return response
 

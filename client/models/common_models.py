@@ -20,7 +20,7 @@ class User(Base):
     linked_workspaces: list[int] 
 
     # Задачи
-    created_wf_tasks: list[int]  # Созданные задачи workspace
+    created_ws_tasks: list[int]  # Созданные задачи workspace
     assigned_to_user_tasks: list[int]  # Порученные пользователЮ
     assigned_by_user_tasks: list[int]  # Порученные пользователЕМ
     responsibility_tasks: list[int]  # Задачи, где пользователь назначен ответственным
@@ -30,11 +30,11 @@ class User(Base):
     roles: list[int] | None
 
     # Документы РП
-    created_wf_documents: list[int] | None
+    created_ws_documents: list[int] | None
 
     # Мероприятия
-    created_wf_daily_events: list[int] | None
-    created_wf_many_days_events: list[int] | None
+    created_ws_daily_events: list[int] | None
+    created_ws_many_days_events: list[int] | None
     notified_daily_events: list[int] | None
     notified_many_days_events: list[int] | None
 
@@ -72,9 +72,9 @@ class Project(Base):
     description: str = Field(max_length=2000)
 
 
-class WFTask(Base):
+class WSTask(Base):
 
-    __tablename__ = 'wf_task'
+    __tablename__ = 'ws_task'
     id: int
     workspace_id: int  # РП
     project_id: int | None  # Проект
@@ -114,9 +114,9 @@ class PersonalTask(Base):
     fact_start_work_date: datetime.datetime | None
 
 
-class WFWorkDirection(Base):
+class WSWorkDirection(Base):
     """Направление работы РП"""
-    __tablename__ = 'wf_work_direction'
+    __tablename__ = 'ws_work_direction'
 
     id: int
     workspace_id: int
@@ -163,9 +163,9 @@ class PersonalManyDaysEvent(Base):
     datetime_end: datetime.datetime
 
 
-class WFDailyEvent(Base):
+class WSDailyEvent(Base):
     """Однодневное мероприятие РП."""
-    __tablename__ = 'wf_daily_event'
+    __tablename__ = 'ws_daily_event'
 
     id: int
     workspace_id: int 
@@ -180,9 +180,9 @@ class WFDailyEvent(Base):
     notified: list[int]  # Оповещаемые пользователи
 
 
-class WFManyDaysEvent(Base):
+class WSManyDaysEvent(Base):
     """Многодневное мероприятие РП."""
-    __tablename__ = 'wf_many_days_event'
+    __tablename__ = 'ws_many_days_event'
 
     id: int
     workspace_id: int
@@ -196,9 +196,9 @@ class WFManyDaysEvent(Base):
     notified: list[int] # Оповещаемые пользователи
 
 
-class WFBaseCategory(Base):
+class WSBaseCategory(Base):
     """Раздел базы РП."""
-    __tablename__ = 'wf_base_category'
+    __tablename__ = 'ws_base_category'
 
     id: int
     workspace_id: int
@@ -210,12 +210,12 @@ class WFBaseCategory(Base):
     documents: list[int]
 
 
-class WFDocument(Base):
+class WSDocument(Base):
     """
     Документ базы РП.
     В key-value базе /database/data/data под id документа хранится его контент.
     """
-    __tablename__ = 'wf_document'
+    __tablename__ = 'ws_document'
 
     id: int
     workspace_id: int

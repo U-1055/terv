@@ -27,20 +27,20 @@ class DatabaseManager:
             creator = cm.User(username='lo', hashed_password='ps', email='email1')
             session.add(creator)
 
-            workspace = cm.Workspace(name='wf1', creator=creator, description='')
+            workspace = cm.Workspace(name='ws1', creator=creator, description='')
             session.add(workspace)
 
             user = cm.User(username=login, hashed_password=hash_password(password), email=email)
             session.add(user)
 
         with self.session_maker() as session, session.begin():
-            workspace = session.execute(select(cm.Workspace).where(cm.Workspace.name == 'wf1')).scalars().one()
+            workspace = session.execute(select(cm.Workspace).where(cm.Workspace.name == 'ws1')).scalars().one()
             user = session.execute(select(cm.User).where(cm.User.username == login)).scalars().one()
             creator = session.execute(select(cm.User).where(cm.User.username == 'lo')).scalars().one()
 
             tasks = []
             for i in range(tasks_num):
-                task = cm.WFTask(name=f'wf_task_{i}',
+                task = cm.WSTask(name=f'ws_task_{i}',
                               plan_deadline=datetime.datetime.now(),
                               creator=creator,
                               entrusted=creator,
@@ -55,19 +55,19 @@ class DatabaseManager:
     def set_repository_test_config(self, login: str, workspace_name: str, tasks_num: int):
         """
         Создаёт конфиг БД для теста репозитория: двух пользователей (User) (один с username=login),
-        одно РП (Workspace(name=workspace_name)), tasks_num задач РП (WFTask).
+        одно РП (Workspace(name=workspace_name)), tasks_num задач РП (WSTask).
         """
         with self.session_maker() as session, session.begin():
             creator = cm.User(username='lo', hashed_password='2', email='N')
             session.add(creator)
-            workspace = cm.Workspace(name=workspace_name, creator=creator, description='Test WF')
+            workspace = cm.Workspace(name=workspace_name, creator=creator, description='Test ws')
             session.add(workspace)
             creator.linked_workspaces = [workspace]
 
             user = cm.User(username=login, hashed_password='2', email='M', linked_workspaces=[workspace])
             session.add(user)
             for i in range(tasks_num):
-                wf_task = cm.WFTask(name=f'Task_{i}',
+                ws_task = cm.WSTask(name=f'Task_{i}',
                                     plan_deadline=datetime.datetime.now(),
                                     creator=creator,
                                     entrusted=creator,
@@ -75,7 +75,7 @@ class DatabaseManager:
                                     workspace=workspace,
                                     description=''
                                     )
-                session.add(wf_task)
+                session.add(ws_task)
 
     def set_workspace_service_test_config(self, users_num: int):
         """
@@ -85,7 +85,7 @@ class DatabaseManager:
         with self.session_maker() as session, session.begin():
             creator = cm.User(username='creator', hashed_password='s', email='ss')
             session.add(creator)
-            workspace = cm.Workspace(name='wf_1', creator=creator)
+            workspace = cm.Workspace(name='ws_1', creator=creator)
             session.add(workspace)
             creator.linked_workspaces = [workspace]
             for i in range(users_num):

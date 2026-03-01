@@ -38,7 +38,7 @@ class WorkspaceService(BaseService):
         """
         default_role_id = repo.get_workspace_default_role_id(workspace_id)  # ID стандартной роли
         if not default_role_id:
-            raise err.IncorrectParamError('workspace', f'There is no default role in this Workspace: wf_id: {workspace_id}')
+            raise err.IncorrectParamError('workspace', f'There is no default role in this Workspace: ws_id: {workspace_id}')
 
         content = repo.get_roles_by_id([default_role_id]).content
         if not content:
@@ -58,7 +58,7 @@ class WorkspaceService(BaseService):
         workspace_users.update(user_ids)
         workspace[DBFields.users] = list(workspace_users)
 
-        repo.update_wf_roles([default_role])  # Отправляем в БД
+        repo.update_ws_roles([default_role])  # Отправляем в БД
         repo.update_workspaces([workspace])
 
     @staticmethod
@@ -83,7 +83,7 @@ class WorkspaceService(BaseService):
             if user_id in default_role[DBFields.users]:  # Удаление из роли
                 default_role[DBFields.users].remove(user_id)
         repo.update_workspaces([workspace])
-        repo.update_wf_roles([default_role])
+        repo.update_ws_roles([default_role])
 
     @staticmethod
     @db_exceptions_handler
@@ -112,7 +112,7 @@ class WorkspaceService(BaseService):
         default_role = {DBFields.name: DBStruct.default_role, DBFields.workspace_id: workspace_id}
         creator_role = {DBFields.name: DBStruct.creator_role, DBFields.workspace_id: workspace_id}
 
-        result = repo.add_wf_roles([default_role, creator_role])
+        result = repo.add_ws_roles([default_role, creator_role])
         default_role_id = result.ids[0]
         creator_role_id = result.ids[1]
 
@@ -121,46 +121,46 @@ class WorkspaceService(BaseService):
         creator_role[DBFields.users] = [user_id]
 
         repo.update_workspaces([workspace])  # Обновляем РП и роли
-        repo.update_wf_roles([creator_role])
+        repo.update_ws_roles([creator_role])
 
         return workspace_id
 
 
-class WFDailyEventService(BaseService):
+class WSDailyEventService(BaseService):
     """Сервис однодневного события РП."""
 
     @staticmethod
     @db_exceptions_handler
-    def add(wf_daily_events: tuple[dict, ...], workspace_id: int):
+    def add(ws_daily_events: tuple[dict, ...], workspace_id: int):
         pass
 
     @staticmethod
     @db_exceptions_handler
-    def update(wf_daily_events: tuple[dict, ...], workspace_id: int):
+    def update(ws_daily_events: tuple[dict, ...], workspace_id: int):
         pass
 
     @staticmethod
     @db_exceptions_handler
-    def delete(wf_daily_events_ids: tuple[int, ...]):
+    def delete(ws_daily_events_ids: tuple[int, ...]):
         pass
 
 
-class WFManyDaysEventService(BaseService):
+class WSManyDaysEventService(BaseService):
     """Сервис многодневного события РП."""
 
     @staticmethod
     @db_exceptions_handler
-    def add(wf_many_days_events: tuple[dict, ...], workspace_id: int):
+    def add(ws_many_days_events: tuple[dict, ...], workspace_id: int):
         pass
 
     @staticmethod
     @db_exceptions_handler
-    def update(wf_many_days_events: tuple[dict, ...], workspace_id: int):
+    def update(ws_many_days_events: tuple[dict, ...], workspace_id: int):
         pass
 
     @staticmethod
     @db_exceptions_handler
-    def delete(wf_many_days_events_ids: tuple[int, ...]):
+    def delete(ws_many_days_events_ids: tuple[int, ...]):
         pass
 
 

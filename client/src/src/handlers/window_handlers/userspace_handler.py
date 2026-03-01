@@ -76,8 +76,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
     def _on_task_completed(self, type_: str, id_: int):
         """Обрабатывает выполнение задачи в виджете задач."""
         access = self._model.get_access_token()
-        if type_ == ObjectTypes.wf_task:
-            request = self._requester.set_wf_task_status(id_, TasksStatuses.completed, access)
+        if type_ == ObjectTypes.ws_task:
+            request = self._requester.set_ws_task_status(id_, TasksStatuses.completed, access)
         elif type_ == ObjectTypes.personal_task:
             request = self._requester.set_personal_task_status(id_, TasksStatuses.completed, access)
         else:
@@ -134,7 +134,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
     def _set_tasks_widget(self):
         """Обрабатывает данные для виджета задач."""
 
-        tasks = [*self._data_model.wf_tasks, *self._data_model.personal_tasks]
+        tasks = [*self._data_model.ws_tasks, *self._data_model.personal_tasks]
         if not self._task_widget:
             return
 
@@ -142,8 +142,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
             plan_deadline = task.plan_deadline.date().strftime(DataStructConst.gui_date_format)
 
-            if task.__tablename__ == ObjectTypes.wf_task:
-                task: cm.WFTask
+            if task.__tablename__ == ObjectTypes.ws_task:
+                task: cm.WSTask
                 description = {GuiLabels.title: task.name, GuiLabels.description: task.description,
                                GuiLabels.workspace: f'#{task.workspace_id}', GuiLabels.plan_deadline: plan_deadline}
                 if task.project_id:
@@ -252,29 +252,29 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         if events:
             self._data_model.personal_many_days_events = [cm.PersonalManyDaysEvent(**event) for event in events]
 
-    def _set_wf_many_days_events(self, events: tuple[dict, ...]):
-        logging.debug(f'WF many days events received.')
+    def _set_ws_many_days_events(self, events: tuple[dict, ...]):
+        logging.debug(f'ws many days events received.')
         if events:
-            self._data_model.wf_many_days_events = [cm.WFManyDaysEvent(**event) for event in events]
+            self._data_model.ws_many_days_events = [cm.WSManyDaysEvent(**event) for event in events]
 
-    def _set_wf_daily_events(self, events: tuple[dict, ...]):
-        logging.debug(f'WF daily events received')
+    def _set_ws_daily_events(self, events: tuple[dict, ...]):
+        logging.debug(f'ws daily events received')
         if events:
-            self._data_model.wf_daily_events = [cm.WFDailyEvent(**event) for event in events]
+            self._data_model.ws_daily_events = [cm.WSDailyEvent(**event) for event in events]
 
     def _set_schedule_widget(self):
         logging.debug(f'Setting schedule widget. Events data received: '
-                      f'WFDaily: {self._data_model.wf_daily_events and True}. '
-                      f'WFManyDays: {self._data_model.wf_many_days_events and True}. '
+                      f'WSDaily: {self._data_model.ws_daily_events and True}. '
+                      f'WSManyDays: {self._data_model.ws_many_days_events and True}. '
                       f'PersonalDaily: {self._data_model.personal_daily_events and True}. '
                       f'PersonalManyDays: {self._data_model.personal_many_days_events and True}')
         daily_events = []
-        for events in [self._data_model.wf_daily_events, self._data_model.personal_daily_events]:
+        for events in [self._data_model.ws_daily_events, self._data_model.personal_daily_events]:
             if events:
                 daily_events.extend(events)
 
         many_days_events = []
-        for events in [self._data_model.wf_many_days_events, self._data_model.personal_many_days_events]:
+        for events in [self._data_model.ws_many_days_events, self._data_model.personal_many_days_events]:
             if events:
                 many_days_events.extend(events)
 
@@ -287,8 +287,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 f'{GuiLabels.lasting}': get_lasting(event.time_start, event.time_end)
             }
 
-            if event.__tablename__ == ObjectTypes.wf_daily_event:
-                event: cm.WFDailyEvent
+            if event.__tablename__ == ObjectTypes.ws_daily_event:
+                event: cm.WSDailyEvent
                 description.update({
                     f'{GuiLabels.title}': event.name,
                     f'{GuiLabels.workspace}': f'#{event.workspace_id}',
@@ -300,7 +300,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._schedule_view_handler.event_tooltip_content_clicked.connect(self._on_id_clicked)
 
         for event in many_days_events:
-            event: cm.WFManyDaysEvent
+            event: cm.WSManyDaysEvent
             date_start = event.datetime_start.date().strftime(DataStructConst.gui_day_date_format)
             date_end = event.datetime_end.date().strftime(DataStructConst.gui_day_date_format)
             lasting = event.datetime_end.date() - event.datetime_start.date()
@@ -311,7 +311,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 f'{GuiLabels.description}': event.description,
                            }
 
-            if event.__tablename__ == ObjectTypes.wf_many_days_event:
+            if event.__tablename__ == ObjectTypes.ws_many_days_event:
                 description.update({
                     f'{GuiLabels.workspace}': f'#{event.workspace_id}',
                     f'{GuiLabels.creator}': f'#{event.creator_id}',
@@ -325,8 +325,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
     def _set_personal_tasks(self, tasks: tuple[dict, ...]):
         self._data_model.personal_tasks = [cm.PersonalTask(**task) for task in tasks]
 
-    def _set_wf_tasks(self, tasks: tuple[dict, ...]):
-        self._data_model.wf_tasks = [cm.WFTask(**task) for task in tasks]
+    def _set_ws_tasks(self, tasks: tuple[dict, ...]):
+        self._data_model.ws_tasks = [cm.WSTask(**task) for task in tasks]
 
     def _get_schedule_widget_data(self):
         """Настраивает виджет расписания."""
@@ -343,25 +343,25 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             personal_many_days_events.finished.connect(lambda request: self._prepare_request(request, self._set_personal_many_days_events))
             self._requests.personal_many_days_events_request = personal_many_days_events
 
-            wf_daily_events = self._requester.get_wf_daily_events_by_user(self._data_model.user.id,
+            ws_daily_events = self._requester.get_ws_daily_events_by_user(self._data_model.user.id,
                                                                           self._data_model.user.notified_daily_events,
                                                                           access_token,
                                                                           datetime.date.today(),
                                                                           )
-            wf_daily_events.finished.connect(lambda request: self._prepare_request(request, self._set_wf_daily_events))
-            self._requests.wf_daily_events = wf_daily_events
+            ws_daily_events.finished.connect(lambda request: self._prepare_request(request, self._set_ws_daily_events))
+            self._requests.ws_daily_events = ws_daily_events
 
-            wf_many_days_events = self._requester.get_wf_many_days_events_by_user(
+            ws_many_days_events = self._requester.get_ws_many_days_events_by_user(
                 self._data_model.user.id,
                 self._data_model.user.notified_many_days_events,
                 access_token,
                 datetime.date.today(),
                     )
-            wf_many_days_events.finished.connect(lambda request: self._prepare_request(request, self._set_wf_many_days_events))
-            self._requests.wf_many_days_event = wf_many_days_events
+            ws_many_days_events.finished.connect(lambda request: self._prepare_request(request, self._set_ws_many_days_events))
+            self._requests.ws_many_days_event = ws_many_days_events
 
-            group = self._requester.create_group(personal_daily_events, personal_many_days_events, wf_daily_events,
-                                                 wf_many_days_events)
+            group = self._requester.create_group(personal_daily_events, personal_many_days_events, ws_daily_events,
+                                                 ws_many_days_events)
             group.finished.connect(lambda request: self._set_schedule_widget())
 
         else:
@@ -374,12 +374,12 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         if self._data_model.user:
             personal_tasks = self._requester.get_personal_tasks(self._data_model.user.id, access_token, datetime.date.today())
             personal_tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_personal_tasks))
-            wf_tasks = self._requester.get_wf_tasks_by_user(self._data_model.user.id, access_token, datetime.date.today())
-            wf_tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_wf_tasks))
-            self._requests.wf_tasks_request = wf_tasks
+            ws_tasks = self._requester.get_ws_tasks_by_user(self._data_model.user.id, access_token, datetime.date.today())
+            ws_tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_ws_tasks))
+            self._requests.ws_tasks_request = ws_tasks
             self._requests.personal_tasks_request = personal_tasks
 
-            group = self._requester.create_group(personal_tasks, wf_tasks)
+            group = self._requester.create_group(personal_tasks, ws_tasks)
             group.finished.connect(lambda _: self._set_tasks_widget())
         else:  # Если данных не получено
             self._prepare_no_data(self._get_user_info, self._requests.user_request, self._get_task_handler_data)
@@ -390,12 +390,12 @@ class UserSpaceDataModel:
     """Датакласс для асинхронного взаимодействия с данными из UserSpaceHandler."""
 
     personal_tasks: list[cm.PersonalTask] = ()
-    wf_tasks: list[cm.WFTask] = ()
+    ws_tasks: list[cm.WSTask] = ()
     user: cm.User | None = None
     personal_daily_events: list[cm.PersonalDailyEvent] = ()
     personal_many_days_events: list[cm.PersonalManyDaysEvent] = ()
-    wf_daily_events: list[cm.WFDailyEvent] = ()
-    wf_many_days_events: list[cm.WFManyDaysEvent] = ()
+    ws_daily_events: list[cm.WSDailyEvent] = ()
+    ws_many_days_events: list[cm.WSManyDaysEvent] = ()
 
 
 @dataclasses.dataclass
@@ -404,8 +404,8 @@ class UserSpaceRequests:
 
     user_request: Request | None = None
     personal_tasks_request: Request | None = None
-    wf_tasks_request: Request | None = None
+    ws_tasks_request: Request | None = None
     personal_daily_events_request: Request | None = None
     personal_many_days_events_request: Request | None = None
-    wf_daily_events: Request | None = None
-    wf_many_days_event: Request | None = None
+    ws_daily_events: Request | None = None
+    ws_many_days_event: Request | None = None

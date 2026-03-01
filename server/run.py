@@ -7,7 +7,7 @@ from pathlib import Path
 
 from common_utils.log_utils.memory_logger import check_memory
 os.chdir('api')
-from server.api.app import app
+from server.api.routes import app
 
 thread = threading.Thread(target=check_memory, args=[Path('../../log/memory_server.txt')], daemon=True)
 thread.start()

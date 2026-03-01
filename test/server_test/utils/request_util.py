@@ -45,10 +45,10 @@ def sent_requests(address: str, thread: int, process: int):
 
     logging.debug('4')
 
-    wf_tasks_request = requester.get_wf_tasks_by_user(user[DBFields.id], access_token, datetime.date.today())
-    wf_tasks_request.wait_until_complete()
-    wf_tasks = prepare_request(wf_tasks_request, 'wf_tasks', session_id)
-    if wf_tasks:
+    ws_tasks_request = requester.get_ws_tasks_by_user(user[DBFields.id], access_token, datetime.date.today())
+    ws_tasks_request.wait_until_complete()
+    ws_tasks = prepare_request(ws_tasks_request, 'ws_tasks', session_id)
+    if ws_tasks:
         requests_with_data += 1
 
     personal_tasks_request = requester.get_personal_tasks(user[DBFields.id], access_token, datetime.date.today())
@@ -57,24 +57,24 @@ def sent_requests(address: str, thread: int, process: int):
     if personal_tasks:
         requests_with_data += 1
 
-    wf_daily_events_request = requester.get_wf_daily_events_by_user(user[DBFields.id], [], access_token, datetime.date.today())
-    wf_many_days_events_request = requester.get_wf_many_days_events_by_user(user[DBFields.id], [], access_token, datetime.date.today())
+    ws_daily_events_request = requester.get_ws_daily_events_by_user(user[DBFields.id], [], access_token, datetime.date.today())
+    ws_many_days_events_request = requester.get_ws_many_days_events_by_user(user[DBFields.id], [], access_token, datetime.date.today())
     personal_daily_events_request = requester.get_personal_daily_events(user[DBFields.id], access_token, datetime.date.today())
     personal_many_days_events_request = requester.get_personal_many_days_events(user[DBFields.id], access_token, datetime.date.today())
 
-    wf_daily_events_request.wait_until_complete()
-    wf_many_days_events_request.wait_until_complete()
+    ws_daily_events_request.wait_until_complete()
+    ws_many_days_events_request.wait_until_complete()
     personal_daily_events_request.wait_until_complete()
     personal_many_days_events_request.wait_until_complete()
 
-    wf_daily = prepare_request(wf_daily_events_request, 'wf_daily_events', session_id)
-    wf_many_days = prepare_request(wf_many_days_events_request, 'wf_many_days_events', session_id)
+    ws_daily = prepare_request(ws_daily_events_request, 'ws_daily_events', session_id)
+    ws_many_days = prepare_request(ws_many_days_events_request, 'ws_many_days_events', session_id)
     personal_daily = prepare_request(personal_daily_events_request, 'personal_daily_events', session_id)
     personal_many_days = prepare_request(personal_many_days_events_request, 'personal_many_days_events', session_id)
 
-    if wf_daily:
+    if ws_daily:
         requests_with_data += 1
-    if wf_many_days:
+    if ws_many_days:
         requests_with_data += 1
     if personal_daily:
         requests_with_data += 1

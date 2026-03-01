@@ -70,7 +70,7 @@ def test_requests_group(requester: Requester, launch_test_server, params: list[l
 )
 def test_request_sequence(client_requester, launch_test_server, limit: int, offset: int):
     """Проверка получения данных из последовательности запросов."""
-    request = client_requester.get_wf_tasks([i for i in range(100)], 'access', limit, offset)
+    request = client_requester.get_ws_tasks([i for i in range(100)], 'access', limit, offset)
 
     result = request.wait_until_complete()
 
@@ -89,8 +89,8 @@ def test_request_sequence(client_requester, launch_test_server, limit: int, offs
 )
 def test_timeout(timeout_requester: Requester, launch_test_server, timeout: int):
     """Проверка соблюдения интервала между запросами."""
-    future1: concurrent.futures.Future = timeout_requester.get_wf_tasks('', 'ONE')
-    future2: concurrent.futures.Future = timeout_requester.get_wf_tasks('', 'TWO')
+    future1: concurrent.futures.Future = timeout_requester.get_ws_tasks('', 'ONE')
+    future2: concurrent.futures.Future = timeout_requester.get_ws_tasks('', 'TWO')
     loop = asyncio.get_event_loop()
     future1 = asyncio.wrap_future(future1, loop=loop)
     future2 = asyncio.wrap_future(future2, loop=loop)

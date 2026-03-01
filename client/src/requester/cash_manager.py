@@ -27,13 +27,13 @@ class CashManager(IRequests):
         """
         return self._requester.get_personal_tasks(user_id, access_token, on_date, tasks_ids, limit, offset)
 
-    def get_wf_daily_events_by_user(self, user_id: int, wf_daily_events_ids: list[int], access_token: str,
+    def get_ws_daily_events_by_user(self, user_id: int, ws_daily_events_ids: list[int], access_token: str,
                                           date: datetime.date = None, limit: int = None, offset: int = 0):
-        return self._requester.get_wf_daily_events_by_user(user_id, wf_daily_events_ids, access_token, date, limit, offset)
+        return self._requester.get_ws_daily_events_by_user(user_id, ws_daily_events_ids, access_token, date, limit, offset)
 
-    def get_wf_many_days_events_by_user(self, user_id: int, wf_many_days_events_ids: list[int], access_token: str,
+    def get_ws_many_days_events_by_user(self, user_id: int, ws_many_days_events_ids: list[int], access_token: str,
                                               date: datetime.date = None, limit: int = None, offset: int = None):
-        return self._requester.get_wf_many_days_events_by_user(user_id, wf_many_days_events_ids, access_token,
+        return self._requester.get_ws_many_days_events_by_user(user_id, ws_many_days_events_ids, access_token,
                                                                date, offset)
 
     def get_personal_many_days_events(self, user_id: int, access_token: str, date: datetime.date = None,
@@ -44,12 +44,12 @@ class CashManager(IRequests):
                                   offset: int = None):
         return self._requester.get_personal_daily_events(user_id, access_token, date, limit, offset)
 
-    def get_wf_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
+    def get_ws_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
                              offset: int = None):
-        return self._requester.get_wf_tasks_by_user(user_id, access_token, date, limit, offset)
+        return self._requester.get_ws_tasks_by_user(user_id, access_token, date, limit, offset)
 
-    def get_wf_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Request:
-        return self._requester.get_wf_tasks(tasks_ids, access_token, limit, offset)
+    def get_ws_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Request:
+        return self._requester.get_ws_tasks(tasks_ids, access_token, limit, offset)
 
     def get_users(self, ids: tuple[int, ...]) -> Request:
         access_token = self._model.get_access_token()

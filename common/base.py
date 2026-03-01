@@ -20,8 +20,8 @@ class CommonStruct:
     ids = 'ids'
     users = 'users'
     require_last_num = 'require_last_num'
-    wf_tasks_ids = 'wf_tasks_ids'
-    wf_tasks = 'wf_tasks'
+    ws_tasks_ids = 'ws_tasks_ids'
+    ws_tasks = 'ws_tasks'
     personal_tasks = 'personal_tasks'
     creator_id = 'creator_id'
     executor_id = 'executor_id'
@@ -29,8 +29,8 @@ class CommonStruct:
     date = 'date'
     task_status = 'task_status'
 
-    wf_daily_events = 'wf_daily_events'
-    wf_many_days_events = 'wf_many_days_events'
+    ws_daily_events = 'ws_daily_events'
+    ws_many_days_events = 'ws_many_days_events'
     personal_daily_events = 'personal_daily_events'
     personal_many_days_events = 'personal_many_days_events'
     user_id = 'user_id'
@@ -75,15 +75,15 @@ class DBFields:
     created_projects = 'created_projects'
     linked_workspaces = 'linked_workspaces'
     linked_projects = 'linked_projects'
-    created_wf_tasks = 'created_wf_tasks'
+    created_ws_tasks = 'created_ws_tasks'
     assigned_to_user_tasks = 'assigned_to_user_tasks'
     assigned_by_user_tasks = 'assigned_by_user_tasks'
     responsibility_tasks = 'responsibility_tasks'
     created_personal_tasks = 'created_personal_tasks'
     roles = 'roles'
-    created_wf_documents = 'created_wf_documents'
-    created_wf_daily_events = 'created_wf_daily_events'
-    created_wf_many_days_events = 'created_wf_many_days_events'
+    created_ws_documents = 'created_ws_documents'
+    created_ws_daily_events = 'created_ws_daily_events'
+    created_ws_many_days_events = 'created_ws_many_days_events'
     notified_daily_events = 'notified_daily_events'
     notified_many_days_events = 'notified_many_days_events'
     work_directions = 'work_directions'
@@ -106,7 +106,7 @@ class DBFields:
     # Project's fields
     workspace_id = 'workspace_id'
     workspace = 'workspace'
-    # WFTask's fields
+    # WSTask's fields
     project_id = 'project_id'
     entrusted_id = 'entrusted_id'
     work_direction_id = 'work_direction_id'
@@ -127,7 +127,7 @@ class DBFields:
     # PersonalTask's fields
     owner_id = 'owner_id'
     owner = 'owner'
-    # WFWorkDirection's fields
+    # WSWorkDirection's fields
     # PersonalWorkDirection's fields
     # PersonalDailyEvent's fields
     date = 'date'
@@ -136,18 +136,18 @@ class DBFields:
     # PersonalManyDaysEvent's fields
     datetime_start = 'datetime_start'
     datetime_end = 'datetime_end'
-    # WFDailyEvent's fields
+    # WSDailyEvent's fields
     notified = 'notified'
-    # WFManyDaysEvent's fields
-    # WFBaseCategory's fields
+    # WSManyDaysEvent's fields
+    # WSBaseCategory's fields
     parent_category_id = 'parent_category_id'
     parent_category = 'parent_category'
     child_categories = 'child_categories'
-    # WFDocument's fields
+    # WSDocument's fields
     base_category_id = 'base_category_id'
     base_category = 'base_category'
 
-    # WFRole's fields
+    # wsRole's fields
     color = 'color'
     permissions = 'permissions'
     # Permission's fields
@@ -157,14 +157,14 @@ class DBFields:
     daily_event_roles = 'daily_event_roles'
     many_days_event_roles = 'many_days_event_roles'
     document_roles = 'document_roles'
-    # WFRoleTask's fields
+    # wsRoleTask's fields
     role_id = 'role_id'
     task_id = 'task_id'
-    # WFRoleDailyEvent's fields
+    # wsRoleDailyEvent's fields
     daily_event_id = 'daily_event_id'
-    # WFRoleManyDaysEvent's fields
+    # wsRoleManyDaysEvent's fields
     many_days_event_id = 'many_days_event_id'
-    # WFRoleDocument's fields
+    # wsRoleDocument's fields
     document_id = 'document_id'
 
 
@@ -172,9 +172,9 @@ class ObjectTypes:
     """Названия объектов, возвращаемых сервером."""
 
     user = 'user'
-    wf_task = 'wf_task'
-    wf_daily_event = 'wf_daily_event'
-    wf_many_days_event = 'wf_many_days_event'
+    ws_task = 'ws_task'
+    ws_daily_event = 'ws_daily_event'
+    ws_many_days_event = 'ws_many_days_event'
     personal_daily_event = 'personal_daily_event'
     personal_many_days_event = 'personal_many_days_event'
     personal_task = 'personal_task'

@@ -6,17 +6,17 @@ from server.database.models.base import Base
 import server.database.models.common_models as cm
 
 
-class WFRole(Base):
+class wsRole(Base):
     """Роль рабочего пространства."""
-    __tablename__ = 'wf_role'
+    __tablename__ = 'ws_role'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     workspace_id: Mapped[int] = mapped_column(ForeignKey('workspace.id'))
     name: Mapped[str] = mapped_column(String[30])
     color: Mapped[str] = mapped_column(String[30], default='#FFFFFF')
 
-    permissions: Mapped[list['Permission']] = relationship(secondary='wf_role_permission', back_populates='roles')
-    users: Mapped[list[cm.User]] = relationship(secondary='user_wf_role', back_populates='roles')
+    permissions: Mapped[list['Permission']] = relationship(secondary='ws_role_permission', back_populates='roles')
+    users: Mapped[list[cm.User]] = relationship(secondary='user_ws_role', back_populates='roles')
 
     fields = ['workspace_id', 'name', 'color']
     many_links = ['users', 'permissions']
@@ -29,104 +29,104 @@ class Permission(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     type: Mapped[str] = mapped_column(String[30], unique=True)  # Тип разрешения (CRUD-<Объект>)
 
-    roles: Mapped[list[WFRole]] = relationship(secondary='wf_role_permission', back_populates='permissions')
-    project_roles: Mapped[list['WFRoleProject']] = relationship(secondary='wf_role_project_permission', back_populates='permissions')
-    task_roles: Mapped[list['WFRoleTask']] = relationship(secondary='wf_role_task_permission', back_populates='permissions')
-    daily_event_roles: Mapped[list['WFRoleDailyEvent']] = relationship(secondary='wf_role_daily_event_permission', back_populates='permissions')
-    many_days_event_roles: Mapped[list['WFRoleManyDaysEvent']] = relationship(secondary='wf_role_many_days_event_permission', back_populates='permissions')
-    document_roles: Mapped[list['WFRoleDocument']] = relationship(secondary='wf_role_document_permission', back_populates='permissions')
+    roles: Mapped[list[wsRole]] = relationship(secondary='ws_role_permission', back_populates='permissions')
+    project_roles: Mapped[list['wsRoleProject']] = relationship(secondary='ws_role_project_permission', back_populates='permissions')
+    task_roles: Mapped[list['wsRoleTask']] = relationship(secondary='ws_role_task_permission', back_populates='permissions')
+    daily_event_roles: Mapped[list['wsRoleDailyEvent']] = relationship(secondary='ws_role_daily_event_permission', back_populates='permissions')
+    many_days_event_roles: Mapped[list['wsRoleManyDaysEvent']] = relationship(secondary='ws_role_many_days_event_permission', back_populates='permissions')
+    document_roles: Mapped[list['wsRoleDocument']] = relationship(secondary='ws_role_document_permission', back_populates='permissions')
 
 
-class WFRoleTask(Base):
+class wsRoleTask(Base):
     """Роль РП - задача."""
-    __tablename__ = 'wf_role_task'
+    __tablename__ = 'ws_role_task'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    role_id: Mapped[int] = mapped_column(ForeignKey('wf_role.id'))
-    task_id: Mapped[int] = mapped_column(ForeignKey('wf_task.id'))
-    permissions: Mapped[list[Permission]] = relationship(secondary='wf_role_task_permission',
+    role_id: Mapped[int] = mapped_column(ForeignKey('ws_role.id'))
+    task_id: Mapped[int] = mapped_column(ForeignKey('ws_task.id'))
+    permissions: Mapped[list[Permission]] = relationship(secondary='ws_role_task_permission',
                                                          back_populates='task_roles')
 
 
-class WFRoleProject(Base):
-    __tablename__ = 'wf_role_project'
+class wsRoleProject(Base):
+    __tablename__ = 'ws_role_project'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    role_id: Mapped[int] = mapped_column(ForeignKey('wf_role.id'))
+    role_id: Mapped[int] = mapped_column(ForeignKey('ws_role.id'))
     project_id: Mapped[int] = mapped_column(ForeignKey('project.id'))
-    permissions: Mapped[list[Permission]] = relationship(secondary='wf_role_project_permission', back_populates='project_roles')
+    permissions: Mapped[list[Permission]] = relationship(secondary='ws_role_project_permission', back_populates='project_roles')
 
 
-class WFRoleDailyEvent(Base):
-    __tablename__ = 'wf_role_daily_event'
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    role_id: Mapped[int] = mapped_column(ForeignKey('wf_role.id'))
-    daily_event_id: Mapped[int] = mapped_column(ForeignKey('wf_daily_event.id'))
-    permissions: Mapped[list[Permission]] = relationship(secondary='wf_role_daily_event_permission', back_populates='daily_event_roles')
-
-
-class WFRoleManyDaysEvent(Base):
-    __tablename__ = 'wf_role_many_days_event'
+class wsRoleDailyEvent(Base):
+    __tablename__ = 'ws_role_daily_event'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    role_id: Mapped[int] = mapped_column(ForeignKey('wf_role.id'))
-    many_days_event_id: Mapped[int] = mapped_column(ForeignKey('wf_many_days_event.id'))
-    permissions: Mapped[list[Permission]] = relationship(secondary='wf_role_many_days_event_permission', back_populates='many_days_event_roles')
+    role_id: Mapped[int] = mapped_column(ForeignKey('ws_role.id'))
+    daily_event_id: Mapped[int] = mapped_column(ForeignKey('ws_daily_event.id'))
+    permissions: Mapped[list[Permission]] = relationship(secondary='ws_role_daily_event_permission', back_populates='daily_event_roles')
 
 
-class WFRoleDocument(Base):
-    __tablename__ = 'wf_role_document'
+class wsRoleManyDaysEvent(Base):
+    __tablename__ = 'ws_role_many_days_event'
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    role_id: Mapped[int] = mapped_column(ForeignKey('wf_role.id'))
-    document_id: Mapped[int] = mapped_column(ForeignKey('wf_document.id'))
-    permissions: Mapped[list[Permission]] = relationship(secondary='wf_role_document_permission',
+    role_id: Mapped[int] = mapped_column(ForeignKey('ws_role.id'))
+    many_days_event_id: Mapped[int] = mapped_column(ForeignKey('ws_many_days_event.id'))
+    permissions: Mapped[list[Permission]] = relationship(secondary='ws_role_many_days_event_permission', back_populates='many_days_event_roles')
+
+
+class wsRoleDocument(Base):
+    __tablename__ = 'ws_role_document'
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey('ws_role.id'))
+    document_id: Mapped[int] = mapped_column(ForeignKey('ws_document.id'))
+    permissions: Mapped[list[Permission]] = relationship(secondary='ws_role_document_permission',
                                                          back_populates='document_roles')
 
 
-wf_role_project_permission = Table(
-    'wf_role_project_permission',
+ws_role_project_permission = Table(
+    'ws_role_project_permission',
     Base.metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('role_project_id', ForeignKey('wf_role_project.id')),
+    Column('role_project_id', ForeignKey('ws_role_project.id')),
     Column('permissions_id', ForeignKey('permission.id'))
 )
 
-wf_role_permission = Table(
-    'wf_role_permission',
+ws_role_permission = Table(
+    'ws_role_permission',
     Base.metadata,
-    Column('role_id', ForeignKey('wf_role.id'), primary_key=True),
+    Column('role_id', ForeignKey('ws_role.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 
 )
 
-wf_role_task_permission = Table(
-    'wf_role_task_permission',
+ws_role_task_permission = Table(
+    'ws_role_task_permission',
     Base.metadata,
-    Column('role_task_id', ForeignKey('wf_role_task.id'), primary_key=True),
+    Column('role_task_id', ForeignKey('ws_role_task.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
-wf_role_daily_event_permissions = Table(
-    'wf_role_daily_event_permission',
+ws_role_daily_event_permissions = Table(
+    'ws_role_daily_event_permission',
     Base.metadata,
-    Column('role_daily_event_id', ForeignKey('wf_role_daily_event.id'), primary_key=True),
+    Column('role_daily_event_id', ForeignKey('ws_role_daily_event.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
-wf_role_many_days_event_permission = Table(
-    'wf_role_many_days_event_permission',
+ws_role_many_days_event_permission = Table(
+    'ws_role_many_days_event_permission',
     Base.metadata,
-    Column('role_many_days_event_id', ForeignKey('wf_role_many_days_event.id'), primary_key=True),
+    Column('role_many_days_event_id', ForeignKey('ws_role_many_days_event.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 )
 
 
-wf_role_document_permission = Table(
-    'wf_role_document_permission',
+ws_role_document_permission = Table(
+    'ws_role_document_permission',
     Base.metadata,
-    Column('role_document_id', ForeignKey('wf_role_document.id'), primary_key=True),
+    Column('role_document_id', ForeignKey('ws_role_document.id'), primary_key=True),
     Column('permissions_id', ForeignKey('permission.id'), primary_key=True)
 
 )

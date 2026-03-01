@@ -1,7 +1,13 @@
+import jwt
+
+import logging
 import shelve
 from pathlib import Path
-import jwt
+import typing as tp
+
 from server.data_const import DataStruct
+
+logging.basicConfig(level=logging.INFO)
 
 
 class Model:
@@ -9,6 +15,23 @@ class Model:
     def __init__(self, storage_path: Path, data_const: DataStruct = DataStruct()):
         self._storage_path = storage_path
         self._data_const = data_const
+        self._validate()
+
+    def _validate(self):
+        """Проверяет и восстанавливает структуру хранилища."""
+        with shelve.open(self._storage_path) as storage:
+            if self._data_const.secret not in storage:
+                storage[self._data_const.secret] = ''
+            if self._data_const.blacklist not in storage:
+                storage[self._data_const.blacklist] = []
+                logging.warning(f'There is no "blacklist"-field in storage in: {self._storage_path}. The blank field added.')
+            if not isinstance(storage[self._data_const.blacklist], tp.Collection):
+                storage[self._data_const.blacklist] = []
+                logging.warning(f'There is incorrect type of "blacklist-field in storage in: {self._storage_path}. '
+                                f'Type: {type(storage[self._data_const.blacklist])}. It has been changed to blank field.')
+            secret = storage.get(self._data_const.secret)
+            if not secret:
+                logging.critical(f'There is no secret in storage: {self._storage_path}. Secret value: {secret}')
 
     def update_blacklist(self):
         """Удаляет из блек-листа токены с истёкшим временем жизни."""

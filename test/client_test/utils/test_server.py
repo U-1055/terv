@@ -23,8 +23,8 @@ def users():
     return form_response(400, error_id=2, message='1')
 
 
-@app.route('/wf_tasks', methods=['GET'])
-def wf_tasks():
+@app.route('/ws_tasks', methods=['GET'])
+def ws_tasks():
     limit = request.args.get(CommonStruct.limit)
     offset = request.args.get(CommonStruct.offset)
 

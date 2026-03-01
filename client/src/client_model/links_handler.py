@@ -5,7 +5,7 @@ from pathlib import Path
 import shelve
 
 from client.src.requester.cash_manager import CashManager, Request
-from client.models.common_models import User, Workspace, WFTask, PersonalTask
+from client.models.common_models import User, Workspace, WSTask, PersonalTask
 
 
 class LinksHandler:
@@ -33,7 +33,7 @@ class LinksHandler:
     def add_user(self, user: User):
         self._links_models.add_user(user)
 
-    def add_wf_task(self):
+    def add_ws_task(self):
         pass
 
     def add_personal_task(self):
@@ -47,7 +47,7 @@ class LinksModel:
 
     users = 'users'
     workspaces = 'workspaces'
-    wf_tasks = 'wf_tasks'
+    ws_tasks = 'ws_tasks'
     personal_tasks = 'personal_tasks'
 
     def __init__(self, storage_path: Path, timeout: int = 60000):
@@ -59,7 +59,7 @@ class LinksModel:
         with shelve.open(self._storage_path) as storage:
             storage[self.users] = dict()
             storage[self.workspaces] = dict()
-            storage[self.wf_tasks] = dict()
+            storage[self.ws_tasks] = dict()
             storage[self.personal_tasks] = dict()
         QTimer.singleShot(self._timeout, self._update)
 
@@ -70,12 +70,12 @@ class LinksModel:
                 user = users.get(user_id)
                 return User(**user)
 
-    def get_wf_task(self, task_id: int) -> WFTask | None:
+    def get_ws_task(self, task_id: int) -> WSTask | None:
         with shelve.open(self._storage_path) as storage:
-            tasks = storage.get(self.wf_tasks)
+            tasks = storage.get(self.ws_tasks)
             if tasks:
                 task = tasks.get(task_id)
-                return WFTask(**task)
+                return WSTask(**task)
 
     def get_personal_task(self, task_id: int) -> PersonalTask | None:
         with shelve.open(self._storage_path) as storage:

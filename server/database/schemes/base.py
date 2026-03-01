@@ -11,14 +11,14 @@ schemes_models = {  # Соответствие моделей и схем
     cm.PersonalWorkDirection: cs.PersonalWorkDirectionSchema(),
     cm.Project: cs.ProjectSchema(),
     cm.User: cs.UserSchema(),
-    cm.WFBaseCategory: cs.WFBaseCategorySchema(),
-    cm.WFDailyEvent: cs.WFDailyEventSchema(),
-    cm.WFDocument: cs.WFDocumentSchema(),
-    cm.WFManyDaysEvent: cs.WFManyDaysEventSchema(),
-    cm.WFTask: cs.WFTaskSchema(),
-    cm.WFWorkDirection: cs.WFWorkDirectionSchema(),
+    cm.WSBaseCategory: cs.WSBaseCategorySchema(),
+    cm.WSDailyEvent: cs.WSDailyEventSchema(),
+    cm.WSDocument: cs.WSDocumentSchema(),
+    cm.WSManyDaysEvent: cs.WSManyDaysEventSchema(),
+    cm.WSTask: cs.WSTaskSchema(),
+    cm.WSWorkDirection: cs.WSWorkDirectionSchema(),
     cm.Workspace: cs.WorkspaceSchema(),
-    roles.WFRole: cs.WFRoleSchema(),
+    roles.wsRole: cs.wsRoleSchema(),
 }
 
 

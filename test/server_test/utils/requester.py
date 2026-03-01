@@ -28,7 +28,7 @@ class TestRequester:
         return result
 
     def get_workspace_tasks(self, access_token: str, username: str, limit: int, offset: int) -> httpx.Response:
-        result = httpx.get(f'{self._server}/wf_tasks', headers={'Authorization': access_token},
+        result = httpx.get(f'{self._server}/ws_tasks', headers={'Authorization': access_token},
                            params={CommonStruct.limit: limit, CommonStruct.offset: offset})
         return result
 
