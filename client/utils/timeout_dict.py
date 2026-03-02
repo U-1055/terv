@@ -1,9 +1,9 @@
 import datetime
-import logging
 import time
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
-logging.basicConfig(level=logging.DEBUG)
-logging.debug('Module timeout_dict.py is running')
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class TimeoutDict(dict):
@@ -30,7 +30,7 @@ class TimeoutDict(dict):
         for key in list(self.keys()):
             if super().get(key)[1] < datetime.datetime.now():
                 self.pop(key)
-        logging.debug(f'TimeoutDict.update_elements has been called. Dict now: {self}')
+        logger.debug(f'TimeoutDict.update_elements has been called. Dict now: {self}')
 
     def __setitem__(self, key, value):
         super().update({key:  (value, datetime.datetime.now() + datetime.timedelta(seconds=self._timeout))})  # Элемент + время удаления

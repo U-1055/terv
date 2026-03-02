@@ -3,7 +3,6 @@ from PySide6.QtGui import QColor
 
 import dataclasses
 import datetime
-import logging
 import threading
 
 from client.src.src.handlers.window_handlers.base import (BaseWindowHandler, MainWindow, Requester, Model, Request)
@@ -17,6 +16,10 @@ from common.base import ObjectTypes, TasksStatuses
 from client.utils.data_tools import iterable_to_str, get_lasting
 from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.src.client_model.links_handler import LinksHandler
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class UserSpaceWindowHandler(BaseWindowHandler):
@@ -87,7 +90,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
     def _on_id_clicked(self, field: str, structured_text: QStructuredText):
         """Обрабатывает нажатие на ID объекта."""
-        logging.debug(f'Field: {field} in {structured_text}. Content: {structured_text.content(field)} has been pressed')
+        logger.debug(f'Field: {field} in {structured_text}. Content: {structured_text.content(field)} has been pressed')
         if field == GuiLabels.workspace:
             workspace_id = structured_text.content(field)[1:]  # Первым символом является "#"
             workspace = self._links_handler.get_workspace(workspace_id)
@@ -118,7 +121,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._place_settable_widgets()  # Обновляем конфигурацию
 
     def _set_user(self, user_info: tuple[dict]):
-        logging.debug(f'User info received: {user_info}')
+        logger.debug(f'User info received: {user_info}')
         self._data_model.user = cm.User(**user_info[0])
         self.receive_user_data()
 
@@ -195,14 +198,14 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 self._task_widget = self._window.place_task_widget(style)
                 self._task_widget.task_completed.connect(self._on_task_completed)
                 self._get_task_handler_data()
-                logging.debug('Tasks widget placed.')
+                logger.debug('Tasks widget placed.')
             if widget_type == self._data_const.notes_widget:
                 widget_view = self._window.place_notes_widget()
                 self._notes_widget = widget_view
                 note = self._model.get_note()
                 self._notes_widget.set_notes(note)
                 self._notes_widget.text_changed.connect(self._on_note_changed)
-                logging.debug('Notes widget placed')
+                logger.debug('Notes widget placed')
             if widget_type == self._data_const.schedule_widget:
 
                 schedule_widget = self._window.place_schedule_widget(marking_color, style)
@@ -210,7 +213,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 self._schedule_view_handler = schedule_widget
                 self._events_today_widget = events_today_widget
                 self._get_schedule_widget_data()
-                logging.debug('Schedule widget placed')
+                logger.debug('Schedule widget placed')
             if widget_type == self._data_const.reminder_widget:
                 reminders = self._model.get_reminders()
                 widget_view = self._window.place_reminder_widget()
@@ -220,7 +223,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 handler.reminder_completed.connect(self._on_reminder_completed)
                 handler.reminder_added.connect(self._on_reminder_added)
                 handler.reminder_edited.connect(self._on_reminder_edited)
-                logging.debug('Reminder widget placed')
+                logger.debug('Reminder widget placed')
 
     def _get_user_info(self) -> Request:
         request = self._requester.get_user_info(self._model.get_access_token())
@@ -235,7 +238,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self.user_data_received.emit()
 
     def update_state(self):
-        logging.debug('UserSpaceWInHandler state updated')
+        logger.debug('UserSpaceWInHandler state updated')
         self._get_user_info()
         self._place_settable_widgets()
 
@@ -243,27 +246,27 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._place_settable_widgets()
 
     def _set_personal_daily_events(self, events: tuple[dict, ...]):
-        logging.debug(f'Personal daily events received: {events}.')
+        logger.debug(f'Personal daily events received: {events}.')
         if events:
             self._data_model.personal_daily_events = [cm.PersonalDailyEvent(**event) for event in events]
 
     def _set_personal_many_days_events(self, events: tuple[dict, ...]):
-        logging.debug(f'Personal many days events received.')
+        logger.debug(f'Personal many days events received.')
         if events:
             self._data_model.personal_many_days_events = [cm.PersonalManyDaysEvent(**event) for event in events]
 
     def _set_ws_many_days_events(self, events: tuple[dict, ...]):
-        logging.debug(f'ws many days events received.')
+        logger.debug(f'ws many days events received.')
         if events:
             self._data_model.ws_many_days_events = [cm.WSManyDaysEvent(**event) for event in events]
 
     def _set_ws_daily_events(self, events: tuple[dict, ...]):
-        logging.debug(f'ws daily events received')
+        logger.debug(f'ws daily events received')
         if events:
             self._data_model.ws_daily_events = [cm.WSDailyEvent(**event) for event in events]
 
     def _set_schedule_widget(self):
-        logging.debug(f'Setting schedule widget. Events data received: '
+        logger.debug(f'Setting schedule widget. Events data received: '
                       f'WSDaily: {self._data_model.ws_daily_events and True}. '
                       f'WSManyDays: {self._data_model.ws_many_days_events and True}. '
                       f'PersonalDaily: {self._data_model.personal_daily_events and True}. '

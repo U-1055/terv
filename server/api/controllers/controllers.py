@@ -3,15 +3,18 @@ import flask
 from flask import Request, Response
 import sqlalchemy.exc as err
 
-import logging
 import typing as tp
 
 from server.data_const import DataStruct, APIAnswers as APIAn
 from common.base import CommonStruct, ErrorCodes
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from server.database.repository import DataRepository
 import server.utils.api_utils as utl
 from server.auth.auth_module import Authenticator
 import server.services.services as services
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class WSTaskController:
@@ -91,7 +94,7 @@ class WSTaskController:
         try:
             repo.update_ws_tasks(tasks)
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during updating WSTasks: {e}')
+            logger.warning(f'DB-error occurred during updating WSTasks: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ws_tasks, request.endpoint,
                 'Database error occurred',
@@ -112,7 +115,7 @@ class WSTaskController:
         try:
             repo.delete_ws_tasks_by_id(ids)
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during deleting WSTasks: {e}')
+            logger.warning(f'DB-error occurred during deleting WSTasks: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ids, request.endpoint,
                 'Database error occurred',
@@ -135,7 +138,7 @@ class UserController:
         try:
             repo.delete_users(ids)
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during deleting Users: {e}')
+            logger.warning(f'DB-error occurred during deleting Users: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ids, request.endpoint,
                 'Database error occurred',
@@ -175,7 +178,7 @@ class UserController:
             else:
                 return utl.form_response(200, 'OK', content=result.content)
         except err.IntegrityError as e:
-            logging.warning(f'DB-error during receiving Users: {e}')
+            logger.warning(f'DB-error during receiving Users: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ids, request.endpoint,
                 'Database error occurred',
@@ -194,7 +197,7 @@ class UserController:
         try:
             repo.update_users(users)
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during updating Users: {e}')
+            logger.warning(f'DB-error occurred during updating Users: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.users, request.endpoint,
                 'Database error occurred',
@@ -231,7 +234,7 @@ class PersonalTaskController:
             else:
                 return utl.form_response(200, 'OK', content=result.content)
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during receiving PersonalTasks: {e}')
+            logger.warning(f'DB-error occurred during receiving PersonalTasks: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ws_tasks, request.endpoint,
                 'Database error occurred',
@@ -250,7 +253,7 @@ class PersonalTaskController:
             result = repo.add_personal_tasks(personal_tasks)
             return utl.form_success_response(content=result.ids)
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during creating PersonalTasks: {e}')
+            logger.warning(f'DB-error occurred during creating PersonalTasks: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ws_tasks, request.endpoint,
                 'Database error occurred',
@@ -266,7 +269,7 @@ class PersonalTaskController:
             repo.update_personal_tasks(personal_tasks)
             return utl.form_success_response()
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during updating PersonalTasks: {e}')
+            logger.warning(f'DB-error occurred during updating PersonalTasks: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ws_tasks, request.endpoint,
                 'Database error occurred',
@@ -281,7 +284,7 @@ class PersonalTaskController:
             repo.delete_personal_tasks(ids)
             return utl.form_success_response()
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during updating PersonalTasks: {e}')
+            logger.warning(f'DB-error occurred during updating PersonalTasks: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ws_tasks, request.endpoint,
                 'Database error occurred',
@@ -324,7 +327,7 @@ class WSDailyEventController:
             repo.add_ws_daily_events(ws_daily_events)
             return utl.form_success_response()
         except err.IntegrityError as e:
-            logging.warning(f'DB-error occurred during creating WSDailyEvent: {e}')
+            logger.warning(f'DB-error occurred during creating WSDailyEvent: {e}')
             return utl.form_response(400, APIAn.database_write_error(
                 CommonStruct.ws_daily_events, request.endpoint,
                 'Database error occurred',
@@ -426,7 +429,7 @@ class WorkspaceController:
         try:
             services.WorkspaceService.add_users(ids, workspace_id, repo)
         except ValueError as e:
-            logging.warning(f'Error during adding users to workspace: {e}')
+            logger.warning(f'Error during adding users to workspace: {e}')
             return utl.form_response(400, "Invalid params in request's params")  # ToDo: разобраться с обработкой ошибок (например, ввести исключения сервисного слоя)
         return utl.form_success_response()
 
@@ -450,7 +453,7 @@ class WorkspaceController:
         try:
             services.WorkspaceService.delete_users(workspace_id, ids, repo)
         except ValueError as e:
-            logging.warning(f'Error during deleting users to workspace: {e}')
+            logger.warning(f'Error during deleting users to workspace: {e}')
             return utl.form_response(400,
                                      "Invalid params in request's params")
         return utl.form_success_response()

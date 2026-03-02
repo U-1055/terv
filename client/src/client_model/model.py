@@ -27,12 +27,15 @@
 """
 from PySide6.QtCore import QFile
 
-import logging
 import shelve
 from pathlib import Path
 
 from client.src.base import DataStructConst
 import client.src.client_model.resources_rc
+from common.logger import config_logger, CLIENT
+from server.api.base import LOG_DIR
+
+logger = config_logger(__name__, CLIENT, LOG_DIR)
 
 userspace_widget = {'x': 0, 'y': 0, 'x_size': 0, 'y_size': 0}
 
@@ -61,20 +64,20 @@ class Model:
             for key in self.default_struct:
                 if key not in storage:
                     storage[key] = self.default_struct[key]
-                    logging.warning(f'There is no field {key} in {self._storage} file. Field has been set to default '
+                    logger.warning(f'There is no field {key} in {self._storage} file. Field has been set to default '
                                     f'value: {self.default_struct[key]}')
 
                 field_type = type(storage[key])
                 expected_field_type = type(self.default_struct[key])
                 if field_type is not expected_field_type:
                     storage[key] = self.default_struct[key]
-                    logging.warning(f'Incorrect type of field {key} of file {self._storage} - '
+                    logger.warning(f'Incorrect type of field {key} of file {self._storage} - '
                                     f'type "{field_type}" must be "{expected_field_type}". Field {key} has been set'
                                     f'to default value: {self.default_struct[key]}.')
             settings = storage[self._ds_const.settings]
             if not storage[self._ds_const.settings].get(self._ds_const.style):
                 storage[self._ds_const.settings] = self.default_struct[self._ds_const.settings]
-                logging.warning(f'There is no field "style" in field "settings" in file. Field '
+                logger.warning(f'There is no field "style" in field "settings" in file. Field '
                                 f'"{self._ds_const.settings}" has been set to default value: '
                                 f'{self.default_struct[self._ds_const.settings]}.')
 

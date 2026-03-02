@@ -3,12 +3,10 @@ from __future__ import annotations
 
 import os
 
-from PySide6.QtCore import QObject, Signal, QThread
+from PySide6.QtCore import QObject, Signal
 import httpx
 
-import concurrent.futures
 import datetime
-import logging
 import json
 import time
 import typing as tp
@@ -20,6 +18,11 @@ from common.base import CommonStruct, ErrorCodes
 from client.src.requester.requester_interface import IRequests
 from client.utils.timeout_list import TimeoutList
 from common_utils.log_utils.request_time_logger import RequestsTimeHandler
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
+
 
 CHECK_TIME = True  # ToDo: при попытке импорта из точки входа возникает круговой импорт !!!МЕНЯТЬ ПУТЬ ПРИ ЗАПУСКЕ НАГРУЗОЧНОГО ТЕСТА!!!
 request_time_handler = RequestsTimeHandler('../log/requests_time_load.txt')
@@ -86,7 +89,7 @@ class Requester(IRequests):
             raise err.NetworkTimeoutError('Bad Gateway', request)
 
         if error_code:  # Вызов исключения по коду
-            logging.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. InternalRequest:'
+            logger.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. InternalRequest:'
                             f'{request}. Response: {response}.')
             exc = err.exceptions_error_ids.get(error_code)
             raise exc(message, request=request)
@@ -164,7 +167,7 @@ class Requester(IRequests):
             raise e
 
     async def _make_request(self, request: InternalRequest) -> Response:
-        logging.info(f'Executing request: {request}.')
+        logger.info(f'Executing request: {request}.')
         if self._requests and self._requests[-1].path == request.path and self._requests[-1].method == request.method: #  Запросы одинаковы
             diff = request.time - self._requests[-1].time  # Разница во времени отправки
             if diff < datetime.timedelta(milliseconds=self._timeout):
@@ -194,13 +197,13 @@ class Requester(IRequests):
             return Response(request, server_response.content, server_response.records_left,
                             server_response.last_record_num)
         except err.NetworkTimeoutError as e:
-            logging.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
+            logger.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
             raise e
         except err.APIError as e:  # Обработка ошибок API
-            logging.warning(f'Excepted error {e} during making request {str(InternalRequest)}')
+            logger.warning(f'Excepted error {e} during making request {str(InternalRequest)}')
             raise e
         except (httpx.ConnectError, httpx.ReadError, httpx.WriteError) as e:  # Обработка ошибок сети
-            logging.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
+            logger.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
             raise err.get_network_error(e, request)
 
 

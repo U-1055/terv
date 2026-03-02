@@ -1,13 +1,15 @@
 import jwt
 
-import logging
 import shelve
 from pathlib import Path
 import typing as tp
 
 from server.data_const import DataStruct
 
-logging.basicConfig(level=logging.INFO)
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class Model:
@@ -24,14 +26,14 @@ class Model:
                 storage[self._data_const.secret] = ''
             if self._data_const.blacklist not in storage:
                 storage[self._data_const.blacklist] = []
-                logging.warning(f'There is no "blacklist"-field in storage in: {self._storage_path}. The blank field added.')
+                logger.warning(f'There is no "blacklist"-field in storage in: {self._storage_path}. The blank field added.')
             if not isinstance(storage[self._data_const.blacklist], tp.Collection):
                 storage[self._data_const.blacklist] = []
-                logging.warning(f'There is incorrect type of "blacklist-field in storage in: {self._storage_path}. '
+                logger.warning(f'There is incorrect type of "blacklist-field in storage in: {self._storage_path}. '
                                 f'Type: {type(storage[self._data_const.blacklist])}. It has been changed to blank field.')
             secret = storage.get(self._data_const.secret)
             if not secret:
-                logging.critical(f'There is no secret in storage: {self._storage_path}. Secret value: {secret}')
+                logger.critical(f'There is no secret in storage: {self._storage_path}. Secret value: {secret}')
 
     def update_blacklist(self):
         """Удаляет из блек-листа токены с истёкшим временем жизни."""

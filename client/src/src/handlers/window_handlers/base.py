@@ -3,7 +3,6 @@ import dataclasses
 from PySide6.QtCore import Signal, QObject
 
 import typing as tp
-import logging
 import threading
 
 from client.src.gui.windows.windows import BaseWindow
@@ -12,6 +11,10 @@ from client.src.requester.requester import Requester, Request, RequestsGroup
 from client.src.client_model.model import Model
 import client.src.requester.errors as err
 from common.base import CommonStruct
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class BaseWindowHandler(QObject):
@@ -42,15 +45,15 @@ class BaseWindowHandler(QObject):
         :param calling_func: Вызывающая функция (которой требуются отсутствующие данные).
 
         """
-        logging.info(f"Starting prepare request that returns no data. Request: {data_get_request}. "
+        logger.info(f"Starting prepare request that returns no data. Request: {data_get_request}. "
                      f"Calling method: {calling_func}. Data get method: {data_get_func}."
                      f"Request's exception: {type(data_get_request.exception())}")
 
         if isinstance(data_get_request.exception(), err.NetworkTimeoutError):
-            logging.debug(f"Request won't be retried because there is NetworkError. Exc: {data_get_request.exception()}")
+            logger.debug(f"Request won't be retried because there is NetworkError. Exc: {data_get_request.exception()}")
             return
         if not self._access_token_status or not self._refresh_token_status:  # Если просрочены токены, запрос не повторяется (Чтобы избежать зацикливания)
-            logging.info(f'Request is not prepared: invalid tokens status - Access: {self._access_token_status}.'
+            logger.info(f'Request is not prepared: invalid tokens status - Access: {self._access_token_status}.'
                          f'Refresh: {self._refresh_token_status}.')
             return
 
@@ -99,7 +102,7 @@ class BaseWindowHandler(QObject):
         """
         thread_id = threading.get_ident()
         if thread_id != self._main_thread_id:
-            logging.warning(f'Preparing of the request executing in other thread: ID: {thread_id}. Main thread: {self._main_thread_id}')
+            logger.warning(f'Preparing of the request executing in other thread: ID: {thread_id}. Main thread: {self._main_thread_id}')
 
         try:
             result = request.result()
@@ -116,7 +119,7 @@ class BaseWindowHandler(QObject):
                 self._refresh_request_sent = True
 
         except err.ExpiredRefreshToken as e:  # Обработка просрочки refresh-токена
-            logging.debug('Expired Refresh Token')
+            logger.debug('Expired Refresh Token')
             self.set_refresh_token_status(False)
             self.incorrect_tokens_update.emit()
 
@@ -131,11 +134,11 @@ class BaseWindowHandler(QObject):
 
     def set_access_token_status(self, status: bool):
         self._access_token_status = status
-        logging.debug(f'Access token status: {status}')
+        logger.debug(f'Access token status: {status}')
 
     def set_refresh_token_status(self, status: bool):
         self._refresh_token_status = status
-        logging.debug(f'Refresh token status: {status}')
+        logger.debug(f'Refresh token status: {status}')
 
     def update_data(self):
         """

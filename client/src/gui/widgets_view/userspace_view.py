@@ -9,7 +9,6 @@ from PySide6.QtWidgets import (QVBoxLayout, QListWidget, QDialog, QHBoxLayout, Q
                                QScrollArea, QWidget, QGraphicsScene, QSizePolicy)
 from PySide6.QtGui import QFontMetrics, QTextOption, QColor
 
-import logging
 import typing as tp
 
 from client.src.gui.widgets_view.base_view import BaseView
@@ -21,7 +20,10 @@ from client.src.gui.sub_widgets.widgets import UserSpaceTask, Reminder, QEventWi
 from client.src.base import GuiLabels, DataStructConst, ObjectNames
 from client.utils.data_tools import parse_time
 from client.src.gui.sub_widgets.common_widgets import QToolTipLabel, QStructuredText
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 MultiSelection = QAbstractItemView.SelectionMode.MultiSelection
 
 
@@ -402,7 +404,7 @@ class ReminderWidgetView(BaseUserSpaceWidget):
         for i in range(self._widgets_layout.count()):
             widget = self._widgets_layout.itemAt(i).widget()
             if widget.name == label:
-                logging.debug(f'Reminder deleted: {widget.name}')
+                logger.debug(f'Reminder deleted: {widget.name}')
                 widget.hide()
 
     def reminders(self) -> tuple[str, ...]:

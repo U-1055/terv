@@ -1,6 +1,4 @@
-"""Основной файл сервера. Содержит слой перенаправления."""
-import logging
-
+"""Основной файл сервера. Содержит слой роутеров."""
 from flask import Flask, request
 from sqlalchemy.orm.session import sessionmaker
 
@@ -14,20 +12,23 @@ from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
 from common.base import CommonStruct, check_password, ErrorCodes as ErCodes, DBFields
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from server.utils.data_checkers import check_email
 from server.utils.api_utils import form_response, exceptions_handler, form_success_response
 import server.api.controllers.controllers as handlers
 # ToDo: заголовок с Authorization на Authorization Bearer
 
-logging.basicConfig(level=logging.INFO)
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 app = Flask(__name__)
 config = Config('../config.json')
 database_path = config.database_path
 engine = init_db(database_path)
 
-logging.info(f'Module app.py is running. Environment: {config.env}. DB path: {database_path}.'
-             f'Access lifetime: {config.access_token_lifetime}. Refresh lifetime: {config.refresh_token_lifetime}')
+logger.info(f'Module is running. Environment: {config.env}. DB path: {database_path}.'
+            f'Access lifetime: {config.access_token_lifetime}. Refresh lifetime: {config.refresh_token_lifetime}')
 
 session = sessionmaker(bind=engine)
 repo = DataRepository(session)

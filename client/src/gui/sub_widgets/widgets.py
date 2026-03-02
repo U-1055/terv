@@ -1,7 +1,6 @@
 from PySide6.QtWidgets import QWidget, QPushButton, QHBoxLayout, QMenu, QWidgetAction, QFrame
 from PySide6.QtCore import Signal, QObject, Qt, QPoint
 
-import logging
 import typing as tp
 
 from client.src.base import DataStructConst, GuiLabels, ObjectNames

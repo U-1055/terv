@@ -2,14 +2,16 @@ from PySide6.QtWidgets import QHBoxLayout, QGridLayout, QVBoxLayout, QPushButton
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QColor
 
-import logging
-
 from client.src.base import GuiLabels, DataStructConst
 from client.src.gui.widgets_view.userspace_view import (TaskWidgetView, NotesWidgetView, ScheduleWidgetView, 
                                                        BaseUserSpaceWidget, ReminderWidgetView, EventsTodayWidget)
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.aligns import AlignBottom
 from client.utils.qt_utils import filled_rows_count, filled_columns_count, get_next_widget_grid_pos
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class UserSpaceWindow(BaseWindow):
@@ -48,7 +50,7 @@ class UserSpaceWindow(BaseWindow):
 
         self.setLayout(self._main_layout)
 
-        logging.debug('UserSpaceWindow initialized')
+        logger.debug('UserSpaceWindow initialized')
 
     def press_btn_set_widgets(self):
         self.btn_set_widgets_pressed.emit()
@@ -72,7 +74,7 @@ class UserSpaceWindow(BaseWindow):
             y += 1
             x = 0
 
-        logging.info(f'Coordinates for widget {widget.name} computed: x: {x}; y: {y}')
+        logger.info(f'Coordinates for widget {widget.name} computed: x: {x}; y: {y}')
         self._widgets_layout.addWidget(widget, y, x)
         self._last_y, self._last_x = y, x  # Новая позиция последнего виджета
         return y, x
@@ -141,4 +143,4 @@ class UserSpaceWindow(BaseWindow):
 
     def close(self):
         super().close()
-        logging.debug('UserSpaceWindow closed')
+        logger.debug('UserSpaceWindow closed')

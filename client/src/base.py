@@ -1,6 +1,15 @@
 from PySide6.QtGui import QFont, QColor
 
+from pathlib import Path
+import logging
+
 from common.base import CommonStruct, DBFields
+
+# Параметры логирования
+LOG_DIR = Path('log')
+MAX_BACKUP_FILES = 100
+MAX_FILE_SIZE = 100 * 1024
+LOGGING_LEVEL = logging.INFO
 
 
 class DataStructConst:

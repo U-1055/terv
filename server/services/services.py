@@ -1,5 +1,4 @@
 """Сервисы."""
-import logging
 
 import sqlalchemy.exc
 
@@ -7,10 +6,11 @@ from common.base import CommonStruct, DBFields
 from server.database.repository import DataRepository
 from server.utils.api_utils import db_exceptions_handler
 from server.data_const import DBStruct
-import server.database.models.common_models as cm
-import server.database.models.roles as roles
-import server.database.schemes.common_schemes as cs
 import server.services.errors as err
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 # ToDo: обеспечивать формат даты из CommonStruct.datetime_format
 
@@ -72,7 +72,7 @@ class WorkspaceService(BaseService):
         default_role_id = workspace.get(DBFields.default_role_id)
         default_role_content = repo.get_roles_by_id([default_role_id]).content
         if not default_role_content:
-            logging.error(f'There is no role with default role id: {default_role_id}. Workspace: {workspace}.'
+            logger.error(f'There is no role with default role id: {default_role_id}. Workspace: {workspace}.'
                           f' (Excepting during deleting_users from workspace)')
             raise err.IncorrectParamError('workspace', f'There is no role with default role id: {default_role_id}')
         default_role = default_role_content[0]

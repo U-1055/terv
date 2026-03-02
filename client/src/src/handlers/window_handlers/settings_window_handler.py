@@ -1,5 +1,3 @@
-import logging
-
 from PySide6.QtCore import Signal
 
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler
@@ -9,6 +7,10 @@ from client.src.gui.main_view import MainWindow
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst
 import client.models.common_models as cm
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class SettingsWindowHandler(BaseWindowHandler):
@@ -76,7 +78,7 @@ class SettingsWindowHandler(BaseWindowHandler):
         self._window.set_mode_log_out()
 
     def set_user_data(self, user: cm.User):
-        logging.debug(f'User info set: {user}')
+        logger.debug(f'User info set: {user}')
         self._user = user
         self._window.set_username(user.username)
 

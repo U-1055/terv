@@ -1,7 +1,6 @@
 from PySide6.QtCore import QTimer
 
 import typing as tp
-import logging
 
 from client.src.gui.main_view import MainWindow
 if tp.TYPE_CHECKING:
@@ -19,9 +18,10 @@ from client.src.src.handlers.window_handlers.main_auth_window_handler import Mai
 import client.models.common_models as cm
 from client.src.client_model.links_handler import LinksHandler
 from client.src.requester.cash_manager import CashManager
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
-logging.basicConfig(level=logging.CRITICAL)
-logging.debug('Module main_logic.py is running')
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class Logic:
@@ -61,7 +61,7 @@ class Logic:
         else:
             style = self._model.get_style(DataStructConst.dark_style)
             self._model.set_current_style(DataStructConst.dark_style)
-        logging.debug(f'Current style: {current_style}.')
+        logger.debug(f'Current style: {current_style}.')
         self._view.set_style(style)
 
         self._view.btn_open_userspace_pressed.connect(self._open_userspace)
@@ -105,7 +105,7 @@ class Logic:
         self._view.show_message(GuiLabels.message, GuiLabels.account_leaved)
 
     def _authorize(self):
-        logging.debug('Opening authorize window by tokens expiration.')
+        logger.debug('Opening authorize window by tokens expiration.')
         main_auth_window = self._view.open_auth_window()
         self._auth_window_handler = MainAuthWindowHandler(main_auth_window, self._view, self._requester, self._model)
         self._auth_window_handler.auth_complete.connect(self._on_auth_complete)
@@ -124,7 +124,7 @@ class Logic:
             self._opened_now.update_state()  # ToDo: обновление данных пользователя
 
     def _on_btn_log_in_pressed(self):
-        logging.debug("Opening authorize window by user's request")
+        logger.debug("Opening authorize window by user's request")
         main_auth_window = self._view.open_auth_window()
         self._auth_window_handler = MainAuthWindowHandler(main_auth_window, self._view, self._requester, self._model)
         self._auth_window_handler.auth_complete.connect(self._on_log_in_completed)
@@ -135,7 +135,7 @@ class Logic:
 
     def _update_current_window(self):
         if self._opened_now:
-            logging.debug(f'Updating current hanlder. Handler: {self._opened_now}')
+            logger.debug(f'Updating current hanlder. Handler: {self._opened_now}')
             self._opened_now.update_data()
 
     def _update_state(self):

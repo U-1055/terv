@@ -1,6 +1,4 @@
 """Обобщённые Qt-подобные виджеты."""
-import logging
-
 from PySide6.QtWidgets import (QWidget, QGridLayout, QLabel, QScrollArea, QVBoxLayout, QSizePolicy, QMenu, QWidgetAction,
                                QProgressBar)
 from PySide6.QtCore import Signal
@@ -11,8 +9,10 @@ import typing as tp
 
 from client.src.base import GUIStyles
 from client.src.gui.sub_widgets.util_widgets import QClickableLabel
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
-logging.basicConfig(level=logging.DEBUG)
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class QStructuredText(QWidget):
@@ -186,10 +186,10 @@ class QStructuredText(QWidget):
 
         for i in range(self._layout.rowCount()):
             widget = self._layout.itemAtPosition(i, self.field_column).widget()
-            logging.warning(f'Iter: {i}. Text: {widget.text()}. Field: {field}')
+            logger.warning(f'Iter: {i}. Text: {widget.text()}. Field: {field}')
             if isinstance(widget, QLabel) and widget.text() == field:
                 menu.exec(QCursor.pos())
-                logging.warning(f'Menu placed by coordinates: {QCursor.pos()}')
+                logger.warning(f'Menu placed by coordinates: {QCursor.pos()}')
 
 
 class QToolTipLabel(QClickableLabel):

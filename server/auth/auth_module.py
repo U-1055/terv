@@ -1,7 +1,6 @@
 from sqlalchemy.exc import IntegrityError
 
 import datetime
-import logging
 import enum
 import os
 import shelve
@@ -12,14 +11,14 @@ from server.storage.server_model import Model
 from server.database.repository import DataRepository
 from server.data_const import DataStruct, Permissions
 from common.base import DBFields, CommonStruct
-from server.database.models.base import Base
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 def hash_password(password: str) -> str:
     return hashpw(bytes(password, encoding='utf-8'), gensalt()).decode('utf-8')
-
-
-logging.basicConfig(level=logging.INFO)
 
 
 class Authenticator:
@@ -64,7 +63,7 @@ class Authenticator:
 
         secret = self._model.get_secret()
         if self._model.check_token_in_blacklist(token_):
-            logging.warning(f'Token in blacklist. Token: {token_}')
+            logger.warning(f'Token in blacklist. Token: {token_}')
             return False
         try:
             payload = jwt.decode(token_, key=secret, algorithms=[self._jwt_alg])
@@ -75,14 +74,14 @@ class Authenticator:
                     return False
             elif type_ == self._data_struct.refresh_token:
                 if expiring_time - creating_time != self._refresh_token_lifetime.total_seconds():
-                    logging.warning(f"Invalid refresh token. Token's time difference: {expiring_time - creating_time}."
+                    logger.warning(f"Invalid refresh token. Token's time difference: {expiring_time - creating_time}."
                                     f"It must be refresh token lifetime: {self._refresh_token_lifetime.total_seconds()}")
                     return False
             else:
                 raise ValueError(f'Unknown token_type: {type_}. Must be access or refresh')
 
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
-            logging.warning(f'Invalid token. Type: {type_}. Token: {token_}')
+            logger.warning(f'Invalid token. Type: {type_}. Token: {token_}')
             return False
         return True
 
@@ -153,7 +152,7 @@ class Authenticator:
             refresh_token = self._create_token(user_id, self._refresh_token_lifetime)
             return {self.access_name: access_token, self.refresh_name: refresh_token}
         except ValueError as e:
-            logging.debug(f'INVALID PASSWORD: saved_hash: {hashed_password}; received_hash: {bytes(password, encoding='utf-8')}')
+            logger.debug(f'INVALID PASSWORD: saved_hash: {hashed_password}; received_hash: {bytes(password, encoding='utf-8')}')
             raise ValueError
 
     @property

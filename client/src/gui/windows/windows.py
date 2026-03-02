@@ -1,13 +1,11 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout
 from PySide6.QtCore import Signal
 
-import logging
-
 from client.src.gui.widgets_view.userspace_view import TaskWidgetView
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
-logging.basicConfig(level=logging.DEBUG)
-
-logging.debug('Module windows.py is running')
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class BaseWindow(QWidget):
@@ -23,7 +21,7 @@ class BaseWindow(QWidget):
     
     def destroy(self, /, destroyWindow = ..., destroySubWindows = ...):
         self.destroyed.emit()
-        logging.debug('Window destroyed')
+        logger.debug('Window destroyed')
         super().destroy(destroyWindow, destroySubWindows)
 
 
@@ -32,11 +30,11 @@ class PersonalTasksWindow(BaseWindow):
     def __init__(self):
         super().__init__()
         
-        logging.debug('PersonalTaskWindow initialized')
+        logger.debug('PersonalTaskWindow initialized')
 
     def close(self):
         super().close()
-        logging.debug('PersonalTaskWindow closed')
+        logger.debug('PersonalTaskWindow closed')
 
     def update(self):
         pass
@@ -46,11 +44,11 @@ class CalendarWindow(BaseWindow):
 
     def __init__(self):
         super().__init__()
-        logging.debug('CalendarWindow initialized')
+        logger.debug('CalendarWindow initialized')
 
     def close(self):
         super().close()
-        logging.debug('CalendarWindow closed')
+        logger.debug('CalendarWindow closed')
 
 
 if __name__ == '__main__':

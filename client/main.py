@@ -2,11 +2,9 @@
 Точка входа
 """
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QPixmap
 
 from pathlib import Path
 import threading
-import logging
 import locale
 
 from common_utils.log_utils.memory_logger import check_memory
@@ -18,7 +16,7 @@ from client.src.base import DataStructConst
 from client.src.client_model.links_handler import LinksHandler
 from common_utils.log_utils.request_time_logger import RequestsTimeHandler
 
-logging.basicConfig(level=logging.INFO)
+
 locale.setlocale(locale.LC_TIME, 'Russian')
 
 CHECK_TIME = True

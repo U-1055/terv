@@ -1,5 +1,4 @@
 import datetime
-import logging
 
 from sqlalchemy.orm.session import sessionmaker, Select
 from sqlalchemy.sql import select, delete
@@ -12,6 +11,10 @@ import server.database.models.common_models as cm
 import server.database.models.roles as roles
 from common.base import DBFields, get_datetime_now
 from server.database.schemes.base import schemes_models
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class DataRepository:
@@ -49,7 +52,7 @@ class DataRepository:
                 if models_list:  # Сериализуем
                     scheme = schemes_models.get(type(models_list[0]))  # Получаем схему
                     if not scheme:
-                        logging.critical(f'There is no scheme for model: {type(models_list[0])}.')
+                        logger.critical(f'There is no scheme for model: {type(models_list[0])}.')
                     content = [scheme.dump(obj=model) for model in result]
                 else:
                     content = []
@@ -372,9 +375,10 @@ class RepoInsertResponse:
 
 if __name__ == '__main__':
     from server.database.models.db_utils import launch_db
+    from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+    from marshmallow.exceptions import MarshmallowError, ValidationError
+
     engine = launch_db('sqlite:///database')
     s_maker = sessionmaker(engine)
     repo = DataRepository(s_maker)
-    print(repo.get_ws_daily_events_by_id(notified_id=1, ids=[]).content)
-
 

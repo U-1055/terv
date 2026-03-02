@@ -2,8 +2,6 @@ from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget
 from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QPixmap
 
-import logging
-
 from client.src.ui.ui_main_window import Ui_Form
 from client.src.gui.sub_widgets.common_widgets import QProgressWidget
 from client.src.gui.sub_widgets.base import BaseWidget
@@ -14,12 +12,10 @@ from client.src.gui.windows.settings_window import SettingsWindow
 from client.src.gui.windows.auth_window import PopUpAuthWindow
 from client.src.base import GUIStyles, GuiLabels
 import client.src.gui.view_utils as utils
+from common.logger import config_logger, CLIENT
+from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
-
-logging.basicConfig(level=logging.DEBUG)
-logging.debug(f'Module main_view.py is running')
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 class MainWindow(QMainWindow):
@@ -86,7 +82,7 @@ class MainWindow(QMainWindow):
 
     def _destroy_window(self, idx: int):
         self._view.wdg_window.removeWidget(idx)
-        logging.debug(f'Window idx {idx} destroyed')
+        logger.debug(f'Window idx {idx} destroyed')
 
     def _open_window(self, type_) -> BaseWindow:
         """Открытие окна"""
@@ -104,12 +100,12 @@ class MainWindow(QMainWindow):
         window.raise_()
 
     def _remove_dialog_window(self, window: QDialog):
-        logging.debug(f'Dialog window {window} closed.')
+        logger.debug(f'Dialog window {window} closed.')
         if window in self._opened_dialog_windows:
             self._opened_dialog_windows.remove(window)
 
     def _remove_message_window(self, window: QMessageBox):
-        logging.debug(f'Message window {window} closed.')
+        logger.debug(f'Message window {window} closed.')
         if window in self._opened_message_windows:
             self._opened_message_windows.remove(window)
 
@@ -227,7 +223,7 @@ class MainWindow(QMainWindow):
     def open_window(self, window: BaseWindow):
         """Переключает окно в стековом виджете на указанное."""
         self._view.wdg_window.setCurrentWidget(window)
-        logging.debug(f'{window} opened')
+        logger.debug(f'{window} opened')
     
     def show_progress_window(self, loading_time: int):
         """Показывает окно загрузки в виджете окон."""
