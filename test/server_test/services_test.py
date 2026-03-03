@@ -1,13 +1,11 @@
 import pytest
 import sqlalchemy.orm.session
 
-from pathlib import Path
-
 from server.services.services import WorkspaceService
 from server.database.repository import DataRepository
 from test.server_test.utils.test_database.base import DatabaseManager
 from common.base import DBFields
-import server.services.errors as err
+import server.services.exceptions as err
 
 
 def string(len_: int = 30) -> str:
@@ -56,13 +54,13 @@ def test_creating_normal_workspace(repository: DataRepository, name: str, descri
 
 @pytest.mark.parametrize(
     ['name', 'description', 'creator_id'],
-    [[string(31), string(25), 2], [string(30), string(1002), 2], [string(31), string(1002), 5]]
+    [[string(61), string(25), 2], [string(30), string(1002), 2], [string(61), string(1002), 5]]
 )
 def test_creating_not_normal_workspace(repository: DataRepository, name: str, description: str, creator_id: int):
     workspace = {DBFields.name: name, DBFields.description: description}
     with pytest.raises(err.IncorrectParamError) as e:
         WorkspaceService.create(workspace, creator_id, repository)
-        assert e.param == 'workspace'
+
 
 
 @pytest.mark.parametrize(

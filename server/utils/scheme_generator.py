@@ -53,6 +53,7 @@ def gen_scheme(input_: Path, output_: Path, module_prefix: str = 'cm', scheme_su
     with open(input_) as input_file:
         text = input_file.readlines(10000)
         model_now = None
+
         while text:
             result = []
             for line in text:
@@ -62,7 +63,7 @@ def gen_scheme(input_: Path, output_: Path, module_prefix: str = 'cm', scheme_su
                                   f'class {model_now}{scheme_suffix}:\n\n'
                                   f'    class Meta{meta_suffix}:\n'
                                   f'        model = {module_prefix}{model_now}\n'
-                                  f'\n')
+                                  f'')
 
                 if ':' in line:
                     field = line.split(':')[0].strip()
@@ -70,7 +71,7 @@ def gen_scheme(input_: Path, output_: Path, module_prefix: str = 'cm', scheme_su
                         entity = '_'.join(field.split('_')[0:-1]).strip()
                         if field not in excluded_fields:  # Записали поле внешнего ключа и relationship-поле
                             result.append(f'    {field} = {marshmallow_fields_prefix}Int(load_only=True)\n')
-                            result.append(f'    {entity} = {marshmallow_fields_prefix}Int(dump_only=True)\n')
+                            result.append(f'    {entity} = auto_field(dump_only=True)\n')
                     if field == 'description':
                         result.append(f'    {field} = {marshmallow_fields_prefix}Str(load_default={description_default_param})\n')
 
@@ -81,4 +82,4 @@ def gen_scheme(input_: Path, output_: Path, module_prefix: str = 'cm', scheme_su
 
 
 if __name__ == '__main__':
-    gen_scheme('../database/models/roles.py', Path('roles(1).py'), module_prefix='roles')
+    gen_scheme('../database/models/common_models.py', Path('common.py'), module_prefix='cm')

@@ -5,6 +5,7 @@ from marshmallow.exceptions import MarshmallowError, ValidationError
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, LOGGING_LEVEL, MAX_FILE_SIZE, MAX_BACKUP_FILES
 from common_utils.text_prepare_utils import snake_to_camel_case
+from functools import wraps
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -13,8 +14,13 @@ NO_VALUE = 'Missing data for required field'  # marshmallow.exceptions.Validatio
 UNKNOWN_FIELD = 'Unknown field'  # marshmallow.exceptions.ValidationError
 
 
-def exc_mapped(func: tp.Callable) -> tp.Callable[[], Exception]:
-    def prepare(*args, **kwargs) -> tp.Any:
+P = tp.ParamSpec('P')
+T = tp.TypeVar('T')
+
+
+def exc_mapped(func: tp.Callable[P, T]) -> tp.Callable[P, T]:
+    @wraps(func)
+    def prepare(*args: P.args, **kwargs: P.kwargs) -> T:
         try:
             return func(*args, **kwargs)
         except SQLAlchemyError as e:
@@ -36,8 +42,8 @@ def map_sqlalchemy_exc_to_repo_exc(exc: SQLAlchemyError) -> 'BaseRepoException':
         if NOT_UNIQUE_VALUE_MESSAGE in msg:
             return NotUniqueValue(msg)
     else:
-        logger.critical(f'There is no complimentary exceptions for: {exc}.')
-        raise ValueError('Unknown Repo error.')
+        logger.critical(f'There are no complimentary exceptions for: {exc}.')
+        return UnknownRepoException(exc)
 
 
 def map_marshmallow_exc_to_repo_exc(exc: MarshmallowError) -> 'BaseRepoException':
@@ -52,9 +58,12 @@ def map_marshmallow_exc_to_repo_exc(exc: MarshmallowError) -> 'BaseRepoException
                 no_value_params.append(param)
             if UNKNOWN_FIELD in messages[param][0]:
                 unknown_params.append(param)
-        if not unknown_params:
+        if not unknown_params and no_value_params:
             return NoRequiredParams(no_value_params)
-        return UnknownParams(unknown_params)
+        if not no_value_params and unknown_params:
+            return UnknownParams(unknown_params)
+        logger.critical(f'There are no complimentary exceptions for: {exc}')
+        return UnknownRepoException(exc)
 
 
 class BaseRepoException(Exception):
@@ -63,6 +72,14 @@ class BaseRepoException(Exception):
 
     def __str__(self):
         return f'RepositoryException - {self.__class__.__name__}: {self.message}'
+
+
+class UnknownRepoException(BaseRepoException):
+    """Неизвестное исключение слоя доступа к данным."""
+
+    def __init__(self, exc: Exception):
+        self.orig = exc
+        self.message = f'{self.orig.__class__.__name__} - {exc.args[0]}'
 
 
 class NotUniqueValue(BaseRepoException):
@@ -115,4 +132,9 @@ class UnknownParams(BaseRepoException):
 
 
 if __name__ == '__main__':
-    print(NotUniqueValue('UNIQUE constraint failed: user.username'))
+    @exc_mapped
+    def func_(sth: str):
+        """Docs."""
+
+    print(func_.__doc__)
+    print(func_.__name__)

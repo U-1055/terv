@@ -9,7 +9,7 @@ from pydantic import Field
 import server.database.models.common_models as db
 
 
-class wsRole(Base):
+class WSRole(Base):
     """Роль рабочего пространства."""
     __tablename__ = 'ws_role'
 
@@ -37,7 +37,7 @@ class Permission(Base):
     document_roles: list[int]
 
 
-class wsRoleTask(Base):
+class WSRoleTask(Base):
     """Роль РП - задача."""
     __tablename__ = 'ws_role_task'
 
@@ -47,7 +47,7 @@ class wsRoleTask(Base):
     permissions: list[int]
 
 
-class wsRoleProject(Base):
+class WSRoleProject(Base):
     __tablename__ = 'ws_role_project'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
@@ -56,7 +56,7 @@ class wsRoleProject(Base):
     permissions: list[int]
 
 
-class wsRoleDailyEvent(Base):
+class WSRoleDailyEvent(Base):
     __tablename__ = 'ws_role_daily_event'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
@@ -65,7 +65,7 @@ class wsRoleDailyEvent(Base):
     permissions: list[int]
 
 
-class wsRoleManyDaysEvent(Base):
+class WSRoleManyDaysEvent(Base):
     __tablename__ = 'ws_role_many_days_event'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)
@@ -74,7 +74,7 @@ class wsRoleManyDaysEvent(Base):
     permissions: list[int]
 
 
-class wsRoleDocument(Base):
+class WSRoleDocument(Base):
     __tablename__ = 'ws_role_document'
 
     id: int = mapped_column(primary_key=True, autoincrement=True)

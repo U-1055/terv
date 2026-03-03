@@ -1,12 +1,9 @@
 """Сервисы."""
 
-import sqlalchemy.exc
-
 from common.base import CommonStruct, DBFields
 from server.database.repository import DataRepository
-from server.utils.api_utils import db_exceptions_handler
 from server.data_const import DBStruct
-import server.services.errors as err
+import server.services.exceptions as err
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL
 
@@ -25,12 +22,10 @@ class UserService(BaseService):
 
 class WorkspaceService(BaseService):
     @staticmethod
-    @db_exceptions_handler
     def delete(workspace_id: int, repo: DataRepository):
         pass
 
     @staticmethod
-    @db_exceptions_handler
     def add_users(user_ids: tuple[int, ...], workspace_id: int, repo: DataRepository):
         """
         Добавляет пользователя в РП. Устанавливает ему стандартную роль. Пользователи, уже имеющиеся в РП, добавлены
@@ -62,7 +57,6 @@ class WorkspaceService(BaseService):
         repo.update_workspaces([workspace])
 
     @staticmethod
-    @db_exceptions_handler
     def delete_users(workspace_id: int, users_ids: tuple[int], repo: DataRepository):  # ToDo: удаление из всех связанных с РП сущностями
         workspace_content = repo.get_workspaces([workspace_id]).content
         if not workspace_content:
@@ -86,7 +80,6 @@ class WorkspaceService(BaseService):
         repo.update_ws_roles([default_role])
 
     @staticmethod
-    @db_exceptions_handler
     def create(workspace: dict, user_id: int, repo: DataRepository) -> int:
         """
         Создаёт РП. Добавляет туда пользователя с id = user_id и присваивает ему роль создателя (creator role).
@@ -102,7 +95,7 @@ class WorkspaceService(BaseService):
             raise err.IncorrectParamError('workspace', f'Length of the description of a workspace must be '
                                                       f'equal to {CommonStruct.max_description_length} or be less.')
 
-        workspace[DBFields.creator] = user_id  # Обновляем поля workspace
+        # Обновляем поля workspace
         workspace[DBFields.users] = [user_id]
         workspace[DBFields.creator_id] = user_id
         result = repo.add_workspaces([workspace])  # Вносим РП в БД
@@ -130,37 +123,52 @@ class WSDailyEventService(BaseService):
     """Сервис однодневного события РП."""
 
     @staticmethod
-    @db_exceptions_handler
-    def add(ws_daily_events: tuple[dict, ...], workspace_id: int):
-        pass
+    def create(ws_daily_events: tuple[dict, ...], workspace_id: int, repo: DataRepository):
+        for event in ws_daily_events:
+            event[CommonStruct.workspace_id] = workspace_id
+
+        repo.add_ws_daily_events(ws_daily_events)
 
     @staticmethod
-    @db_exceptions_handler
-    def update(ws_daily_events: tuple[dict, ...], workspace_id: int):
-        pass
+    def update(ws_daily_events: tuple[dict, ...], repo: DataRepository):
+        repo.update_ws_daily_events(ws_daily_events)
 
     @staticmethod
-    @db_exceptions_handler
-    def delete(ws_daily_events_ids: tuple[int, ...]):
-        pass
+    def delete(ws_daily_events_ids: tuple[int, ...], repo: DataRepository):
+        repo.delete_ws_daily_events(ws_daily_events_ids)
 
 
 class WSManyDaysEventService(BaseService):
     """Сервис многодневного события РП."""
 
     @staticmethod
-    @db_exceptions_handler
-    def add(ws_many_days_events: tuple[dict, ...], workspace_id: int):
+    def create(ws_many_days_events: tuple[dict, ...], workspace_id: int, repo: DataRepository):
+        for event in ws_many_days_events:
+            event[CommonStruct.workspace_id] = workspace_id
+        repo.add_ws_many_days_events(ws_many_days_events)
+
+    @staticmethod
+    def update(ws_many_days_events: tuple[dict, ...], workspace_id: int, repo: DataRepository):
+        repo.update_ws_many_days_events(ws_many_days_events)
+
+    @staticmethod
+    def delete(ws_many_days_events_ids: tuple[int, ...], repo: DataRepository):
+        repo.delete_ws_many_days_events(ws_many_days_events_ids)
+
+
+class WSTaskService(BaseService):
+    """Сервис задач РП."""
+
+    @staticmethod
+    def create(ws_tasks: tuple[dict, ...], workspace_id: int, repo: DataRepository):
         pass
 
     @staticmethod
-    @db_exceptions_handler
-    def update(ws_many_days_events: tuple[dict, ...], workspace_id: int):
+    def update(ws_tasks: tuple[dict, ...], repo: DataRepository):
         pass
 
     @staticmethod
-    @db_exceptions_handler
-    def delete(ws_many_days_events_ids: tuple[int, ...]):
+    def update_status(ws_tasks: tuple[dict, ...]):
         pass
 
 

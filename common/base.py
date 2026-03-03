@@ -49,15 +49,15 @@ class CommonStruct:
     date_format = '%Y-%m-%d'
     time_format = '%H:%M:%S'
     datetime_format = f'{date_format}T{time_format}'
-    max_name_length = 30  # Максимальная длина названий объектов
+    max_name_length = 60  # Максимальная длина названий объектов
     max_description_length = 1000  # Максимальная длина описаний объектов
 
 
 class TasksStatuses:
     """Статусы задач."""
     completed = 'completed'
-    in_progress = 'in_progress'
-    standing_by = 'standing_by'
+    default_task_status_name = 'Запланировано'
+    default_completed_task_status_name = 'Выполнено'
 
 
 class DBFields:
@@ -71,6 +71,8 @@ class DBFields:
     username = 'username'
     email = 'email'
     hashed_password = 'hashed_password'
+    completed_task_status_id = 'completed_task_status_id'
+    default_task_status_id = 'default_task_status_id'
     created_workspaces = 'created_workspaces'
     created_projects = 'created_projects'
     linked_workspaces = 'linked_workspaces'
@@ -89,20 +91,21 @@ class DBFields:
     work_directions = 'work_directions'
     personal_daily_events = 'personal_daily_events'
     personal_many_days_events = 'personal_many_days_events'
-    fields = 'fields'
-    one_links = 'one_links'
-    many_links = 'many_links'
-    # Workspace's fields
+    tags = 'tags'
+    statuses = 'statuses'
+    # Workspaces fields
     creator_id = 'creator_id'
+    default_role_id = 'default_role_id'
     name = 'name'
     description = 'description'
-    default_role_id = 'default_role_id'
     projects = 'projects'
     tasks = 'tasks'
     users = 'users'
     creator = 'creator'
     documents = 'documents'
     base_categories = 'base_categories'
+    daily_events = 'daily_events'
+    many_days_events = 'many_days_events'
     # Project's fields
     workspace_id = 'workspace_id'
     workspace = 'workspace'
@@ -111,6 +114,7 @@ class DBFields:
     entrusted_id = 'entrusted_id'
     work_direction_id = 'work_direction_id'
     parent_task_id = 'parent_task_id'
+    status_id = 'status_id'
     plan_deadline = 'plan_deadline'
     fact_deadline = 'fact_deadline'
     plan_time = 'plan_time'
@@ -124,6 +128,7 @@ class DBFields:
     parent_task = 'parent_task'
     child_tasks = 'child_tasks'
     project = 'project'
+    status = 'status'
     # PersonalTask's fields
     owner_id = 'owner_id'
     owner = 'owner'
@@ -146,26 +151,6 @@ class DBFields:
     # WSDocument's fields
     base_category_id = 'base_category_id'
     base_category = 'base_category'
-
-    # wsRole's fields
-    color = 'color'
-    permissions = 'permissions'
-    # Permission's fields
-    type = 'type'
-    project_roles = 'project_roles'
-    task_roles = 'task_roles'
-    daily_event_roles = 'daily_event_roles'
-    many_days_event_roles = 'many_days_event_roles'
-    document_roles = 'document_roles'
-    # wsRoleTask's fields
-    role_id = 'role_id'
-    task_id = 'task_id'
-    # wsRoleDailyEvent's fields
-    daily_event_id = 'daily_event_id'
-    # wsRoleManyDaysEvent's fields
-    many_days_event_id = 'many_days_event_id'
-    # wsRoleDocument's fields
-    document_id = 'document_id'
 
 
 class ObjectTypes:

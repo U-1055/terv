@@ -1,13 +1,12 @@
 """Объекты для настройки тестовой БД."""
 import datetime
 
-from sqlalchemy.orm.session import Session, sessionmaker
+from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql.expression import delete, select
 
 from server.auth.auth_module import hash_password
 from server.database.models.db_utils import init_db
 import server.database.models.common_models as cm
-import server.database.models.roles as roles
 
 
 class DatabaseManager:
@@ -41,13 +40,13 @@ class DatabaseManager:
             tasks = []
             for i in range(tasks_num):
                 task = cm.WSTask(name=f'ws_task_{i}',
-                              plan_deadline=datetime.datetime.now(),
-                              creator=creator,
-                              entrusted=creator,
-                              executors=[user],
-                              workspace=workspace,
-                              description=''
-                              )
+                                 plan_deadline=datetime.datetime.now(),
+                                 creator=creator,
+                                 entrusted=creator,
+                                 executors=[user],
+                                 workspace=workspace,
+                                 description=''
+                                 )
                 tasks.append(task)
 
             session.add_all(tasks)
@@ -66,6 +65,11 @@ class DatabaseManager:
 
             user = cm.User(username=login, hashed_password='2', email='M', linked_workspaces=[workspace])
             session.add(user)
+            ws_task_status = cm.WSTaskStatus(workspace=workspace, name='NAME', description='DESCRIPTION')
+            personal_task_status = cm.PersonalTaskStatus(owner=user, name='NAME', description='DESCRIPTION')
+            session.add(ws_task_status)
+            session.add(personal_task_status)
+
             for i in range(tasks_num):
                 ws_task = cm.WSTask(name=f'Task_{i}',
                                     plan_deadline=datetime.datetime.now(),
@@ -73,7 +77,8 @@ class DatabaseManager:
                                     entrusted=creator,
                                     executors=[user],
                                     workspace=workspace,
-                                    description=''
+                                    description='',
+                                    status=ws_task_status
                                     )
                 session.add(ws_task)
 
@@ -87,11 +92,16 @@ class DatabaseManager:
             session.add(creator)
             workspace = cm.Workspace(name='ws_1', creator=creator)
             session.add(workspace)
+            role = cm.WSRole(name='Role1', workspace=workspace)
+            session.add(role)
+
+            workspace.default_role_id = 1
             creator.linked_workspaces = [workspace]
+            assert workspace.default_role_id, workspace.default_role_id
             for i in range(users_num):
                 user = cm.User(username=f'user_{i}', hashed_password='s', email=f'em{i}')
                 session.add(user)
-
+            session.commit()
 
 if __name__ == '__main__':
 

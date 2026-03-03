@@ -1,12 +1,7 @@
-import pathlib
-
 import pytest
 from pathlib import Path
 import json
-import os
 import contextlib
-
-import sqlalchemy.orm.session
 
 from test.client_test.utils.test_server import launch
 from test.server_test.utils.test_database.base import DatabaseManager

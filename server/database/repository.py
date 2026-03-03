@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 from sqlalchemy.orm.session import sessionmaker, Select
 from sqlalchemy.sql import select, delete
@@ -8,12 +9,11 @@ import typing as tp
 from dataclasses import dataclass
 
 import server.database.models.common_models as cm
-import server.database.models.roles as roles
 from common.base import DBFields, get_datetime_now
 from server.database.schemes.base import schemes_models
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
-from server.database.exceptions import exc_mapped
+from server.database.exceptions import exc_mapped, NoRequiredParams
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -35,12 +35,11 @@ class DataRepository:
     def _validate(self):
         pass
 
-
     def _get_permissions(self, query: Select) -> tuple[str, ...]:
         with self._session_maker() as session, session.begin():
             perm_ids = session.execute(query)
             permissions = session.execute(
-                select(roles.Permission.type).where(roles.Permission.id.in_(perm_ids))).scalars().all()
+                select(cm.Permission.type).where(cm.Permission.id.in_(perm_ids))).scalars().all()
 
         return permissions
 
@@ -89,18 +88,31 @@ class DataRepository:
 
     def _execute_update(self, models: tp.Iterable[dict], base_model: tp.Type[cm.Base]):
         """
-        Перезаписывает указанные модели с введёнными данными. Автоматически десериализует модели, переданные в
-        relationship-полях.
+        Частично обновляет указанные модели введёнными данными. Автоматически десериализует модели, ID которых передан в
+        relationship-полях. В переданных моделях обязательно должно быть поле id (ID обновляемого объекта), кроме него
+        могут быть любые другие поля, значения которых будут обновлены.
         """
         with self._session_maker() as session, session.begin():
             schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
+            ids = []
+            for model in models:
+                id_ = model.get(DBFields.id)
+                if not id_:
+                    raise NoRequiredParams(('id',))
+                ids.append(id_)
+
+            db_models = session.execute(select(base_model).where(base_model.id.in_(ids))).scalars().all()
+            db_models = {db_model.id: db_model for db_model in db_models}
 
             for model in models:  # Сериализация + обновление даты в updated_at
-                for field in model:
-                    if field == DBFields.updated_at:
-                        model[field] = get_datetime_now()
-                model = schema.load(model, session=session)
-                session.merge(model)
+                model[DBFields.updated_at] = get_datetime_now()
+                schema_model = schema.load(model, session=session, partial=True)
+                db_model = db_models.get(schema_model.id)
+                if db_model:
+                    for field in model:  # Обновление полей
+                        setattr(db_model, field, model[field])
+
+            session.commit()
 
     @exc_mapped
     def get_users_by_username(self, usernames: tp.Iterable[str] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0,
@@ -161,7 +173,7 @@ class DataRepository:
 
     @exc_mapped
     def update_ws_roles(self, models: tp.Iterable[dict]):
-        self._execute_update(models, roles.WSRole)
+        self._execute_update(models, cm.WSRole)
 
     @exc_mapped
     def get_ws_daily_event_by_notified_id(self, notified_id: int, limit: int = None, offset: int = 0,
@@ -180,8 +192,8 @@ class DataRepository:
     @exc_mapped
     def get_role_by_user_id(self, workspace_id: int, user_id: int):
         """Получает роль пользователя в проекте."""
-        query = (select(roles.WSRole).where(roles.WSRole.workspace_id == workspace_id).
-                 where(roles.WSRole.users.any(cm.User.id == user_id)))
+        query = (select(cm.WSRole).where(cm.WSRole.workspace_id == workspace_id).
+                 where(cm.WSRole.users.any(cm.User.id == user_id)))
         return self._execute_select(query)
 
     @exc_mapped
@@ -200,7 +212,7 @@ class DataRepository:
                         offset: int = None,
                         require_last_num: bool = False) -> 'RepoSelectResponse':
         """Получает роль РП (WSRole) по её ID."""
-        query = select(roles.WSRole).where(roles.WSRole.id.in_(ids))
+        query = select(cm.WSRole).where(cm.WSRole.id.in_(ids))
         return self._execute_select(query, limit, offset, require_last_num)
 
     @exc_mapped
@@ -249,33 +261,33 @@ class DataRepository:
 
     @exc_mapped
     def get_task_permissions(self, task_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WSRoleTask.permissions).
-                 where(roles.WSRoleTask.task_id == task_id).
-                 where(roles.WSRoleTask.role_id == role_id)
+        query = (select(cm.WSRoleTask.permissions).
+                 where(cm.WSRoleTask.task_id == task_id).
+                 where(cm.WSRoleTask.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     @exc_mapped
     def get_project_permissions(self, project_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WSRoleProject.permissions).
-                 where(roles.WSRoleProject.project_id == project_id).
-                 where(roles.WSRoleProject.role_id == role_id)
+        query = (select(cm.WSRoleProject.permissions).
+                 where(cm.WSRoleProject.project_id == project_id).
+                 where(cm.WSRoleProject.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     @exc_mapped
     def get_document_permissions(self, document_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WSRoleDocument.permissions).
-                 where(roles.WSRoleDocument.document_id == document_id).
-                 where(roles.WSRoleDocument.role_id == role_id)
+        query = (select(cm.WSRoleDocument.permissions).
+                 where(cm.WSRoleDocument.document_id == document_id).
+                 where(cm.WSRoleDocument.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     @exc_mapped
     def get_daily_event_permissions(self, daily_event_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WSRoleDailyEvent.permissions).
-                 where(roles.WSRoleDailyEvent.daily_event_id == daily_event_id).
-                 where(roles.WSRoleDailyEvent.role_id == role_id)
+        query = (select(cm.WSRoleDailyEvent.permissions).
+                 where(cm.WSRoleDailyEvent.daily_event_id == daily_event_id).
+                 where(cm.WSRoleDailyEvent.role_id == role_id)
                  )
         return self._get_permissions(query)
 
@@ -384,24 +396,120 @@ class DataRepository:
 
     @exc_mapped
     def get_many_days_event_permissions(self, many_days_event_id: int, role_id: int) -> tuple[str]:
-        query = (select(roles.WSRoleManyDaysEvent.permissions).
-                 where(roles.WSRoleManyDaysEvent.many_days_event_id == many_days_event_id).
-                 where(roles.WSRoleManyDaysEvent.role_id == role_id)
+        query = (select(cm.WSRoleManyDaysEvent.permissions).
+                 where(cm.WSRoleManyDaysEvent.many_days_event_id == many_days_event_id).
+                 where(cm.WSRoleManyDaysEvent.role_id == role_id)
                  )
         return self._get_permissions(query)
 
     @exc_mapped
     def get_role_by_id_workspace(self, id_: int, workspace_id: int) -> 'RepoSelectResponse':
-        query = select(roles.WSRole).where(roles.WSRole.id == id_).where(roles.WSRole.workspace_id == workspace_id)
+        query = select(cm.WSRole).where(cm.WSRole.id == id_).where(cm.WSRole.workspace_id == workspace_id)
         return self._execute_select(query)
 
     @exc_mapped
-    def update_workspaces(self, models: list[dict]):
+    def update_workspaces(self, models: tp.Iterable[dict]):
         self._execute_update(models, cm.Workspace)
 
     @exc_mapped
-    def add_ws_roles(self, models: list[dict]) -> 'RepoInsertResponse':
-        return self._execute_insert(models, roles.WSRole)
+    def add_ws_roles(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.WSRole)
+
+    @exc_mapped
+    def add_ws_task_statuses(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.WSTaskStatus)
+
+    @exc_mapped
+    def update_ws_task_statuses(self, models: tp.Iterable[dict]):
+        self._execute_update(models, cm.WSTaskStatus)
+
+    @exc_mapped
+    def delete_ws_task_statuses(self, ids: tp.Iterable[int]):
+        self._execute_delete(ids, cm.WSTaskStatus)
+
+    @exc_mapped
+    def get_ws_task_statuses_by_id(self, ids: tp.Iterable[int], limit: int = None, offset: int = None,
+                                   require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.WSTaskStatus).where(cm.WSTaskStatus.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def add_ws_task_tags(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.WSTaskTag)
+
+    @exc_mapped
+    def update_ws_task_tags(self, models: tp.Iterable[dict]):
+        self._execute_update(models, cm.WSTaskTag)
+
+    @exc_mapped
+    def delete_ws_task_tags(self, ids: tp.Iterable[int]):
+        self._execute_delete(ids, cm.WSTaskTag)
+
+    @exc_mapped
+    def get_ws_task_tags_by_id(self, ids: tp.Iterable[int], limit: int = None, offset: int = None,
+                               require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.WSTaskTag).where(cm.WSTaskTag.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def add_personal_task_statuses(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.PersonalTaskStatus)
+
+    @exc_mapped
+    def update_personal_task_statuses(self, models: tp.Iterable[dict]):
+        self._execute_update(models, cm.PersonalTaskStatus)
+
+    @exc_mapped
+    def delete_personal_task_statuses(self, ids: tp.Iterable[int]):
+        self._execute_delete(ids, cm.PersonalTaskStatus)
+
+    @exc_mapped
+    def get_personal_task_statuses_by_id(self, ids: tp.Iterable[int], limit: int = None, offset: int = None,
+                                   require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.PersonalTaskStatus).where(cm.PersonalTaskStatus.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def add_personal_task_tags(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        return self._execute_insert(models, cm.PersonalTaskTag)
+
+    @exc_mapped
+    def update_personal_task_tags(self, models: tp.Iterable[dict]):
+        self._execute_update(models, cm.PersonalTaskTag)
+
+    @exc_mapped
+    def delete_personal_task_tags(self, ids: tp.Iterable[int]):
+        self._execute_delete(ids, cm.PersonalTaskTag)
+
+    @exc_mapped
+    def get_personal_task_tags_by_id(self, ids: tp.Iterable[int], limit: int = None, offset: int = None,
+                                     require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.PersonalTaskTag).where(cm.PersonalTaskTag.id.in_(ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_personal_task_tags_by_user(self, user_id: int, limit: int = None, offset: int = None,
+                                     require_last_num: bool = False, serialize: bool = True):
+        query = select(cm.PersonalTaskTag).where(cm.PersonalTaskTag.owner_id == user_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_personal_task_statuses_by_user(self, user_id: int, limit: int = None, offset: int = None,
+                                       require_last_num: bool = False, serialize: bool = True):
+        query = select(cm.PersonalTaskStatus).where(cm.PersonalTaskStatus.owner_id == user_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_ws_task_tags_by_workspace(self, workspace_id: int, limit: int = None, offset: int = None,
+                                      require_last_num: bool = False, serialize: bool = True):
+        query = select(cm.WSTaskTag).where(cm.WSTaskTag.workspace == workspace_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_ws_task_statuses_by_workspace(self, workspace_id: int, limit: int = None, offset: int = None,
+                                          require_last_num: bool = False, serialize: bool = True):
+        query = select(cm.WSTaskStatus).where(cm.WSTaskStatus.workspace_id == workspace_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
 
 
 @dataclass

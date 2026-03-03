@@ -6,7 +6,6 @@ import datetime
 
 from server.auth.auth_module import hash_password
 import server.database.models.common_models as cm
-import server.database.models.roles as roles
 
 
 def set_db_config_1(engine: Engine,
@@ -47,27 +46,35 @@ def set_db_config_1(engine: Engine,
         session.add(user_2)
         session.add(ws_creator)
 
+        default_personal_task_status = cm.PersonalTaskStatus(name='default_status', owner=user_1)
+        session.add(default_personal_task_status)
+
         if personal_tasks_params:
             personal_tasks = [
-                cm.PersonalTask(owner=user_1, name=params[0], description=params[1], plan_deadline=datetime.date.today())
+                cm.PersonalTask(owner=user_1, name=params[0], description=params[1], plan_deadline=datetime.date.today(),
+                                status=default_personal_task_status)
                 for params in personal_tasks_params]
         else:
             personal_tasks = [
                 cm.PersonalTask(owner=user_1, name=f'personal_task.{i}', plan_deadline=datetime.date.today(),
-                                description=''.join(['Description ' for i in range(50)])) for i in range(10)]
+                                description=''.join(['Description ' for i in range(50)]), status=default_personal_task_status) for i in range(10)]
         session.add_all(personal_tasks)
 
         workspace = cm.Workspace(creator=ws_creator, users=[ws_creator, user_2, user_1], name=workspace_name)
         session.add(workspace)
+        default_ws_task_status = cm.WSTaskStatus(name='default_status', workspace=workspace)
+        session.add(default_ws_task_status)
 
         if workspace_tasks_params:
             workspace_tasks = [cm.WSTask(name=params[0], description=params[1], workspace=workspace, creator=ws_creator,
-                                        entrusted=ws_creator, executors=[user_1, user_2], plan_deadline=datetime.date.today())
+                                         entrusted=ws_creator, executors=[user_1, user_2], plan_deadline=datetime.date.today(),
+                                         status=default_ws_task_status)
                               for params in workspace_tasks_params]
         else:
             workspace_tasks = [
                 cm.WSTask(name=f'ws_task.{i}', description='Description', creator=ws_creator, entrusted=ws_creator,
-                          executors=[user_1, user_2], workspace=workspace, plan_deadline=datetime.date.today())
+                          executors=[user_1, user_2], workspace=workspace, plan_deadline=datetime.date.today(),
+                          status=default_ws_task_status)
                 for i in range(10)]
         session.add_all(workspace_tasks)
 
@@ -171,6 +178,6 @@ if __name__ == '__main__':
                                                      ), ))
 
     repo = DataRepository(sessionmaker(bind=engine))
-    print(repo.get_ws_daily_events_by_id())
+    print(repo.get_workspaces())
 
 

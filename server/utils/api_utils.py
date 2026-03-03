@@ -1,13 +1,16 @@
-import logging
-
 import flask
 from flask import Response, jsonify, Request
 from sqlalchemy.exc import SQLAlchemyError
 
 import typing as tp
+import functools
 
 from common.base import CommonStruct, ErrorCodes
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, LOGGING_LEVEL, MAX_FILE_SIZE, MAX_BACKUP_FILES
 from server.data_const import APIAnswers as APIAn
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 def form_response(http_code: int,
@@ -101,11 +104,12 @@ def list_to_int(list_: list[str]) -> list[int]:
 def exceptions_handler(func: tp.Callable):
     """Обработчик исключений."""
 
+    @functools.wraps(func)
     def prepare(request: flask.Request):
         try:
             return func(request)
         except Exception as e:
-            logging.critical(f'Unknown error was excepted during preparing request: {request}.')
+            logger.critical(f'Unknown error was excepted during preparing request: {request}.')
             return form_response(500, 'Unknown server error', error_id=ErrorCodes.server_error.value)
 
     return prepare
@@ -118,6 +122,7 @@ def get_request(func: tp.Callable):
     соответствующий ответ API.
     """
 
+    @functools.wraps(func)
     def prepare(request: flask.Request, *args, **kwargs):
         limit = request.args.get(CommonStruct.limit)
         offset = request.args.get(CommonStruct.offset)
@@ -143,18 +148,6 @@ def get_request(func: tp.Callable):
             require_last_num = True
 
         return func(request, *args, **kwargs, limit=limit, offset=offset, require_last_num=require_last_num)
-
-    return prepare
-
-
-def db_exceptions_handler(func: tp.Callable):
-    """Передаёт вызывающей стороне все исключения БД, вызванные в декорированной функции."""
-
-    def prepare(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except SQLAlchemyError as e:
-            raise e
 
     return prepare
 

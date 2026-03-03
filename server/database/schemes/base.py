@@ -1,6 +1,5 @@
 import server.database.schemes.common_schemes as cs
 import server.database.models.common_models as cm
-import server.database.models.roles as roles
 
 
 schemes_models = {  # Соответствие моделей и схем
@@ -18,14 +17,16 @@ schemes_models = {  # Соответствие моделей и схем
     cm.WSTask: cs.WSTaskSchema(),
     cm.WSWorkDirection: cs.WSWorkDirectionSchema(),
     cm.Workspace: cs.WorkspaceSchema(),
-    roles.wsRole: cs.wsRoleSchema(),
+    cm.WSTaskStatus: cs.WSTaskStatusSchema(),
+    cm.WSTaskTag: cs.WSTaskTagSchema(),
+    cm.PersonalTaskStatus: cs.PersonalTaskStatusSchema(),
+    cm.PersonalTaskTag: cs.PersonalTaskTagSchema(),
+    cm.WSRole: cs.WSRoleSchema(),
 }
 
 
 if __name__ == '__main__':
     for model in dir(cm):
         print(f'cm.{model}: cs.{model}Schema(),')
-    for model in dir(roles):
-        print(f'roles.{model}: cs.{model}Schema(),')
 
 

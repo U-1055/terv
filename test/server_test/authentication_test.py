@@ -3,15 +3,10 @@ import datetime
 
 import pytest
 import jwt
-import os
 import time
 import typing as tp
 
-from pathlib import Path
-import json
-
 from test.server_test.utils.requester import TestRequester
-from test.server_test.utils.model import Model
 from common.base import CommonStruct as DataStruct
 from test.conftest import set_config, TEST_CONFIG_PATH, SERVER_CONFIG_PATH, SERVER_WORKING_DIR
 

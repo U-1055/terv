@@ -19,7 +19,7 @@ TEST_ws_NAME = 'workspace'
 @pytest.fixture(scope='session')
 def config_db() -> sqlalchemy.orm.session.sessionmaker:  # Устанавливает конфиг БД для теста, возвращает sessionmaker
     db_manager = DatabaseManager(test_database_path)
-    db_manager.set_repository_test_config(TEST_LOGIN, TEST_ws_NAME, 15)
+    db_manager.set_repository_test_config(TEST_LOGIN, TEST_ws_NAME, 30)
     return db_manager.session_maker
 
 
@@ -99,9 +99,11 @@ def test_deserializing_links(repository: DataRepository):
     ['name', 'description'],
     [['task', 'some_description']]
 )
-def test_creating_modelsse(repository: DataRepository, name: str, description: str, user: dict):
+def test_creating_models(repository: DataRepository, name: str, description: str):
     """Проверяет создание моделей. (Конкретно: PersonalTask)."""
-    task = {DBFields.name: name, DBFields.description: description, DBFields.plan_deadline: get_datetime_now(), DBFields.owner: user, DBFields.owner_id: user.get(DBFields.id)}
+    user_id = 1
+    task = {DBFields.name: name, DBFields.description: description, DBFields.plan_deadline: get_datetime_now(),
+            DBFields.owner_id: user_id, DBFields.status_id: 0}
     request = repository.add_personal_tasks([task])
     task_id = request.ids[0]
     request = repository.get_personal_tasks_by_id([task_id])
@@ -110,5 +112,24 @@ def test_creating_modelsse(repository: DataRepository, name: str, description: s
     assert isinstance(task_id, int)
     assert task_name == name
     assert task_desc == description
+
+
+@pytest.mark.parametrize(
+    ['name', 'description'],
+    [[f'task_{i}', f'description_{i}'] for i in range(10)]
+)
+def test_serializing_foreign_keys(repository: DataRepository, name: str, description: str):
+    """Проверяет сериализацию полей с внешним ключом и соответствующих им relationship-полей."""
+    user_id = 1
+    task = {DBFields.name: name, DBFields.description: description, DBFields.plan_deadline: get_datetime_now(),
+            DBFields.owner_id: user_id, DBFields.status_id: 0}
+    request = repository.add_personal_tasks([task])
+    task_id = request.ids[0]
+    request = repository.get_personal_tasks_by_id([task_id])
+    task = request.content[0]
+    owner_id = task.get(DBFields.owner_id)
+    assert owner_id is None
+
+
 
 

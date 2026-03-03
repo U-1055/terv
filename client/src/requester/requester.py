@@ -12,6 +12,7 @@ import time
 import typing as tp
 import asyncio
 import threading
+import functools
 
 import client.src.requester.errors as err
 from common.base import CommonStruct, ErrorCodes
@@ -34,6 +35,8 @@ def run_loop(loop: asyncio.AbstractEventLoop):
 
 
 def synchronized_request(func) -> tp.Callable[..., Request]:
+
+    @functools.wraps(func)
     def prepare(*args) -> Request:
         try:
             loop = asyncio.get_running_loop()

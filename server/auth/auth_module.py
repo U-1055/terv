@@ -1,5 +1,3 @@
-from sqlalchemy.exc import IntegrityError
-
 import datetime
 import enum
 import os
@@ -7,10 +5,11 @@ import shelve
 import jwt
 from bcrypt import checkpw, hashpw, gensalt
 
+from server.database.exceptions import NotUniqueValue
 from server.storage.server_model import Model
 from server.database.repository import DataRepository
 from server.data_const import DataStruct, Permissions
-from common.base import DBFields, CommonStruct
+from common.base import DBFields, CommonStruct, TasksStatuses
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
@@ -22,7 +21,7 @@ def hash_password(password: str) -> str:
 
 
 class Authenticator:
-    """Класс, отвечающий за проверку аутентификации пользователя."""
+    """Сервис аутентификации."""
 
     def __init__(
              self,
@@ -75,7 +74,7 @@ class Authenticator:
             elif type_ == self._data_struct.refresh_token:
                 if expiring_time - creating_time != self._refresh_token_lifetime.total_seconds():
                     logger.warning(f"Invalid refresh token. Token's time difference: {expiring_time - creating_time}."
-                                    f"It must be refresh token lifetime: {self._refresh_token_lifetime.total_seconds()}")
+                                   f"It must be refresh token lifetime: {self._refresh_token_lifetime.total_seconds()}")
                     return False
             else:
                 raise ValueError(f'Unknown token_type: {type_}. Must be access or refresh')
@@ -123,8 +122,29 @@ class Authenticator:
     def register(self, login: str, email: str, password: str):
         hashed_password = hash_password(password)
         try:
-            self._repository.add_users(({DBFields.username: login, DBFields.email: email, DBFields.hashed_password: hashed_password},))
-        except IntegrityError:
+            response = self._repository.add_users(({DBFields.username: login, DBFields.email: email,
+                                                    DBFields.hashed_password: hashed_password},))
+            user_id = response.ids[0]
+            # Создание стандартных статусов задач
+            default_personal_task_status = {DBFields.owner_id: user_id,
+                                            DBFields.name: TasksStatuses.default_task_status_name}
+            completed_personal_task_status = {DBFields.owner_id: user_id,
+                                              DBFields.name: TasksStatuses.default_completed_task_status_name}
+
+            # Добавление статусов
+            status_response = self._repository.add_personal_task_statuses(
+                      [default_personal_task_status, completed_personal_task_status]
+            )
+            ids = status_response.ids
+            # Добавление статусов пользователю
+
+            statuses = {
+                DBFields.id: user_id,
+                DBFields.default_task_status_id: ids[0],
+                DBFields.completed_task_status_id: ids[1]}
+            self._repository.update_users([statuses])
+
+        except NotUniqueValue as e:
             raise ValueError
 
     def recall_tokens(self, tokens: list):
@@ -152,7 +172,7 @@ class Authenticator:
             refresh_token = self._create_token(user_id, self._refresh_token_lifetime)
             return {self.access_name: access_token, self.refresh_name: refresh_token}
         except ValueError as e:
-            logger.debug(f'INVALID PASSWORD: saved_hash: {hashed_password}; received_hash: {bytes(password, encoding='utf-8')}')
+            logger.warning(f'INVALID PASSWORD: saved_hash: {hashed_password}; received_hash: {bytes(password, encoding='utf-8')}')
             raise ValueError
 
     @property
@@ -165,7 +185,7 @@ class Authenticator:
 
 
 class Authorizer:
-    """Проверяет роль пользователя."""
+    """Сервис авторизации."""
     def __init__(self, repository: DataRepository, data_const: DataStruct = DataStruct(), permissions: enum.Enum = Permissions):
         self._repo = repository
         self._data_const = data_const
