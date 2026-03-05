@@ -29,6 +29,9 @@ class DatabaseManager:
             workspace = cm.Workspace(name='ws1', creator=creator, description='')
             session.add(workspace)
 
+            status = cm.WSTaskStatus(name=f'status', workspace=workspace)
+            session.add(status)
+
             user = cm.User(username=login, hashed_password=hash_password(password), email=email)
             session.add(user)
 
@@ -45,7 +48,8 @@ class DatabaseManager:
                                  entrusted=creator,
                                  executors=[user],
                                  workspace=workspace,
-                                 description=''
+                                 description='',
+                                 status=status
                                  )
                 tasks.append(task)
 
@@ -102,6 +106,7 @@ class DatabaseManager:
                 user = cm.User(username=f'user_{i}', hashed_password='s', email=f'em{i}')
                 session.add(user)
             session.commit()
+
 
 if __name__ == '__main__':
 

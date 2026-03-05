@@ -96,7 +96,7 @@ def test_serializing_links(repository: DataRepository):
         f'All of users must be the users of workspace. Workspace: {workspace.content[0]}'
 
 
-def test_deserializing_links(repository: DataRepository):
+def test_deserializing_links(repository: DataRepository):  # ToDo: расширить тесты сериализации
     """Проверяет десериализацию связей между моделями."""
     workspace = repository.get_workspaces([1]).content[0]
     serialized_users = workspace.get(DBFields.users)

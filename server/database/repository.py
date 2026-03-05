@@ -527,7 +527,7 @@ class RepoSelectResponse:
 @dataclass
 class RepoInsertResponse:
     """Ответ DataRepository на запрос по добавлению данных."""
-    ids: tp.Iterable[int] = ()
+    ids: list[int] = ()
 
 
 if __name__ == '__main__':
