@@ -3,17 +3,22 @@ import sqlalchemy.orm.session
 from sqlalchemy.sql import select
 
 import datetime
+import typing as tp
 
-from server.database.repository import DataRepository
+from server.database.repository import DataRepository, RepoInsertResponse, RepoSelectResponse
 from common.base import CommonStruct, DBFields, get_datetime_now
-from server.database.models.common_models import Workspace, User
+from server.database.models.common_models import Workspace
 from test.server_test.utils.test_database.base import DatabaseManager
 from server.database.schemes.common_schemes import UserSchema
+from test.server_test.utils.test_data.repository_test_data import test_updating_objects_data
 
 test_database_path = 'sqlite:///utils/test_database/database'
 
 TEST_LOGIN = 'username'
 TEST_ws_NAME = 'workspace'
+REPOSITORY = 'repository'
+CREATING_METHOD = 'creating_method'
+OBJ_DATA = 'obj_data'
 
 
 @pytest.fixture(scope='session')
@@ -29,8 +34,30 @@ def repository(config_db) -> DataRepository:
 
 
 @pytest.fixture(scope='function')
+def clear_db():
+    DatabaseManager(test_database_path)  # DataBaseManager при инициализации пересоздаёт базу
+
+
+@pytest.fixture(scope='function')
 def user(repository) -> dict:
     return repository.get_users_by_username().content[0]
+
+
+@pytest.fixture(scope='function')
+def obj_id(request: pytest.FixtureRequest, repository) -> int:
+    """
+    Создаёт объект в БД. В тестовой функции должны быть параметры:
+    creating_method - метод создания объекта, принимающий объект репозитория и коллекцию словарей с данными объектов;
+    obj_data - словарь с данными объекта. Возвращает ID созданного объекта.
+
+    """
+    params = request.node.callspec.params
+
+    creating_method: tp.Callable[[DataRepository, tp.Collection[dict]], RepoInsertResponse] = params.get(CREATING_METHOD)
+    obj_data: dict = params.get(OBJ_DATA)
+
+    response = creating_method(repository, [obj_data])
+    return response.ids[0]
 
 
 @pytest.mark.parametrize(
@@ -128,8 +155,59 @@ def test_serializing_foreign_keys(repository: DataRepository, name: str, descrip
     request = repository.get_personal_tasks_by_id([task_id])
     task = request.content[0]
     owner_id = task.get(DBFields.owner_id)
+    owner = task.get(DBFields.owner)
+
     assert owner_id is None
+    assert owner == 1
 
 
+@pytest.mark.parametrize(
+    ['creating_method', 'updating_method', 'obj_data', 'updating_data', 'get_by_id_method', 'expected'],
+    test_updating_objects_data
+)
+def test_updating_objects(creating_method: tp.Callable[[DataRepository, tp.Collection[dict]], RepoInsertResponse],
+                          updating_method: tp.Callable[[DataRepository, tp.Collection[dict]], None], obj_id: int,
+                          obj_data: dict, updating_data: dict, repository: DataRepository, expected: dict,
+                          get_by_id_method: tp.Callable[[DataRepository, tp.Collection[int]], RepoSelectResponse]):
+    """
+    Проверка частичного обновления объектов.
 
+    :param creating_method: Метод создания объекта (Принимает список словарей с данными объектов).
+    :param updating_method: Метод обновления объекта (Принимает список словарей с обновляемыми данными).
+    :param obj_data: Данные создаваемого объекта.
+    :param updating_data: Обновляемые данные.
+    :param repository: Репозиторий (фикстура).
+    :param obj_id: Фикстура для создания объекта в базе.
+    :param expected: Ожидаемый результат (обновлённый объект).
+    :param get_by_id_method: Метод получения объектов по ID (Принимает список ID).
+
+    """
+    updating_data[DBFields.id] = obj_id  # Устанавливаем ID объектам
+    expected[DBFields.id] = obj_id
+
+    updating_method(repository, [updating_data])  # Обновили объект
+
+    for field in obj_data:
+        if field in updating_data:  # Обновляем данные об объекте
+            obj_data[field] = updating_data[field]
+
+    response = get_by_id_method(repository, [obj_id])  # Получаем объект
+    updated_obj = response.content[0]
+
+    for field in expected:
+        assert field in updated_obj, (f'Field {field} must be in updated object, but it is not. Updated object: {updated_obj},'
+                                      f'Expected: {expected}.')
+
+    for field in updated_obj:
+        if field == DBFields.updated_at or field == DBFields.created_at:  # Dump-only поля пропускаем
+            continue
+
+        assert field in expected, f'Unknown field {field} in updated object. Object: {updated_obj}. Expected: {expected}.'
+        updated_field = updated_obj[field]
+        expected_field = expected[field]
+
+        if updated_field or expected_field:  # В обоих полях значение может быть None, [], () - это эквивалентно
+            assert updated_obj[field] == expected[field], (f'Field {field} has different content in updated and expected objects.'
+                                                           f'Updated content: {updated_obj[field]}. Expected content: {expected[field]}.'
+                                                           f'Updated object: {updated_obj}. Expected object: {expected}.')
 
