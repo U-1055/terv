@@ -1,5 +1,5 @@
-# terv
-Terv is a task-tracker for small working groups, like start-ups. It has been in development since the end of December 2025 as a part of the project "Developing of an automated planning system". Now it can:
+# τerv
+τerv is a task-tracker for small working groups, like start-ups. It has been in development since the end of December 2025 as a part of the project "Developing of an automated planning system". Now it can:
 1. Create your personal reminders and simple notes.
 2. Show your tasks and events scheduled this day.
 3. Show information about tasks and events.
