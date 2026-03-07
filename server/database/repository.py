@@ -1,8 +1,8 @@
 import datetime
 import logging
 
-from sqlalchemy.orm.session import sessionmaker, Select
-from sqlalchemy.sql import select, delete
+from sqlalchemy.orm.session import sessionmaker, Select, Session
+from sqlalchemy.sql import select, delete, text
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 import typing as tp
@@ -13,7 +13,7 @@ from common.base import DBFields, get_datetime_now
 from server.database.schemes.base import schemes_models
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
-from server.database.exceptions import exc_mapped, NoRequiredParams
+from server.database.exceptions import exc_mapped, ExceptionGenerator
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -25,15 +25,28 @@ class DataRepository:
     RepoSelectResponse.content - список сериализованных моделей, полученных в ответе.
     RepoSelectResponse.last_record_num - номер последней модели (если в запрос передан limit, offset или require_last_rec_num,
     иначе - None)
+
+    :param session_maker: Фабрика сессий sessionmaker, используемая для создания сессий в репозитории.
+    :param launch_validation: Запускать ли проверку целостности БД при инициализации? По умолчанию: да.
+    :param enable_fk_check: Включать ли проверку FK при создании сессий? (Только для SQLite). По умолчанию: да.
+
     """
 
-    def __init__(self, session_maker: sessionmaker, launch_validation: bool = True):
+    def __init__(self, session_maker: sessionmaker, launch_validation: bool = True, enable_fk_check: bool = True):
         self._session_maker = session_maker
+        self._enable_fk_check = enable_fk_check
         if launch_validation:
             self._validate()
 
     def _validate(self):
         pass
+
+    def _prepare_session(self, session: Session):
+        """
+        Выполняет действия с сессией перед обработкой запросов. Включает проверку FK при соответствующем параметре.
+        """
+        if self._enable_fk_check:
+            session.execute(text('PRAGMA foreign_keys=ON'))
 
     def _get_permissions(self, query: Select) -> tuple[str, ...]:
         with self._session_maker() as session, session.begin():
@@ -46,7 +59,7 @@ class DataRepository:
     def _execute_select(self, query: Select, limit: int = None, offset: int = None, require_last_rec_num: bool = False,
                         serialize: bool = True) -> 'RepoSelectResponse':
         with self._session_maker() as session, session.begin():
-
+            self._prepare_session(session)
             result = session.execute(query.limit(limit).offset(offset)).scalars().all()
             if serialize:
                 models_list = [model for model in result]
@@ -74,17 +87,19 @@ class DataRepository:
 
     def _execute_delete(self, ids: tp.Iterable[int], base_model: tp.Type[cm.Base]):
         with self._session_maker() as session, session.begin():
+            self._prepare_session(session)
             session.execute(delete(base_model).where(base_model.id.in_(ids)))
 
     def _execute_insert(self, models: tp.Iterable[dict], base_model: tp.Type[cm.Base]) -> 'RepoInsertResponse':
         with self._session_maker() as session, session.begin():
+            self._prepare_session(session)
             schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
             schema.sqla_session = session
             models = [schema.load(model, session=session) for model in models]
 
             session.add_all(models)
             session.flush()
-            return RepoInsertResponse(ids=tuple(int(db_model.id) for db_model in models))
+            return RepoInsertResponse(ids=list(int(db_model.id) for db_model in models))
 
     def _execute_update(self, models: tp.Iterable[dict], base_model: tp.Type[cm.Base]):
         """
@@ -93,12 +108,13 @@ class DataRepository:
         могут быть любые другие поля, значения которых будут обновлены.
         """
         with self._session_maker() as session, session.begin():
+            self._prepare_session(session)
             schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
             ids = []
             for model in models:
                 id_ = model.get(DBFields.id)
                 if not id_:
-                    raise NoRequiredParams(('id',))
+                    raise ExceptionGenerator.get_no_required_param_error(DBFields.id)
                 ids.append(id_)
 
             db_models = session.execute(select(base_model).where(base_model.id.in_(ids))).scalars().all()
@@ -539,8 +555,9 @@ if __name__ == '__main__':
     s_maker = sessionmaker(engine)
     repo = DataRepository(s_maker)
     try:
-        repo.add_users([{'1hashed_password': 'ss', 'email': '@a'},
-                        {'username': 'aa', 'hashed_password': 'ss', 'email': '@d'}])
+        repo.add_personal_tasks([{DBFields.name: 'Name', DBFields.description: 'Desc', DBFields.status_id: 15, DBFields.owner_id: 91,
+                                  DBFields.plan_deadline: datetime.datetime.now()}])
+       # print(repo.get_personal_task_statuses_by_id([]).content)
     except IntegrityError as e:
         print(e.orig)
 

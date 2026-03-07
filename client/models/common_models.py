@@ -25,7 +25,7 @@ class User(Base):
     assigned_by_user_tasks: list[int]  # Порученные пользователЕМ
     responsibility_tasks: list[int]  # Задачи, где пользователь назначен ответственным
 
-    created_personal_tasks: list[int] | None # Личные задачи
+    created_personal_tasks: list[int] | None  # Личные задачи
     # Роли
     roles: list[int] | None
 
@@ -50,7 +50,7 @@ class Workspace(Base):
     __tablename__ = 'workspace'
 
     id: int
-    creator_id: int 
+    creator_id: int | None
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
@@ -66,8 +66,8 @@ class Project(Base):
     """Проект."""
     __tablename__ = 'project'
     id: int 
-    workspace_id: int
-    creator_id: int
+    workspace_id: int | None
+    creator_id: int | None
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
@@ -76,12 +76,12 @@ class WSTask(Base):
 
     __tablename__ = 'ws_task'
     id: int
-    workspace_id: int  # РП
-    project_id: int | None  # Проект
-    creator_id: int  # Создатель
-    entrusted_id: int  # Поручивший
-    work_direction_id: int | None  # Направление работы
-    parent_task_id: int | None  # Родительская задача
+    workspace_id: int | None = None  # РП
+    project_id: int | None = None  # Проект
+    creator_id: int | None = None  # Создатель
+    entrusted_id: int | None = None  # Поручивший
+    work_direction_id: int | None = None  # Направление работы
+    parent_task_id: int | None = None  # Родительская задача
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
@@ -101,8 +101,8 @@ class PersonalTask(Base):
     """Личная задача"""
     __tablename__ = 'personal_task'
     id: int
-    owner_id: int
-    work_direction_id: int | None
+    owner_id: int | None = None
+    work_direction_id: int | None  = None
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
@@ -119,7 +119,7 @@ class WSWorkDirection(Base):
     __tablename__ = 'ws_work_direction'
 
     id: int
-    workspace_id: int
+    workspace_id: int | None = None
     name: str = Field(max_length=30)
 
     tasks: list[int]
@@ -130,7 +130,7 @@ class PersonalWorkDirection(Base):
     __tablename__ = 'personal_work_direction'
 
     id: int
-    owner_id: int
+    owner_id: int | None = None
     name: str = Field(max_length=60)
 
     owner: int
@@ -142,7 +142,7 @@ class PersonalDailyEvent(Base):
     __tablename__ = 'personal_daily_event'
 
     id: int
-    owner_id: int
+    owner_id: int | None = None
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
@@ -156,7 +156,7 @@ class PersonalManyDaysEvent(Base):
     __tablename__ = 'personal_many_days_event'
 
     id: int
-    owner_id: int
+    owner_id: int | None = None
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
     datetime_start: datetime.datetime
@@ -168,8 +168,8 @@ class WSDailyEvent(Base):
     __tablename__ = 'ws_daily_event'
 
     id: int
-    workspace_id: int 
-    creator_id: int 
+    workspace_id: int | None = None  # ToDo: переделать модели клиента
+    creator_id: int | None = None
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
@@ -185,8 +185,8 @@ class WSManyDaysEvent(Base):
     __tablename__ = 'ws_many_days_event'
 
     id: int
-    workspace_id: int
-    creator_id: int
+    workspace_id: int | None = None
+    creator_id: int | None = None
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
@@ -201,8 +201,8 @@ class WSBaseCategory(Base):
     __tablename__ = 'ws_base_category'
 
     id: int
-    workspace_id: int
-    parent_category_id: int
+    workspace_id: int | None
+    parent_category_id: int | None
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
@@ -218,9 +218,9 @@ class WSDocument(Base):
     __tablename__ = 'ws_document'
 
     id: int
-    workspace_id: int
-    creator_id: int
-    base_category_id: int
+    workspace_id: int | None
+    creator_id: int | None
+    base_category_id: int | None
 
 
 if __name__ == '__main__':

@@ -11,11 +11,12 @@ from server.database.models.common_models import Workspace
 from test.server_test.utils.test_database.base import DatabaseManager
 from server.database.schemes.common_schemes import UserSchema
 from test.server_test.utils.test_data.repository_test_data import test_updating_objects_data
+from server.database.exceptions import BaseRepoException, DataIntegrityError, IncorrectLinkError, NotUniqueValue
 
 test_database_path = 'sqlite:///utils/test_database/database'
 
 TEST_LOGIN = 'username'
-TEST_ws_NAME = 'workspace'
+TEST_WS_NAME = 'workspace'
 REPOSITORY = 'repository'
 CREATING_METHOD = 'creating_method'
 OBJ_DATA = 'obj_data'
@@ -24,7 +25,7 @@ OBJ_DATA = 'obj_data'
 @pytest.fixture(scope='session')
 def config_db() -> sqlalchemy.orm.session.sessionmaker:  # Устанавливает конфиг БД для теста, возвращает sessionmaker
     db_manager = DatabaseManager(test_database_path)
-    db_manager.set_repository_test_config(TEST_LOGIN, TEST_ws_NAME, 30)
+    db_manager.set_repository_test_config(TEST_LOGIN, TEST_WS_NAME, 30)
     return db_manager.session_maker
 
 
@@ -96,7 +97,7 @@ def test_serializing_links(repository: DataRepository):
         f'All of users must be the users of workspace. Workspace: {workspace.content[0]}'
 
 
-def test_deserializing_links(repository: DataRepository):  # ToDo: расширить тесты сериализации
+def test_deserializing_links(repository: DataRepository):
     """Проверяет десериализацию связей между моделями."""
     workspace = repository.get_workspaces([1]).content[0]
     serialized_users = workspace.get(DBFields.users)
@@ -130,7 +131,7 @@ def test_creating_models(repository: DataRepository, name: str, description: str
     """Проверяет создание моделей. (Конкретно: PersonalTask)."""
     user_id = 1
     task = {DBFields.name: name, DBFields.description: description, DBFields.plan_deadline: get_datetime_now(),
-            DBFields.owner_id: user_id, DBFields.status_id: 0}
+            DBFields.owner_id: user_id, DBFields.status_id: 1}
     request = repository.add_personal_tasks([task])
     task_id = request.ids[0]
     request = repository.get_personal_tasks_by_id([task_id])
@@ -149,7 +150,7 @@ def test_serializing_foreign_keys(repository: DataRepository, name: str, descrip
     """Проверяет сериализацию полей с внешним ключом и соответствующих им relationship-полей."""
     user_id = 1
     task = {DBFields.name: name, DBFields.description: description, DBFields.plan_deadline: get_datetime_now(),
-            DBFields.owner_id: user_id, DBFields.status_id: 0}
+            DBFields.owner_id: user_id, DBFields.status_id: 1}
     request = repository.add_personal_tasks([task])
     task_id = request.ids[0]
     request = repository.get_personal_tasks_by_id([task_id])
@@ -211,3 +212,52 @@ def test_updating_objects(creating_method: tp.Callable[[DataRepository, tp.Colle
                                                            f'Updated content: {updated_obj[field]}. Expected content: {expected[field]}.'
                                                            f'Updated object: {updated_obj}. Expected object: {expected}.')
 
+
+@pytest.mark.parametrize(
+    ['creating_method', 'obj_data', 'expected_exc', 'expected_params', 'param_attributes'],
+    [
+        [
+            DataRepository.add_personal_tasks,
+            {
+                DBFields.name: 'Name', DBFields.description: 1, DBFields.status_id: 1, DBFields.owner_id: 1,
+                DBFields.plan_deadline: datetime.datetime.now()
+            },
+            DataIntegrityError, [{DBFields.description: 'Not a valid string.'}], ['data']
+        ],
+        [
+            DataRepository.add_personal_tasks,
+            {
+                DBFields.name: 'Name', DBFields.description: 'Desc', DBFields.status_id: 15, DBFields.owner_id: 91,
+                DBFields.plan_deadline: datetime.datetime.now()
+            },
+            IncorrectLinkError, None, None
+        ],
+        [
+            DataRepository.add_users,
+            {
+                DBFields.username: 'lo', DBFields.hashed_password: '1', DBFields.email: 'another_email'
+            },
+            NotUniqueValue, ['User', DBFields.username], ['entity', 'param']
+        ],
+        [
+            DataRepository.add_users,
+            {
+                DBFields.username: 'lox', DBFields.hashed_password: '1', DBFields.email: 'M'
+            },
+            NotUniqueValue, ['User', DBFields.email], ['entity', 'param']
+        ]
+    ]
+                         )
+def test_incorrect_adding_objects(creating_method: tp.Callable[[DataRepository, tp.Sequence[dict]], int],
+                                  repository: DataRepository, obj_data: dict, expected_exc: tp.Type[BaseRepoException],
+                                  expected_params: tp.Sequence[tp.Any], param_attributes: str):
+    with pytest.raises(expected_exc) as e:
+        creating_method(repository, [obj_data])
+    print(f'Caused exception: {e.value}.')
+    if param_attributes:
+        for i, param_attribute in enumerate(param_attributes):
+            param = getattr(e.value, param_attribute)
+            expected_param = expected_params[i]
+            assert param == expected_param, (f'The error attribute must be equal to expected. '
+                                             f'Expected value: {expected_param}. Fact value: {param}. '
+                                             f'Attribute name: {param_attribute}')

@@ -7,11 +7,13 @@ from server.api.base import LOG_DIR, LOGGING_LEVEL, MAX_FILE_SIZE, MAX_BACKUP_FI
 from common_utils.text_prepare_utils import snake_to_camel_case
 from functools import wraps
 
+
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 NOT_UNIQUE_VALUE_MESSAGE = 'UNIQUE constraint failed'  # sqlalchemy.exc.IntegrityError
 NO_VALUE = 'Missing data for required field'  # marshmallow.exceptions.ValidationError
 UNKNOWN_FIELD = 'Unknown field'  # marshmallow.exceptions.ValidationError
+UNKNOWN_LINK = 'FOREIGN KEY constraint failed'  # sqlalchemy.exc.IntegrityError
 
 
 P = tp.ParamSpec('P')
@@ -40,7 +42,10 @@ def map_sqlalchemy_exc_to_repo_exc(exc: SQLAlchemyError) -> 'BaseRepoException':
         exc: IntegrityError
         msg = exc.orig.args[0]
         if NOT_UNIQUE_VALUE_MESSAGE in msg:
-            return NotUniqueValue(msg)
+            return NotUniqueValue(msg, exc)
+        if UNKNOWN_LINK in msg:
+            return IncorrectLinkError(exc)
+
     else:
         logger.critical(f'There are no complimentary exceptions for: {exc}.')
         return UnknownRepoException(exc)
@@ -49,26 +54,29 @@ def map_sqlalchemy_exc_to_repo_exc(exc: SQLAlchemyError) -> 'BaseRepoException':
 def map_marshmallow_exc_to_repo_exc(exc: MarshmallowError) -> 'BaseRepoException':
     if type(exc) is ValidationError:
         exc: ValidationError
-
         messages = exc.messages_dict
-        no_value_params = []
-        unknown_params = []
-        for param in messages:
-            if NO_VALUE in messages[param][0]:
-                no_value_params.append(param)
-            if UNKNOWN_FIELD in messages[param][0]:
-                unknown_params.append(param)
-        if not unknown_params and no_value_params:
-            return NoRequiredParams(no_value_params)
-        if not no_value_params and unknown_params:
-            return UnknownParams(unknown_params)
+        return DataIntegrityError(messages, exc)
+
+    else:  # Для всех остальных ошибок исключения не предусмотрено
         logger.critical(f'There are no complimentary exceptions for: {exc}')
         return UnknownRepoException(exc)
+
+
+class ExceptionGenerator:
+
+    @staticmethod
+    def get_no_required_param_error(param: str):
+        exc = DataIntegrityError({param: NO_VALUE}, None)
+        return exc
 
 
 class BaseRepoException(Exception):
     """Базовый класс ошибок слоя доступа к данным."""
     message: str
+    orig: Exception
+
+    def __init__(self, orig: Exception | None):
+        self.orig = orig
 
     def __str__(self):
         return f'RepositoryException - {self.__class__.__name__}: {self.message}'
@@ -93,7 +101,8 @@ class NotUniqueValue(BaseRepoException):
 
     """
 
-    def __init__(self, message: str):
+    def __init__(self, message: str, orig: Exception | None):
+        super().__init__(orig)
         self.entity, self.param = self._prepare_msg(message)
         self.message = f'The param {self.param} of entity {self.entity} must be unique.'
 
@@ -106,29 +115,34 @@ class NotUniqueValue(BaseRepoException):
                 return tuple(spl_line)
 
 
-class NoRequiredParams(BaseRepoException):
+class DataIntegrityError(BaseRepoException):
     """
-    Исключение, соответствующее отсутствию обязательного параметра.
+    Исключение, выбрасываемое при нарушении целостности данных в БД: неверный тип данных, нет нужного параметра,
+    есть неизвестный параметр. Соответствует Marshmallow ValidationError.
 
-    :param params: Обязательные параметры, в которых нет данных.
-
-    """
-
-    def __init__(self, params: tp.Collection[str]):
-        self.params = params
-        self.message = f'There are null required params {','.join(self.params)}'
-
-
-class UnknownParams(BaseRepoException):
-    """
-    Исключение, соответствующее неизвестному параметру.
-
-    :param params: Неизвестные параметры.
+    :var data: Информация об ошибке в формате {<Параметр>: <Описание ошибки>}.
 
     """
-    def __init__(self, params: tp.Collection[str]):
-        self.params = params
-        self.message = f'There are unknown params {','.join(self.params)}'
+
+    def __init__(self, data: dict, orig: Exception | None):
+        super().__init__(orig)
+        self.data = self._prepare_data(data)
+        self.message = f'Data integrity errors: {str(data)}'
+
+    def _prepare_data(self, data: dict) -> dict:
+        """Словарь в ValidationError вида: {<key>: [<error_info>]} переделывается в {<key>: <error_info>}."""
+        return {key: data[key][0] for key in data}
+
+
+class IncorrectLinkError(BaseRepoException):
+    """
+    Исключение, выбрасываемое при ссылке на несуществующий объект. Соответствует sqlalchemy.exc.IntegrityError
+    "FOREIGN KEY constraint failed".
+    """
+
+    def __init__(self, orig: Exception | None):
+        super().__init__(orig)
+        self.message = 'There is link to non-existent object.'
 
 
 if __name__ == '__main__':

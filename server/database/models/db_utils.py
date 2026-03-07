@@ -1,11 +1,13 @@
-import datetime
-
 from sqlalchemy import create_engine, Engine
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql.expression import insert
 
 import server.database.models.common_models as cm
 from server.data_const import Permissions
+from common.logger import config_logger, SERVER
+from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
 def init_db(path: str) -> Engine:
