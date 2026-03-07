@@ -214,7 +214,7 @@ def test_updating_objects(creating_method: tp.Callable[[DataRepository, tp.Colle
 
 
 @pytest.mark.parametrize(
-    ['creating_method', 'obj_data', 'expected_exc', 'expected_params', 'param_attributes'],
+    ['creating_method', 'obj_data', 'expected_exc', 'expected_params'],
     [
         [
             DataRepository.add_personal_tasks,
@@ -222,7 +222,7 @@ def test_updating_objects(creating_method: tp.Callable[[DataRepository, tp.Colle
                 DBFields.name: 'Name', DBFields.description: 1, DBFields.status_id: 1, DBFields.owner_id: 1,
                 DBFields.plan_deadline: datetime.datetime.now()
             },
-            DataIntegrityError, [{DBFields.description: 'Not a valid string.'}], ['data']
+            DataIntegrityError, {'data': {DBFields.description: 'Not a valid string.'}}
         ],
         [
             DataRepository.add_personal_tasks,
@@ -230,34 +230,126 @@ def test_updating_objects(creating_method: tp.Callable[[DataRepository, tp.Colle
                 DBFields.name: 'Name', DBFields.description: 'Desc', DBFields.status_id: 15, DBFields.owner_id: 91,
                 DBFields.plan_deadline: datetime.datetime.now()
             },
-            IncorrectLinkError, None, None
+            IncorrectLinkError, None
         ],
         [
             DataRepository.add_users,
             {
                 DBFields.username: 'lo', DBFields.hashed_password: '1', DBFields.email: 'another_email'
             },
-            NotUniqueValue, ['User', DBFields.username], ['entity', 'param']
+            NotUniqueValue, {'entity': 'User', 'param': DBFields.username}
         ],
         [
             DataRepository.add_users,
             {
                 DBFields.username: 'lox', DBFields.hashed_password: '1', DBFields.email: 'M'
             },
-            NotUniqueValue, ['User', DBFields.email], ['entity', 'param']
+            NotUniqueValue, {'entity': 'User', 'param': DBFields.email}
         ]
     ]
                          )
 def test_incorrect_adding_objects(creating_method: tp.Callable[[DataRepository, tp.Sequence[dict]], int],
                                   repository: DataRepository, obj_data: dict, expected_exc: tp.Type[BaseRepoException],
-                                  expected_params: tp.Sequence[tp.Any], param_attributes: str):
+                                  expected_params: dict):
+    """
+    Тест исключений репозитория при добавлении объектов.
+
+    :param creating_method: Метод создания объекта, принимающий аргументы: (<объект DataRepository>,
+                            <Список словарей с данными об объектах>).
+    :param repository: Репозиторий (фикстура).
+    :param obj_data: Данные добавляемого объекта.
+    :param expected_exc: Ожидаемое исключение.
+    :param expected_params: Ожидаемые значения атрибутов исключения. Словарь вида: {<название атрибута>: <значение>}.
+
+    """
+
     with pytest.raises(expected_exc) as e:
         creating_method(repository, [obj_data])
-    print(f'Caused exception: {e.value}.')
-    if param_attributes:
-        for i, param_attribute in enumerate(param_attributes):
-            param = getattr(e.value, param_attribute)
-            expected_param = expected_params[i]
+    if expected_params:
+        for attribute in expected_params:
+            param = getattr(e.value, attribute)
+            expected_param = expected_params[attribute]
             assert param == expected_param, (f'The error attribute must be equal to expected. '
                                              f'Expected value: {expected_param}. Fact value: {param}. '
-                                             f'Attribute name: {param_attribute}')
+                                             f'Attribute name: {attribute}')
+
+
+@pytest.mark.parametrize(
+    ['creating_method', 'obj_data', 'expected_exc', 'expected_params', 'updating_method', 'updating_data'],
+    [
+        [
+            DataRepository.add_personal_tasks,
+            {
+                DBFields.name: 'Name', DBFields.description: 'desc', DBFields.status_id: 1, DBFields.owner_id: 1,
+                DBFields.plan_deadline: datetime.datetime.now()
+            },
+            DataIntegrityError, {'data': {DBFields.description: 'Not a valid string.'}},
+            DataRepository.update_personal_tasks,
+            {
+                DBFields.description: 1,
+            }
+        ],
+        [
+            DataRepository.add_personal_tasks,
+            {
+                DBFields.name: 'Name', DBFields.description: 'Desc', DBFields.status_id: 1, DBFields.owner_id: 1,
+                DBFields.plan_deadline: datetime.datetime.now()
+            },
+            IncorrectLinkError, None,
+            DataRepository.update_personal_tasks,
+            {
+                DBFields.status_id: 2,
+            }
+        ],
+        [
+            DataRepository.add_users,
+            {
+                DBFields.username: 'user', DBFields.hashed_password: '1', DBFields.email: 'another_email'
+            },
+            NotUniqueValue, {'entity': 'User', 'param': DBFields.username},
+            DataRepository.update_personal_tasks,
+            {
+                DBFields.username: 'lo',
+            }
+        ],
+        [
+            DataRepository.add_users,
+            {
+                DBFields.username: 'lox', DBFields.hashed_password: '1', DBFields.email: 'T'
+            },
+            NotUniqueValue, {'entity': 'User', 'param': DBFields.email},
+            DataRepository.update_personal_tasks,
+            {
+                DBFields.username: 'M',
+            }
+        ]
+    ]
+                         )
+def test_incorrect_updating_objects(obj_id: int, obj_data: dict, repository: DataRepository,
+                                    creating_method: tp.Callable[[DataRepository, tp.Collection[dict]], RepoInsertResponse],
+                                    updating_method: tp.Callable[[DataRepository, tp.Collection[dict]], None],
+                                    updating_data: dict, expected_params: tp.Sequence[tp.Any],
+                                    expected_exc: tp.Type[Exception]):
+    """
+    Тест исключений репозитория при обновлении объектов.
+
+    :param obj_id: Фикстура, создающая объект по obj_data в базе и возвращающая его ID.
+    :param obj_data: Данные объекта.
+    :param repository: Репозиторий.
+    :param updating_method: Метод обновления объекта.
+    :param updating_data: Обновляемые данные. Словарь вида {<поле в таблице БД>: <значение>}.
+    :param expected_params: Ожидаемые атрибуты исключения. Словарь вида {<название атрибута>: <значение>}.
+    :param expected_exc: Ожидаемое исключение.
+
+    """
+    updating_data.update({DBFields.id: obj_id})
+
+    with pytest.raises(expected_exc) as e:
+        updating_method(repository, [updating_data])
+    if expected_params:
+        for attribute in expected_params:
+            param = getattr(e.value, attribute)
+            expected_param = expected_params[attribute]
+            assert param == expected_param, (f'The error attribute must be equal to expected. '
+                                             f'Expected value: {expected_param}. Fact value: {param}. '
+                                             f'Attribute name: {attribute}')
