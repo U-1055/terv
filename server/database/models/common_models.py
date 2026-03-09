@@ -198,6 +198,7 @@ class WSTask(Base):
     project: Mapped[Project] = relationship(Project, back_populates='tasks')
     status: Mapped['WSTaskStatus'] = relationship('WSTaskStatus', back_populates='tasks')
     tags: Mapped['WSTaskTag'] = relationship(secondary='tag_ws_task', back_populates='tasks')
+    task_events: Mapped['WSTaskEvent'] = relationship('WSTaskEvent', back_populates='task')
 
 
 class PersonalTask(Base):
@@ -224,6 +225,7 @@ class PersonalTask(Base):
     child_tasks: Mapped[list['PersonalTask']] = relationship('PersonalTask', back_populates='parent_task')
     status: Mapped['PersonalTaskStatus'] = relationship('PersonalTaskStatus', back_populates='tasks')
     tags: Mapped['PersonalTaskTag'] = relationship(secondary='tag_personal_task', back_populates='tasks')
+    task_events: Mapped[list['PersonalTaskEvent']] = relationship('PersonalTaskEvent', back_populates='task')
 
 
 class WSWorkDirection(Base):
@@ -397,6 +399,32 @@ class PersonalTaskStatus(Base):
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     owner: Mapped[User] = relationship(User, back_populates='statuses')
     tasks: Mapped[list[PersonalTask]] = relationship(PersonalTask, back_populates='status')
+
+
+class PersonalTaskEvent(Base):
+    """Мероприятие - личная задача."""
+    __tablename__ = 'personal_task_event'
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey('personal_task.id'))
+
+    date: Mapped[datetime.date] = mapped_column()
+    time_start: Mapped[datetime.time] = mapped_column()
+    time_end: Mapped[datetime.time] = mapped_column()
+
+    task: Mapped[PersonalTask] = relationship(PersonalTask, back_populates='task_events')
+
+
+class WSTaskEvent(Base):
+    """Мероприятие - задача РП."""
+    __tablename__ = 'ws_task_event'
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey('ws_task.id'))
+
+    date: Mapped[datetime.date] = mapped_column()
+    time_start: Mapped[datetime.time] = mapped_column()
+    time_end: Mapped[datetime.time] = mapped_column()
+
+    task: Mapped[WSTask] = relationship(WSTask, back_populates='task_events')
 
 
 class WSRole(Base):
