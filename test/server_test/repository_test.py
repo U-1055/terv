@@ -69,11 +69,11 @@ def test_get_workspace(repository: DataRepository, exp_len: int):
     result = repository.get_workspaces([1])
 
     assert len(result.content) == exp_len
-    assert type(result.content[0]) == dict
+    assert type(result.content[0]) is dict
 
 
 def test_date_format(repository: DataRepository):
-    ws_tasks = repository.get_ws_tasks_by_id()
+    ws_tasks = repository.get_ws_tasks([])
     for task in ws_tasks.content:
         try:
             datetime.datetime.strptime(str(task.get(DBFields.created_at)), CommonStruct.datetime_format)
@@ -97,7 +97,7 @@ def test_serializing_links(repository: DataRepository):
         f'All of users must be the users of workspace. Workspace: {workspace.content[0]}'
 
 
-def test_deserializing_links(repository: DataRepository):
+def test_deserializing_links(repository: DataRepository):  
     """Проверяет десериализацию связей между моделями."""
     workspace = repository.get_workspaces([1]).content[0]
     serialized_users = workspace.get(DBFields.users)
@@ -211,7 +211,7 @@ def test_updating_objects(creating_method: tp.Callable[[DataRepository, tp.Colle
             assert updated_obj[field] == expected[field], (f'Field {field} has different content in updated and expected objects.'
                                                            f'Updated content: {updated_obj[field]}. Expected content: {expected[field]}.'
                                                            f'Updated object: {updated_obj}. Expected object: {expected}.')
-
+    print(updated_obj, expected)
 
 @pytest.mark.parametrize(
     ['creating_method', 'obj_data', 'expected_exc', 'expected_params'],
@@ -307,7 +307,7 @@ def test_incorrect_adding_objects(creating_method: tp.Callable[[DataRepository, 
                 DBFields.username: 'user', DBFields.hashed_password: '1', DBFields.email: 'another_email'
             },
             NotUniqueValue, {'entity': 'User', 'param': DBFields.username},
-            DataRepository.update_personal_tasks,
+            DataRepository.update_users,
             {
                 DBFields.username: 'lo',
             }
@@ -318,9 +318,9 @@ def test_incorrect_adding_objects(creating_method: tp.Callable[[DataRepository, 
                 DBFields.username: 'lox', DBFields.hashed_password: '1', DBFields.email: 'T'
             },
             NotUniqueValue, {'entity': 'User', 'param': DBFields.email},
-            DataRepository.update_personal_tasks,
+            DataRepository.update_users,
             {
-                DBFields.username: 'M',
+                DBFields.email: 'M',
             }
         ]
     ]

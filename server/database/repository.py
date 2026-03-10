@@ -120,15 +120,13 @@ class DataRepository:
             db_models = session.execute(select(base_model).where(base_model.id.in_(ids))).scalars().all()
             db_models = {db_model.id: db_model for db_model in db_models}
 
+            result = [(user.username, user.email) for user in session.execute(select(cm.User)).scalars().all()]
+
             for model in models:  # Сериализация + обновление даты в updated_at
                 model[DBFields.updated_at] = get_datetime_now()
-                schema_model = schema.load(model, session=session, partial=True)
-                db_model = db_models.get(schema_model.id)
-                if db_model:
-                    for field in model:  # Обновление полей
-                        setattr(db_model, field, model[field])
-
-            session.commit()
+                db_model = db_models.get(model.get(DBFields.id))
+                schema.load(model, session=session, partial=True, instance=db_model)
+                pass
 
     @exc_mapped
     def get_users_by_username(self, usernames: tp.Iterable[str] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0,
@@ -198,12 +196,17 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num)
 
     @exc_mapped
-    def get_ws_tasks_by_id(self, ws_tasks_ids: list[int] = None, limit: int = None, offset: int = 0, require_last_num: bool = False) -> 'RepoSelectResponse':
+    def get_ws_tasks(self, ids: tp.Sequence[int], workspace_id: int = None, executor_id: int = None, limit: int = None,
+                     offset: int = None, require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.WSTask)
-        if ws_tasks_ids:
-            query = query.where(cm.WSTask.id.in_(ws_tasks_ids))
+        if ids:
+            query = query.where(cm.WSTask.id.in_(ids))
+        if executor_id:
+            query = query.where(cm.WSTask.executors.any(cm.User.id == executor_id))
+        if workspace_id:
+            query = query.where(cm.WSTask.workspace_id == workspace_id)
 
-        return self._execute_select(query, limit, offset, require_last_num)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
     def get_role_by_user_id(self, workspace_id: int, user_id: int):
@@ -240,8 +243,8 @@ class DataRepository:
         self._execute_delete(ids, cm.WSTask)
 
     @exc_mapped
-    def update_personal_tasks(self, models: list[cm.WSTask]):
-        self._execute_update(models, cm.WSTask)
+    def update_personal_tasks(self, models: list[cm.PersonalTask]):
+        self._execute_update(models, cm.PersonalTask)
 
     @exc_mapped
     def delete_workspaces(self, workspaces_ids: tp.Iterable[int]):
@@ -527,6 +530,31 @@ class DataRepository:
         query = select(cm.WSTaskStatus).where(cm.WSTaskStatus.workspace_id == workspace_id)
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
+    @exc_mapped
+    def get_ws_task_events(self, ids: tp.Sequence[int], workspace_id: int, executor_id: int = None, limit: int = None,
+                           offset: int = None, require_last_num: bool = False,
+                           serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.WSTaskEvent)
+        if ids:
+            query = query.where(cm.WSTaskEvent.id.in_(ids))
+        if workspace_id:
+            query = query.where(cm.WSTaskEvent.task.workspace_id == workspace_id)
+        if executor_id:
+            query = query.where(cm.WSTaskEvent.task.exe)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_personal_task_events_by_user(self, ids: tp.Sequence[int], user_id: int, limit: int = None,
+                                         offset: int = None, require_last_num: bool = False,
+                                         serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.PersonalTaskEvent)
+        if ids:
+            query = query.where(cm.PersonalTaskEvent.id.in_(ids))
+        if user_id:
+            query = query.where(cm.PersonalTaskEvent.task.owner_id == user_id)
+
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
 
 @dataclass
 class RepoSelectResponse:
@@ -555,9 +583,10 @@ if __name__ == '__main__':
     s_maker = sessionmaker(engine)
     repo = DataRepository(s_maker)
     try:
-        repo.add_personal_tasks([{DBFields.name: 'Name', DBFields.description: 'Desc', DBFields.status_id: 15, DBFields.owner_id: 91,
+        repo.add_personal_tasks([{DBFields.name: 'Name', DBFields.description: 'Desc', DBFields.status_id: 1, DBFields.owner_id: 1,
                                   DBFields.plan_deadline: datetime.datetime.now()}])
-       # print(repo.get_personal_task_statuses_by_id([]).content)
+        repo.update_personal_tasks({DBFields.status_id: 2})
+        # print(repo.get_personal_task_statuses_by_id([]).content)
     except IntegrityError as e:
         print(e.orig)
 
