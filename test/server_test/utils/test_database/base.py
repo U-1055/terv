@@ -1,8 +1,9 @@
 """Объекты для настройки тестовой БД."""
-import datetime
-
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql.expression import delete, select
+from faker import Faker
+
+import datetime
 
 from server.auth.auth_module import hash_password
 from server.database.models.db_utils import init_db
@@ -11,10 +12,21 @@ import server.database.models.common_models as cm
 
 class DatabaseManager:
 
+    getting_config_personal_tasks = 1
+    getting_config_ws_tasks = 2
+    getting_config_workspaces = 3
+    getting_config_4 = 4
+
     def __init__(self, path: str):
         self._database_path = path
+        self._faker = Faker()
         engine = init_db(path)
         self.session_maker = sessionmaker(bind=engine)
+
+    def _set_getting_config_personal_tasks(self):
+        with self.session_maker() as session, session.begin():
+            pass
+
 
     def set_authentication_test_config(self):
         with self.session_maker() as session, session.begin():
@@ -106,6 +118,16 @@ class DatabaseManager:
                 user = cm.User(username=f'user_{i}', hashed_password='s', email=f'em{i}')
                 session.add(user)
             session.commit()
+
+    def add_new_user(self):
+        """Добавляет пользователя со случайными email и username."""
+        with self.session_maker() as session, session.begin():
+            user = cm.User(username=self._faker.name(), hashed_password=str(datetime.datetime.now()),
+                           email=self._faker.email())
+            session.add(user)
+
+    def choose_db_config(self, num: int):
+        pass
 
 
 if __name__ == '__main__':

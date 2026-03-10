@@ -1,72 +1,139 @@
-"""Тесты CRUD-ов."""
-import asyncio
-import concurrent.futures
+"""
+Тесты CRUD-ов.
+Во всех конфигах все личные объекты принадлежат пользователю (User) с id=1.
+"""
+import datetime
 
+import jsonschema as js
+import flask
+from flask.testing import FlaskClient
 import pytest
+import jwt
 
+import os
 import typing as tp
 
 from common.base import CommonStruct
-from test.conftest import client_requester, set_config, SERVER_WORKING_DIR, access_token, LOGIN, PASSWORD, register, EMAIL
-from client.src.requester.requester import Request, Requester
+from test.server_test.utils.test_database.base import DatabaseManager
+from test.conftest import SERVER_CONFIG_PATH, SERVER_WORKING_DIR, TEST_CONFIG_PATH
+from server.storage.server_model import Model
 
-
+IGNORE = f'IGNORE_VALUE_{datetime.datetime.now()}'  # Константа, помечающая параметр теста как игнорируемый
 base_params = {
     SERVER_WORKING_DIR: '../../server/api',
-    LOGIN: 'test_login1',
-    PASSWORD: 'password_1',
-    EMAIL: 'test_email'
+    SERVER_CONFIG_PATH: '../../server/config.json',
+    TEST_CONFIG_PATH: '../../test/server_test/utils/server_configs/limit_offset_test_config.json'
               }
 
 
-@pytest.fixture()
-def request_get(request: pytest.FixtureRequest) -> Request:
-    endpoint = request.node.callspec.params.get('endpoint')
-    return Request(endpoint, 'GET')
+class BaseSchema:
+    """Базовый класс для работы со схемой."""
+
+    number = 'number'
+    object = 'object'
+    string = 'string'
+
+    def __init__(self, schema: dict[str, str]):
+        super().__init__()
+        self._schema = schema
+
+    def add_fields(self, fields: dict) -> 'BaseSchema':
+        """
+        Обновляет схему и возвращает обновленную.
+
+        :param fields: Данные для обновления схемы.
+
+        """
+        self._schema.update(fields)
+        return BaseSchema(self._schema)
+
+    @property
+    def schema(self) -> dict:
+        return self._schema
 
 
-def wait(future: concurrent.futures.Future) -> tp.Any:
-    """
-    Ждёт завершения объекта concurrent.futures.Future и возвращает результат его выполнения.
-    Передаёт все исключения, вызванные при выполнении.
-    """
-    future = asyncio.wrap_future(future)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(future)
-    try:
-        return future.result()
-    except Exception as e:
-        raise e
-
-
-@pytest.mark.f_data({
-    SERVER_WORKING_DIR: '../../server/api',
-    LOGIN: 'test_login1',
-    PASSWORD: 'password_1',
-    EMAIL: 'test_email'
+common_response_schema = BaseSchema({
+    "type": "object",
+    "status_code":
+        {"type": BaseSchema.number},
 })
+
+common_error_schema = common_response_schema.add_fields(
+    {
+        "message":
+            {"type": "string"},
+        "error_id":
+            {"type": "number"}
+    })
+valid_response_schema = common_error_schema.add_fields({"status_code": {"type": 200}})
+
+
+@pytest.fixture(scope='session')
+def controller_access_token() -> str:
+    if os.getcwd().split('\\')[-1] != 'api':
+        os.chdir('../../server/api')
+    model = Model('../storage/storage')
+    secret_ = model.get_secret()
+    token_ = jwt.encode(
+        key=secret_,
+        algorithm='HS256',
+        payload={
+            'sub': '1',
+            'exp': datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=15),  # Время истечения токена
+            'iat': datetime.datetime.now(tz=datetime.timezone.utc)  # Время создания токена
+        }
+    )
+    return token_
+
+
+@pytest.fixture(scope='session')
+def client(app: flask.Flask) -> FlaskClient:
+    test_client = app.test_client()
+    test_client.post('/register', json={CommonStruct.login: 'NEW NAME', CommonStruct.email: 'NEW EMAIL',
+                     CommonStruct.password: 'PASSWORD'})
+    test_client.post('/auth/login', json={CommonStruct.login: 'NEW NAME', CommonStruct.password: 'PASSWORD'})
+
+    return test_client
+
+
+@pytest.fixture(scope='session')
+def app() -> flask.Flask:
+    if os.getcwd().split('\\')[-1] != 'api':
+        os.chdir('../../server/api')
+    import server.api.routes as routes
+
+    app_ = routes.app
+    return app_
+
+
+@pytest.fixture(scope='function')
+def set_db_get_config(request: pytest.FixtureRequest):
+    """
+    Добавляет пользователя в БД. Если в аргументах теста, в котором используется фикстура, есть config_num,
+    создаётся конфиг в БД с соответствующим номером.
+    """
+    db_manager = DatabaseManager('sqlite:///../../test/server_test/utils/test_database/database')
+    db_manager.add_new_user()
+    params = request.node.callspec.params
+    config_num = params.get('config_num')
+    if config_num:
+        db_manager.choose_db_config(config_num)
+
+
+@pytest.mark.f_data(base_params)
 @pytest.mark.parametrize(
-    ['endpoint'],
-    [['http://localhost:5000/ws_tasks', 'http://localhost:5000/personal_tasks', 'http://localhost:5000/ws_many_days_events',
-      'http://localhost:5000/personal_many_days_events', 'http://localhost:5000/ws_daile_events',
-      'http://localhost:5000/ws_many_days_events']]
+    ['uri', 'expected_schema', 'query_params', 'exp_status_code', 'config_num', 'exp_content'],
+    [
+        ['/users', valid_response_schema, {}, 200, None, IGNORE]
+    ],
 )
-def test_data_receiving(client_requester: Requester,
-                        set_config,
-                        request_get: Request,
-                        register,
-                        access_token: str,
-                        endpoint: str):
+def test_get_model(set_config, client: FlaskClient, uri: str, expected_schema: BaseSchema, query_params: tp.Sequence,
+                   exp_status_code: int, set_db_get_config, controller_access_token: str, config_num: int | None,
+                   exp_content: tp.Sequence[dict]):
+    response = client.get(uri, query_string=query_params, headers={'Authorization': controller_access_token})
+    js.validate(response.json, schema=expected_schema.schema)
 
-    request = client_requester.make_custom_request(request_get)
-    request.wait_until_complete()
-    response = request.result()
-
-    assert response.content is not None, (f'Request to endpoint: {endpoint} has not returned anything.'
-                                          f'Request: {request_get}. Response: {response}.')
-
-
-@pytest.mark.parametrize.f_data(base_params)
-def test_get_ws_tasks(client_requester: Requester, set_config, access_token):
-    request = Request('http://localhost:5000/ws_tasks', 'GET')
+    assert response.status_code == exp_status_code
+    if exp_content != IGNORE:
+        assert response.json.get(CommonStruct.content) == exp_content
 

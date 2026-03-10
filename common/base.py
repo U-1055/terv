@@ -129,6 +129,7 @@ class DBFields:
     child_tasks = 'child_tasks'
     project = 'project'
     status = 'status'
+    task_events = 'task_events'
     # PersonalTask's fields
     owner_id = 'owner_id'
     owner = 'owner'
@@ -151,6 +152,8 @@ class DBFields:
     # WSDocument's fields
     base_category_id = 'base_category_id'
     base_category = 'base_category'
+    # PersonalTaskEvent's fields
+    task = 'task'
 
 
 class ObjectTypes:

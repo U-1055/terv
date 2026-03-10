@@ -136,6 +136,10 @@ def set_db_config_1(engine: Engine,
                                          for i in range(10)]
 
         session.add_all(ws_many_days_events)
+        session.commit()
+
+    with session_maker() as session, session.begin():
+        pass
 
 
 if __name__ == '__main__':
@@ -155,7 +159,7 @@ if __name__ == '__main__':
                                                           ('Рассмотреть З-19', ''),
                                                           ('Изучить раздел №2 книги по БД', 'Реляционные БД в примерах')
                                                           ),
-                    workspace_tasks_params=(('Реализовать утилиту для замера памяти' , ''),
+                    workspace_tasks_params=(('Реализовать утилиту для замера памяти', ''),
                                             ('Реализовать утилиту для запросов', ''),
                                             ('Настроить стиль GUI', ''),
                                             ('Отладить настройки', ''),
@@ -169,8 +173,7 @@ if __name__ == '__main__':
                     personal_daily_events_params=(('Проект', "...", datetime.time(9, 00), datetime.time(12, 00)),
                                                   ('Физика', 'Разбор хитрых задач с Сириус-курса', datetime.time(12, 30), datetime.time(14, 30)),
                                                   ('Матеша', 'Неравенства из книжки', datetime.time(14, 45), datetime.time(16, 45))),
-                    ws_daily_events_params=(('Созвон', 'Согласовать требования с начальством', datetime.time(17, 00), datetime.time(18, 00)),
-                                            ('Проект', 'Доработка документации', datetime.time(18, 45), datetime.time(20, 15))),
+                    ws_daily_events_params=(('Проект', 'Доработка документации', datetime.time(17, 00), datetime.time(20, 15)),),
                     personal_many_days_events_params=(('Разбор физики', 'Закрыть модули курса по электростатике',
                                                        datetime.date(2026, 2, 14), datetime.date(2026, 2, 20)), ),
 
@@ -179,5 +182,9 @@ if __name__ == '__main__':
 
     repo = DataRepository(sessionmaker(bind=engine))
     print(repo.get_workspaces())
+    repo.update_personal_tasks([{'id': 1, 'status_id': 120, 'name': 'NAMN'}])
+    with sessionmaker(bind=engine)() as session, session.begin():
+        result = session.execute(select(cm.PersonalTask).where(cm.PersonalTask.id == 1)).scalars().all()
+        print([[model.status_id, model.name] for model in result])
 
 
