@@ -154,6 +154,7 @@ class DBFields:
     base_category = 'base_category'
     # PersonalTaskEvent's fields
     task = 'task'
+    task_id = 'task_id'
 
 
 class ObjectTypes:

@@ -4,10 +4,12 @@ from sqlalchemy.sql.expression import delete, select
 from faker import Faker
 
 import datetime
+import typing as tp
 
 from server.auth.auth_module import hash_password
 from server.database.models.db_utils import init_db
 import server.database.models.common_models as cm
+from common.base import DBFields
 
 
 class DatabaseManager:
@@ -24,9 +26,42 @@ class DatabaseManager:
         self.session_maker = sessionmaker(bind=engine)
 
     def _set_getting_config_personal_tasks(self):
-        with self.session_maker() as session, session.begin():
-            pass
+        current_date = datetime.date.today()
+        date_data = {"year": current_date.year, "month": current_date.month, "day": current_date.day}
 
+        users_params = [[self._faker.name(), self._faker.email()] for _ in range(10)]
+        statuses_params = [[self._faker.name()] for _ in range(5)]
+        personal_tasks_params = [
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.description: self._faker.text(1000, ['vodka', 'chay', 'kniga']),
+                DBFields.status_id: 1 if i % 2 == 0 else 2,
+                DBFields.plan_deadline: self._faker.date_time()
+            } for i in range(10)
+        ]
+        personal_tasks_events_params = [
+            {
+                DBFields.task_id: i,
+                DBFields.date: datetime.date.today(),
+                DBFields.time_start: datetime.time(hour=i * 2, minute=15 * (i % 2)),
+                DBFields.time_end: datetime.time(hour=i * 2 + 2, minute=15 * (i % 2))
+            } for i in range(10)]
+
+        with self.session_maker() as session, session.begin():
+            users = [cm.User(username=param[0], hashed_password='_', email=param[1]) for param in users_params]
+
+            session.add_all(users)
+            user = session.execute(select(cm.User).where(cm.User.id == 1)).scalars().all()[0]
+
+            statuses = [cm.PersonalTaskStatus(name=param[0], owner=user) for param in statuses_params]
+            session.add_all(statuses)
+            user.completed_task_status_id = 1
+
+            personal_tasks = [cm.PersonalTask(**param, owner=user) for param in personal_tasks_params]
+            session.add_all(personal_tasks)
+
+            personal_tasks_events = [cm.PersonalTaskEvent(**param) for param in personal_tasks_events_params]
+            session.add_all(personal_tasks_events)
 
     def set_authentication_test_config(self):
         with self.session_maker() as session, session.begin():
@@ -127,10 +162,37 @@ class DatabaseManager:
             session.add(user)
 
     def choose_db_config(self, num: int):
-        pass
+        """Устанавливает конфиг БД по номеру."""
+        if num == self.getting_config_personal_tasks:
+            self._set_getting_config_personal_tasks()
+
+    def show_db_config(self):
+        """Выводит в консоль объекты из базы."""
+        entities = []
+
+        with self.session_maker() as session, session.begin():
+            for model in cm.Base.__subclasses__():
+                entities.extend(session.execute(select(model)).scalars().all())
+
+            print([entity.id for entity in entities])
+            groups: dict[tp.Type[cm.Base], list] = {}
+            for entity in entities:
+                type_ = type(entity)
+                if type_ not in groups:
+                    groups[type_] = [entity]
+                else:
+                    groups[type_].append(entity)
+
+            print('----------------- TEST DATABASE STATE -----------------')
+            for group in groups:
+                print(f'\nmodel_class ---- {group} ---- \n')
+                for model in groups[group]:
+                    if model:
+                        print(model.__dict__)
 
 
 if __name__ == '__main__':
 
     db_manager = DatabaseManager('sqlite:///database')
-    db_manager.set_workspace_service_test_config(15)
+    db_manager._set_getting_config_personal_tasks()
+    db_manager.show_db_config()

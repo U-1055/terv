@@ -124,16 +124,23 @@ def set_db_get_config(request: pytest.FixtureRequest):
 @pytest.mark.parametrize(
     ['uri', 'expected_schema', 'query_params', 'exp_status_code', 'config_num', 'exp_content'],
     [
-        ['/users', valid_response_schema, {}, 200, None, IGNORE]
+        ['/users', valid_response_schema, {}, 200, None, IGNORE, IGNORE],
+        ['/ws_tasks', valid_response_schema, {}, 200, None, IGNORE, IGNORE],
+        [
+            '/personal_tasks', valid_response_schema, {}, 200,
+            DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(10) if i % 2 == 0]
+        ]
     ],
 )
 def test_get_model(set_config, client: FlaskClient, uri: str, expected_schema: BaseSchema, query_params: tp.Sequence,
                    exp_status_code: int, set_db_get_config, controller_access_token: str, config_num: int | None,
-                   exp_content: tp.Sequence[dict]):
+                   exp_content: tp.Sequence[dict], exp_content_ids: tp.Sequence[int]):
     response = client.get(uri, query_string=query_params, headers={'Authorization': controller_access_token})
     js.validate(response.json, schema=expected_schema.schema)
 
     assert response.status_code == exp_status_code
     if exp_content != IGNORE:
         assert response.json.get(CommonStruct.content) == exp_content
-
+    if exp_content_ids != IGNORE:
+        ids = [dict_.get("id") for dict_ in response.json.get(CommonStruct.content)]
+        assert tuple(ids) == tuple(exp_content_ids)
