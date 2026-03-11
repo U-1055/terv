@@ -126,10 +126,6 @@ def set_db_get_config(request: pytest.FixtureRequest):
     [
         ['/users', valid_response_schema, {}, 200, None, IGNORE, IGNORE],
         ['/ws_tasks', valid_response_schema, {}, 200, None, IGNORE, IGNORE],
-        [
-            '/personal_tasks', valid_response_schema, {}, 200,
-            DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(10) if i % 2 == 0]
-        ],
         # Тесты поиска
         # ID указан согласно порядку создания объектов в конфиге. + 1, т.к. каждый раз создаётся ещё один пользователь
         [
@@ -144,6 +140,16 @@ def set_db_get_config(request: pytest.FixtureRequest):
             '/users/search', valid_response_schema, {CommonStruct.email: '9'}, 200,
             DatabaseManager.searching_config, IGNORE, [11, 21, 31, 41, 51, 61, 71, 81, 91, 92, 93, 94, 95, 96, 97, 98, 99,
                                                        100, 101]
+        ],
+        # Тесты фильтрации
+        [
+            '/personal_tasks', valid_response_schema, {CommonStruct.not_completed: True}, 200,
+            DatabaseManager.getting_config_personal_tasks, IGNORE, [2, 4, 6, 8, 10]
+        ],
+        [
+            '/personal_tasks', valid_response_schema,
+            {CommonStruct.plan_deadline: datetime.datetime(2026, 2, 14, 0, 10)}, 200,
+            DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
         ]
     ],
 )

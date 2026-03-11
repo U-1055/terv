@@ -36,7 +36,8 @@ class DatabaseManager:
                 DBFields.name: self._faker.name(),
                 DBFields.description: self._faker.text(1000, ['vodka', 'chay', 'kniga']),
                 DBFields.status_id: 1 if i % 2 == 0 else 2,
-                DBFields.plan_deadline: self._faker.date_time()
+                DBFields.plan_deadline: datetime.datetime(2026, 2, 14, 0, 10)
+                if i % 2 == 0 else datetime.datetime(2026, 3, 3, 0, 10)
             } for i in range(10)
         ]
         personal_tasks_events_params = [
@@ -214,5 +215,5 @@ class DatabaseManager:
 if __name__ == '__main__':
 
     db_manager = DatabaseManager('sqlite:///database')
-    db_manager.set_name_searching_test_config()
+    db_manager._set_getting_config_personal_tasks()
     db_manager.show_db_config()
