@@ -1,5 +1,4 @@
 from PySide6.QtCore import QTimer, Signal
-from PySide6.QtGui import QColor
 
 import dataclasses
 import datetime
@@ -121,9 +120,10 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._place_settable_widgets()  # Обновляем конфигурацию
 
     def _set_user(self, user_info: tuple[dict]):
-        logger.debug(f'User info received: {user_info}')
-        self._data_model.user = cm.User(**user_info[0])
-        self.receive_user_data()
+        if user_info:
+            logger.debug(f'User info received: {user_info}')
+            self._data_model.user = cm.User(**user_info[0])
+            self.receive_user_data()
 
     def _show_info_to_tooltip(self, tooltip: QStructuredText, info: [dict], field: str):
         info = info[0]
@@ -326,10 +326,12 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._events_today_widget.event_tooltip_content_clicked.connect(self._on_id_clicked)
 
     def _set_personal_tasks(self, tasks: tuple[dict, ...]):
-        self._data_model.personal_tasks = [cm.PersonalTask(**task) for task in tasks]
+        if tasks:
+            self._data_model.personal_tasks = [cm.PersonalTask(**task) for task in tasks]
 
     def _set_ws_tasks(self, tasks: tuple[dict, ...]):
-        self._data_model.ws_tasks = [cm.WSTask(**task) for task in tasks]
+        if tasks:
+            self._data_model.ws_tasks = [cm.WSTask(**task) for task in tasks]
 
     def _get_schedule_widget_data(self):
         """Настраивает виджет расписания."""
@@ -375,9 +377,11 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         access_token = self._model.get_access_token()
 
         if self._data_model.user:
-            personal_tasks = self._requester.get_personal_tasks(self._data_model.user.id, access_token, datetime.date.today())
+            personal_tasks = self._requester.get_personal_tasks(self._data_model.user.id, access_token, datetime.date.today(),
+                                                                not_completed=True)
             personal_tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_personal_tasks))
-            ws_tasks = self._requester.get_ws_tasks_by_user(self._data_model.user.id, access_token, datetime.date.today())
+            ws_tasks = self._requester.get_ws_tasks_by_user(self._data_model.user.id, access_token, datetime.date.today(),
+                                                            not_completed=True)
             ws_tasks.finished.connect(lambda request_: self._prepare_request(request_, self._set_ws_tasks))
             self._requests.ws_tasks_request = ws_tasks
             self._requests.personal_tasks_request = personal_tasks

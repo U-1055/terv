@@ -150,3 +150,28 @@ def client_requester(request: pytest.FixtureRequest) -> Requester:
     request_limit = params.get(REQUEST_LIMIT)
     timeout = params.get(TIMEOUT)
     return Requester('http://localhost:5000', request_limit=request_limit, timeout=timeout)
+
+
+@pytest.fixture(scope='function')
+def set_db_config(request: pytest.FixtureRequest) -> DatabaseManager:
+    """
+    Устанавливает конфиг в БД и возвращает объект DataBaseManager для дальнейшей настройки.
+    Вызывающая функция должна быть помечена с помощью pytest.mark.f_data с параметром test_database_path
+    (путь к тестовой БД). В параметрах вызывающей функции должен быть config_num - номер конфига БД. Если
+    config_num = None - конфиг не устанавливается. Если вызывающий тест не параметризован, конфиг не устанавливается.
+
+    """
+    config_num = None
+    if hasattr(request.node, 'callspec'):  # Проверка параметризации вызывающего теста
+        params = request.node.callspec.params
+        config_num = params.get('config_num')
+
+    settings = request.node.get_closest_marker('f_data').args[0]
+    db_path = settings.get(TEST_DB_PATH)
+
+    db_manager = DatabaseManager(db_path)
+
+    if config_num:
+        db_manager.choose_db_config(config_num)
+
+    return db_manager

@@ -182,7 +182,6 @@ if __name__ == '__main__':
 
     repo = DataRepository(sessionmaker(bind=engine))
     print(repo.get_workspaces())
-    repo.update_personal_tasks([{'id': 1, 'status_id': 120, 'name': 'NAMN'}])
     with sessionmaker(bind=engine)() as session, session.begin():
         result = session.execute(select(cm.PersonalTask).where(cm.PersonalTask.id == 1)).scalars().all()
         print([[model.status_id, model.name] for model in result])

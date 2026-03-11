@@ -13,7 +13,7 @@ from common.base import DBFields, get_datetime_now
 from server.database.schemes.base import schemes_models
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
-from server.database.exceptions import exc_mapped, ExceptionGenerator
+from server.database.exceptions import exc_mapped, BaseRepoException
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -114,7 +114,7 @@ class DataRepository:
             for model in models:
                 id_ = model.get(DBFields.id)
                 if not id_:
-                    raise ExceptionGenerator.get_no_required_param_error(DBFields.id)
+                    raise BaseRepoException.get_no_required_param_error(DBFields.id)
                 ids.append(id_)
 
             db_models = session.execute(select(base_model).where(base_model.id.in_(ids))).scalars().all()
@@ -196,8 +196,10 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num)
 
     @exc_mapped
-    def get_ws_tasks(self, ids: tp.Sequence[int], workspace_id: int = None, executor_id: int = None, limit: int = None,
-                     offset: int = None, require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+    def get_ws_tasks(self, ids: tp.Sequence[int], workspace_id: int = None, executor_id: int = None,
+                     working_date: datetime.date = None, plan_deadline: datetime.datetime = None, status_ids: tp.Sequence[int] = None,
+                     not_completed: bool = False, limit: int = None, offset: int = None,
+                     require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.WSTask)
         if ids:
             query = query.where(cm.WSTask.id.in_(ids))
@@ -205,6 +207,14 @@ class DataRepository:
             query = query.where(cm.WSTask.executors.any(cm.User.id == executor_id))
         if workspace_id:
             query = query.where(cm.WSTask.workspace_id == workspace_id)
+        if working_date:
+            query = query.where(cm.WSTask.task_events.any(cm.WSTaskEvent.date == working_date))
+        if status_ids:
+            query = query.where(cm.WSTask.status_id.in_(status_ids))
+        if not_completed:
+            query = query.where(cm.WSTask.workspace.has(cm.WSTask.status_id != cm.Workspace.completed_task_status_id))
+        if plan_deadline:
+            query = query.where(cm.WSTask.plan_deadline == plan_deadline)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
@@ -311,11 +321,22 @@ class DataRepository:
         return self._get_permissions(query)
 
     @exc_mapped
-    def get_personal_tasks_by_id(self, ids: tp.Iterable[int] = None, limit: int = None, offset: int = None,
-                                 require_last_num: bool = False, serialize: bool = True):
+    def get_personal_tasks_by_id(self, ids: tp.Iterable[int] = None, working_date: datetime.date = None,
+                                 plan_deadline: datetime.datetime = None, status_ids: tp.Sequence[int] = None,
+                                 not_completed: bool = False, limit: int = None,
+                                 offset: int = None, require_last_num: bool = False, serialize: bool = True):
         query = select(cm.PersonalTask)
         if ids:
             query = query.where(cm.PersonalTask.id.in_(ids))
+        if working_date:
+            query = query.where(cm.PersonalTask.task_events.any(cm.PersonalTaskEvent.date == working_date))
+        if status_ids:
+            query = query.where(cm.PersonalTask.status_id.in_(status_ids))
+        if not_completed:
+            query = query.where(cm.PersonalTask.owner.has(cm.User.completed_task_status_id != cm.PersonalTask.status_id))
+        if plan_deadline:
+            query = query.where(cm.PersonalTask.plan_deadline == plan_deadline)
+
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped

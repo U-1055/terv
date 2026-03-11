@@ -198,7 +198,7 @@ class WSTask(Base):
     project: Mapped[Project] = relationship(Project, back_populates='tasks')
     status: Mapped['WSTaskStatus'] = relationship('WSTaskStatus', back_populates='tasks')
     tags: Mapped['WSTaskTag'] = relationship(secondary='tag_ws_task', back_populates='tasks')
-    task_events: Mapped['WSTaskEvent'] = relationship('WSTaskEvent', back_populates='task')
+    task_events: Mapped[list['WSTaskEvent']] = relationship('WSTaskEvent', back_populates='task')
 
 
 class PersonalTask(Base):

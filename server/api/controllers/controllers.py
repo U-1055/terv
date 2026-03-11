@@ -6,7 +6,7 @@ import sqlalchemy.exc as err
 import typing as tp
 
 from server.data_const import APIAnswers as APIAn
-from common.base import CommonStruct, ErrorCodes
+from common.base import CommonStruct, ErrorCodes, TasksStatuses, DBFields
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from server.database.repository import DataRepository
@@ -14,6 +14,7 @@ import server.utils.api_utils as utl
 from server.auth.auth_module import Authenticator
 import server.services.services as services
 from server.database.exceptions import BaseRepoException
+from server.api.controllers.exceptions import IncorrectParamException, VALUE, MESSAGE
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -50,11 +51,15 @@ class WSTaskController(BaseController):
     def get(request: Request, repo: DataRepository, user_id: int = None, limit: int = None, offset: int = None,
             require_last_num: bool = False):  # ToDo: авторизация
         """
-        Возвращает задачи РП. Вид запроса:
-        api/ws_tasks/ids,name,description,project_id,creator_id,entrusted_id,executor_id,workspace_id
+        Возвращает задачи РП.
         """
         ids = request.args.getlist(CommonStruct.ws_tasks_ids)
         executor_id = request.args.get(CommonStruct.executor_id)
+        status_ids = request.args.getlist(CommonStruct.status_ids)
+        not_completed = request.args.get(CommonStruct.not_completed)
+        date = request.args.get(CommonStruct.date)
+        plan_deadline = request.args.get(CommonStruct.plan_deadline)
+
         if not executor_id:
             executor_id = user_id
 
@@ -71,7 +76,7 @@ class WSTaskController(BaseController):
                                          error_id=ErrorCodes.incorrect_id.value
                                          )
         ids = [int(id_) for id_ in ids]
-        tasks = repo.get_ws_tasks(ids, workspace_id, executor_id, limit, offset)
+        tasks = repo.get_ws_tasks(ids, workspace_id, executor_id, date, plan_deadline, status_ids, not_completed, limit, offset)
 
         return utl.form_response(200, 'OK', content=tasks.content,
                                  last_rec_num=tasks.last_record_num,
@@ -154,6 +159,24 @@ class WSTaskController(BaseController):
 
         return utl.form_response(200, 'OK')
 
+    @staticmethod
+    def change_status(request: Request, task_id: int, repo: DataRepository):
+        """Изменяет статус задаче."""
+        status = request.args.get(CommonStruct.task_status)
+        status_id = request.args.get(CommonStruct.status_ids)
+        task = repo.get_ws_tasks([task_id])
+        if status in (TasksStatuses.default_completed_task_status_name, TasksStatuses.default_task_status_name):  # Если передан стандартный статус
+            if not task.content:
+                raise IncorrectParamException({"task_id": {VALUE: task, MESSAGE: "Incorrect task's ID"}})
+            task = task.content[0]
+            workspace = repo.get_workspaces([task.get(DBFields.workspace_id)]).content[0]
+
+            if status == TasksStatuses.default_completed_task_status_name:
+                completed_status_id = workspace.get(CommonStruct.completed_task_status_id)
+                repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: completed_status_id})
+        else:  # Если нестандартный
+            repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: status_id})
+
 
 class UserController(BaseController):
 
@@ -200,18 +223,9 @@ class UserController(BaseController):
 
         try:
             result = repo.get_users_by_id(ids, limit=limit, offset=offset)
-            if limit or offset or require_last_num:
-                return utl.form_response(200, 'OK', content=result.content, last_rec_num=result.last_record_num,
-                                         records_left=result.records_left)
-            else:
-                return utl.form_response(200, 'OK', content=result.content)
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error during receiving Users: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ids, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+            return utl.form_success_response(result.content)
+        except BaseRepoException as e:
+            pass
 
     @staticmethod
     def update(request: Request, repo: DataRepository):
@@ -259,19 +273,23 @@ class PersonalTaskController(BaseController):
     @staticmethod
     @utl.get_request
     def get(request: Request, repo: DataRepository, user_id: int = None, limit: int = None, offset: int = None,
-                           require_last_num: bool = False):
+            require_last_num: bool = False):
         """Получает личные задачи по их ID."""
 
-        params = request.args  # ToDo: фильтрация по пользователю и по датам
+        params = request.args
         ids = params.getlist(CommonStruct.ids)
         require_last_num = params.get(CommonStruct.require_last_num)
+        date = request.args.get(CommonStruct.date)
+        not_completed = request.args.get(CommonStruct.not_completed)
+        status_ids = request.args.getlist(CommonStruct.status_ids)
+        plan_deadline = request.args.get(CommonStruct.plan_deadline)
 
         if not utl.check_list_is_digit(ids):
             return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
                                                                    'One of ids is not integer'))
         ids = utl.list_to_int(ids)
         try:
-            result = repo.get_personal_tasks_by_id(ids, limit, offset)
+            result = repo.get_personal_tasks_by_id(ids, date, plan_deadline, status_ids, not_completed, limit, offset)
             if limit or offset or require_last_num:  # Проверка запроса лимита или offset-а
                 return utl.form_response(200, 'OK', last_rec_num=result.last_record_num,
                                          records_left=result.records_left, content=result.content)
@@ -332,6 +350,25 @@ class PersonalTaskController(BaseController):
                 'Database error occurred',
                 str(e)
             ))
+
+    @staticmethod
+    def change_status(request: Request, task_id: int, repo: DataRepository):
+        """Изменяет статус задаче."""
+        status = request.args.get(CommonStruct.task_status)
+        status_id = request.args.get(CommonStruct.status_ids)
+        task = repo.get_personal_tasks_by_id([task_id])
+        if status in (TasksStatuses.default_completed_task_status_name,
+                      TasksStatuses.default_task_status_name):  # Если передан стандартный статус
+            if not task.content:
+                raise IncorrectParamException({"task_id": {VALUE: task, MESSAGE: "Incorrect task's ID"}})
+            task = task.content[0]
+            owner = repo.get_users_by_id([task.get(DBFields.owner_id)]).content[0]
+
+            if status == TasksStatuses.default_completed_task_status_name:
+                completed_status_id = owner.get(CommonStruct.completed_task_status_id)
+                repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: completed_status_id})
+        else:  # Если нестандартный
+            repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: status_id})
 
 
 class WSDailyEventController(BaseController):

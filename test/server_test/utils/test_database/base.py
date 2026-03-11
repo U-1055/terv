@@ -18,6 +18,7 @@ class DatabaseManager:
     getting_config_ws_tasks = 2
     getting_config_workspaces = 3
     getting_config_4 = 4
+    searching_config = 5
 
     def __init__(self, path: str):
         self._database_path = path
@@ -27,7 +28,6 @@ class DatabaseManager:
 
     def _set_getting_config_personal_tasks(self):
         current_date = datetime.date.today()
-        date_data = {"year": current_date.year, "month": current_date.month, "day": current_date.day}
 
         users_params = [[self._faker.name(), self._faker.email()] for _ in range(10)]
         statuses_params = [[self._faker.name()] for _ in range(5)]
@@ -154,6 +154,24 @@ class DatabaseManager:
                 session.add(user)
             session.commit()
 
+    def set_name_searching_test_config(self):
+        """
+        Устанавливает конфиг для тестирования поиска по имени и email.
+        Формат имени пользователей: User#<[0-99]><[0-1]>
+        Email: email<[0-99]><[0-1]>@sth.com
+        Всего создаётся 100 пользователей, из них 50 имеют 0 в качестве последней цифры email и имени, 50 - 1.
+
+        """
+        users_params = [
+            {
+                DBFields.username: f'User#{i}{i % 2}', DBFields.email: f'email{i}{i % 2}@sth.com',
+                DBFields.hashed_password: self._faker.text(100, ['Der', 'Lowe', 'aus', 'Mitternacht', 'coms'])
+            } for i in range(100)
+        ]
+        with self.session_maker() as session, session.begin():
+            users = [cm.User(**params) for params in users_params]
+            session.add_all(users)
+
     def add_new_user(self):
         """Добавляет пользователя со случайными email и username."""
         with self.session_maker() as session, session.begin():
@@ -165,6 +183,8 @@ class DatabaseManager:
         """Устанавливает конфиг БД по номеру."""
         if num == self.getting_config_personal_tasks:
             self._set_getting_config_personal_tasks()
+        if num == self.searching_config:
+            self.set_name_searching_test_config()
 
     def show_db_config(self):
         """Выводит в консоль объекты из базы."""
@@ -194,5 +214,5 @@ class DatabaseManager:
 if __name__ == '__main__':
 
     db_manager = DatabaseManager('sqlite:///database')
-    db_manager._set_getting_config_personal_tasks()
+    db_manager.set_name_searching_test_config()
     db_manager.show_db_config()

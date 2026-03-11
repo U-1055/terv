@@ -9,6 +9,7 @@ from common.base import CommonStruct, ErrorCodes
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, LOGGING_LEVEL, MAX_FILE_SIZE, MAX_BACKUP_FILES
 from server.data_const import APIAnswers as APIAn
+import server.api.controllers.exceptions as controller_exc
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -76,18 +77,6 @@ def form_forbidden_response(resource: str, endpoint: str, role: str, permission:
                               f'operation with resource {resource}.')
 
 
-def prepare_pagination_param(param: str) -> int:
-    """
-    Валидирует и приводит к требуемому виду параметры пагинации (limit и offset).
-    Оба параметра: числа, >=0.
-    """
-    if param:
-        param = int(param)
-
-    else:
-        pass
-
-
 def check_list_is_digit(list_: list[str]) -> bool:
     """Проверяет, все ли элементы списка могут быть приведены к типу int."""
     for el in list_:
@@ -108,6 +97,14 @@ def exceptions_handler(func: tp.Callable):
     def prepare(request: flask.Request):
         try:
             return func(request)
+        except controller_exc.IncorrectParamException as e:
+            params = ''
+            for param in e.params:
+                value = e.params[controller_exc.VALUE]
+                message = e.params[controller_exc.MESSAGE]
+                params = f'{params}{param}={value}  -  {message}  '
+            message = f'Incorrect params in request to endpoint {request.endpoint}. Params: {e.params}.'
+            return form_response(400, message)
         except Exception as e:
             logger.critical(f'Unknown error was excepted during preparing request: {request}.')
             return form_response(500, 'Unknown server error', error_id=ErrorCodes.server_error.value)

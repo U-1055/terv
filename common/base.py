@@ -35,6 +35,11 @@ class CommonStruct:
     personal_many_days_events = 'personal_many_days_events'
     user_id = 'user_id'
     username = 'username'
+    status_ids = 'status_ids'
+    status_id = 'status_id'
+    not_completed = 'not_completed'
+    completed_task_status_id = 'completed_task_status_id'
+    plan_deadline = 'plan_deadline'
 
     limit = 'limit'
     offset = 'offset'

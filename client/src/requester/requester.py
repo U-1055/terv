@@ -37,7 +37,7 @@ def run_loop(loop: asyncio.AbstractEventLoop):
 def synchronized_request(func) -> tp.Callable[..., Request]:
 
     @functools.wraps(func)
-    def prepare(*args) -> Request:
+    def prepare(*args, **kwargs) -> Request:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -209,8 +209,6 @@ class Requester(IRequests):
             logger.warning(f'Excepted network connection error {e} during making request {str(InternalRequest)}')
             raise err.get_network_error(e, request)
 
-
-
     @synchronized_request
     async def make_custom_request(self, request: InternalRequest) -> Response:
         response = await self._make_request(request)
@@ -263,8 +261,9 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_personal_tasks(self, user_id: int, access_token: str, on_date: datetime.date, tasks_ids: list[int] = None,
-                                 limit: int = None, offset: int = None) -> Response:
+    async def get_personal_tasks(self, user_id: int, access_token: str, on_date: datetime.date,
+                                 tasks_ids: list[int] = None, status_ids: tp.Sequence[int] = None,
+                                 not_completed: bool = False, limit: int = None, offset: int = None) -> Response:
         """
         Получает личные задачи (конкретную или по user_id).
 
@@ -272,11 +271,21 @@ class Requester(IRequests):
         :param access_token: access-токен.
         :param on_date: Дата, на которую запланирована работа над задачей.
         :param tasks_ids: ID задач.
+        :param status_ids: ID статусов задач.
+        :param not_completed: Должна ли задача не быть выполненной? Если True, то возвращаются все подходящие задачи,
+                              кроме задач, статус которых соответствует статусу выполненных личных задач.
+
         """
 
         path = f'{self._server}/users/{user_id}/personal_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
-                          query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+                                  query_params={
+                                      CommonStruct.limit: limit,
+                                      CommonStruct.offset: offset,
+                                      CommonStruct.date: on_date,
+                                      CommonStruct.status_ids: status_ids,
+                                      CommonStruct.not_completed: not_completed
+                          })
         response = await self._choose_request_type(request, limit)
 
         return response
@@ -381,11 +390,18 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_ws_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None, limit: int = None,
+    async def get_ws_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None,
+                                   status_ids: tp.Sequence[int] = None, not_completed: bool = False, limit: int = None,
                                    offset: int = None):
         path = f'{self._server}/users/{user_id}/ws_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
-                                  query_params={CommonStruct.limit: limit, CommonStruct: offset, CommonStruct.date: date})
+                                  query_params={
+                                      CommonStruct.limit: limit,
+                                      CommonStruct: offset,
+                                      CommonStruct.date: date,
+                                      CommonStruct.status_ids: status_ids,
+                                      CommonStruct.not_completed: not_completed
+                                  })
         response = await self._choose_request_type(request, limit)
         return response
 

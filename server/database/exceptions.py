@@ -62,14 +62,6 @@ def map_marshmallow_exc_to_repo_exc(exc: MarshmallowError) -> 'BaseRepoException
         return UnknownRepoException(exc)
 
 
-class ExceptionGenerator:
-
-    @staticmethod
-    def get_no_required_param_error(param: str):
-        exc = DataIntegrityError({param: NO_VALUE}, None)
-        return exc
-
-
 class BaseRepoException(Exception):
     """Базовый класс ошибок слоя доступа к данным."""
     message: str
@@ -77,6 +69,11 @@ class BaseRepoException(Exception):
 
     def __init__(self, orig: Exception | None):
         self.orig = orig
+
+    @staticmethod
+    def get_no_required_param_error(param: str):
+        exc = DataIntegrityError({param: NO_VALUE}, None)
+        return exc
 
     def __str__(self):
         return f'RepositoryException - {self.__class__.__name__}: {self.message}'
