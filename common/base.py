@@ -34,6 +34,7 @@ class CommonStruct:
     personal_daily_events = 'personal_daily_events'
     personal_many_days_events = 'personal_many_days_events'
     user_id = 'user_id'
+    username = 'username'
 
     limit = 'limit'
     offset = 'offset'

@@ -508,13 +508,13 @@ class DataRepository:
 
     @exc_mapped
     def get_personal_task_tags_by_user(self, user_id: int, limit: int = None, offset: int = None,
-                                     require_last_num: bool = False, serialize: bool = True):
+                                       require_last_num: bool = False, serialize: bool = True):
         query = select(cm.PersonalTaskTag).where(cm.PersonalTaskTag.owner_id == user_id)
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
     def get_personal_task_statuses_by_user(self, user_id: int, limit: int = None, offset: int = None,
-                                       require_last_num: bool = False, serialize: bool = True):
+                                           require_last_num: bool = False, serialize: bool = True):
         query = select(cm.PersonalTaskStatus).where(cm.PersonalTaskStatus.owner_id == user_id)
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
@@ -531,8 +531,8 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
-    def get_ws_task_events(self, ids: tp.Sequence[int], workspace_id: int, executor_id: int = None, limit: int = None,
-                           offset: int = None, require_last_num: bool = False,
+    def get_ws_task_events(self, ids: tp.Sequence[int], workspace_id: int, executor_id: int = None,
+                           date: datetime.date = None, limit: int = None, offset: int = None, require_last_num: bool = False,
                            serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.WSTaskEvent)
         if ids:
@@ -540,19 +540,34 @@ class DataRepository:
         if workspace_id:
             query = query.where(cm.WSTaskEvent.task.workspace_id == workspace_id)
         if executor_id:
-            query = query.where(cm.WSTaskEvent.task.exe)
+            query = query.where(cm.WSTaskEvent.task.executor_id == executor_id)
+        if date:
+            query = query.where(cm.WSTaskEvent.date == date)
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
-    def get_personal_task_events_by_user(self, ids: tp.Sequence[int], user_id: int, limit: int = None,
-                                         offset: int = None, require_last_num: bool = False,
+    def get_personal_task_events_by_user(self, ids: tp.Sequence[int], user_id: int, date: datetime.date = None,
+                                         limit: int = None, offset: int = None, require_last_num: bool = False,
                                          serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.PersonalTaskEvent)
         if ids:
             query = query.where(cm.PersonalTaskEvent.id.in_(ids))
         if user_id:
             query = query.where(cm.PersonalTaskEvent.task.owner_id == user_id)
+        if date:
+            query = query.where(cm.PersonalTaskEvent.date == date)
 
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def search_users(self, username: str, email: str, limit: int = None, offset: int = None, require_last_num: bool = False,
+                     serialize: bool = True) -> 'RepoSelectResponse':
+        query = select(cm.User)
+
+        if username:
+            query = query.where(cm.User.username.contains(username))
+        if email:
+            query = query.where(cm.User.email.contains(email))
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
 

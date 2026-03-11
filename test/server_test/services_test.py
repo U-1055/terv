@@ -62,7 +62,6 @@ def test_creating_not_normal_workspace(repository: DataRepository, name: str, de
         WorkspaceService.create(workspace, creator_id, repository)
 
 
-
 @pytest.mark.parametrize(
     ['user_ids'],
     [[(2, 3, 4, 5, 6, 7, 8)]]
@@ -91,6 +90,5 @@ def test_normal_deleting_users(workspace_with_users_id: tuple[int, tuple[int, ..
     users = repository.get_users_by_id(user_ids).content
     linked_workspace = [user.get(DBFields.linked_workspaces) for user in users]
     assert all([user not in users for user in workspace_users])
-    assert workspace_id not in linked_workspace
-
+    assert workspace_id not in linked_workspace  # ToDo: падают 2 теста из-за default_role_id = None. Почему так, неясно
 

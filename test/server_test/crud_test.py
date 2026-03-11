@@ -15,14 +15,15 @@ import typing as tp
 
 from common.base import CommonStruct
 from test.server_test.utils.test_database.base import DatabaseManager
-from test.conftest import SERVER_CONFIG_PATH, SERVER_WORKING_DIR, TEST_CONFIG_PATH
+from test.conftest import SERVER_CONFIG_PATH, SERVER_WORKING_DIR, TEST_CONFIG_PATH, TEST_DB_PATH
 from server.storage.server_model import Model
 
 IGNORE = f'IGNORE_VALUE_{datetime.datetime.now()}'  # Константа, помечающая параметр теста как игнорируемый
 base_params = {
     SERVER_WORKING_DIR: '../../server/api',
     SERVER_CONFIG_PATH: '../../server/config.json',
-    TEST_CONFIG_PATH: '../../test/server_test/utils/server_configs/limit_offset_test_config.json'
+    TEST_CONFIG_PATH: '../../test/server_test/utils/server_configs/limit_offset_test_config.json',
+    TEST_DB_PATH: 'sqlite:///../../test/server_test/utils/test_database/database'
               }
 
 
@@ -109,8 +110,7 @@ def app() -> flask.Flask:
 @pytest.fixture(scope='function')
 def set_db_get_config(request: pytest.FixtureRequest):
     """
-    Добавляет пользователя в БД. Если в аргументах теста, в котором используется фикстура, есть config_num,
-    создаётся конфиг в БД с соответствующим номером.
+    Добавляет пользователя в БД.
     """
     db_manager = DatabaseManager('sqlite:///../../test/server_test/utils/test_database/database')
     db_manager.add_new_user()
@@ -122,13 +122,28 @@ def set_db_get_config(request: pytest.FixtureRequest):
 
 @pytest.mark.f_data(base_params)
 @pytest.mark.parametrize(
-    ['uri', 'expected_schema', 'query_params', 'exp_status_code', 'config_num', 'exp_content'],
+    ['uri', 'expected_schema', 'query_params', 'exp_status_code', 'config_num', 'exp_content', 'exp_content_ids'],
     [
         ['/users', valid_response_schema, {}, 200, None, IGNORE, IGNORE],
         ['/ws_tasks', valid_response_schema, {}, 200, None, IGNORE, IGNORE],
         [
             '/personal_tasks', valid_response_schema, {}, 200,
             DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(10) if i % 2 == 0]
+        ],
+        # Тесты поиска
+        # ID указан согласно порядку создания объектов в конфиге. + 1, т.к. каждый раз создаётся ещё один пользователь
+        [
+            '/users/search', valid_response_schema, {CommonStruct.username: '#90'},
+             200, DatabaseManager.searching_config, IGNORE, [92]
+        ],
+        [
+            '/users/search', valid_response_schema, {CommonStruct.username: 'User'}, 200,
+            DatabaseManager.searching_config, IGNORE, [i for i in range(2, 102)]
+        ],
+        [
+            '/users/search', valid_response_schema, {CommonStruct.email: '9'}, 200,
+            DatabaseManager.searching_config, IGNORE, [11, 21, 31, 41, 51, 61, 71, 81, 91, 92, 93, 94, 95, 96, 97, 98, 99,
+                                                       100, 101]
         ]
     ],
 )
@@ -143,4 +158,4 @@ def test_get_model(set_config, client: FlaskClient, uri: str, expected_schema: B
         assert response.json.get(CommonStruct.content) == exp_content
     if exp_content_ids != IGNORE:
         ids = [dict_.get("id") for dict_ in response.json.get(CommonStruct.content)]
-        assert tuple(ids) == tuple(exp_content_ids)
+        assert tuple(ids) == tuple(exp_content_ids), f'Response: {response.json}'

@@ -12,6 +12,7 @@ from test.server_test.utils.test_database.base import DatabaseManager
 from server.database.schemes.common_schemes import UserSchema
 from test.server_test.utils.test_data.repository_test_data import test_updating_objects_data
 from server.database.exceptions import BaseRepoException, DataIntegrityError, IncorrectLinkError, NotUniqueValue
+from test.conftest import TEST_DB_PATH
 
 test_database_path = 'sqlite:///utils/test_database/database'
 
@@ -21,10 +22,12 @@ REPOSITORY = 'repository'
 CREATING_METHOD = 'creating_method'
 OBJ_DATA = 'obj_data'
 
+params = {TEST_DB_PATH: test_database_path}
 
-@pytest.fixture(scope='session')
-def config_db() -> sqlalchemy.orm.session.sessionmaker:  # Устанавливает конфиг БД для теста, возвращает sessionmaker
-    db_manager = DatabaseManager(test_database_path)
+
+@pytest.fixture(scope='function')
+def config_db(set_db_config: DatabaseManager) -> sqlalchemy.orm.session.sessionmaker:  # Устанавливает конфиг БД для теста, возвращает sessionmaker
+    db_manager = set_db_config
     db_manager.set_repository_test_config(TEST_LOGIN, TEST_WS_NAME, 30)
     return db_manager.session_maker
 
@@ -61,6 +64,7 @@ def obj_id(request: pytest.FixtureRequest, repository) -> int:
     return response.ids[0]
 
 
+@pytest.mark.f_data(params)
 @pytest.mark.parametrize(
     ['exp_len'],
     [[1]]
@@ -72,6 +76,7 @@ def test_get_workspace(repository: DataRepository, exp_len: int):
     assert type(result.content[0]) is dict
 
 
+@pytest.mark.f_data(params)
 def test_date_format(repository: DataRepository):
     ws_tasks = repository.get_ws_tasks([])
     for task in ws_tasks.content:
@@ -87,6 +92,7 @@ def test_date_format(repository: DataRepository):
                            f'must be {CommonStruct.datetime_format}.')
 
 
+@pytest.mark.f_data(params)
 def test_serializing_links(repository: DataRepository):
     """Проверяет сериализацию связей между моделями."""
     workspace = repository.get_workspaces([1])
@@ -97,6 +103,7 @@ def test_serializing_links(repository: DataRepository):
         f'All of users must be the users of workspace. Workspace: {workspace.content[0]}'
 
 
+@pytest.mark.f_data(params)
 def test_deserializing_links(repository: DataRepository):  
     """Проверяет десериализацию связей между моделями."""
     workspace = repository.get_workspaces([1]).content[0]
@@ -123,6 +130,7 @@ def test_deserializing_links(repository: DataRepository):
     assert serialized_users == rewritten_users
 
 
+@pytest.mark.f_data(params)
 @pytest.mark.parametrize(
     ['name', 'description'],
     [['task', 'some_description']]
@@ -142,6 +150,7 @@ def test_creating_models(repository: DataRepository, name: str, description: str
     assert task_desc == description
 
 
+@pytest.mark.f_data(params)
 @pytest.mark.parametrize(
     ['name', 'description'],
     [[f'task_{i}', f'description_{i}'] for i in range(10)]
@@ -162,6 +171,7 @@ def test_serializing_foreign_keys(repository: DataRepository, name: str, descrip
     assert owner == 1
 
 
+@pytest.mark.f_data(params)
 @pytest.mark.parametrize(
     ['creating_method', 'updating_method', 'obj_data', 'updating_data', 'get_by_id_method', 'expected'],
     test_updating_objects_data
@@ -213,6 +223,8 @@ def test_updating_objects(creating_method: tp.Callable[[DataRepository, tp.Colle
                                                            f'Updated object: {updated_obj}. Expected object: {expected}.')
     print(updated_obj, expected)
 
+
+@pytest.mark.f_data(params)
 @pytest.mark.parametrize(
     ['creating_method', 'obj_data', 'expected_exc', 'expected_params'],
     [
@@ -274,6 +286,7 @@ def test_incorrect_adding_objects(creating_method: tp.Callable[[DataRepository, 
                                              f'Attribute name: {attribute}')
 
 
+@pytest.mark.f_data(params)
 @pytest.mark.parametrize(
     ['creating_method', 'obj_data', 'expected_exc', 'expected_params', 'updating_method', 'updating_data'],
     [
