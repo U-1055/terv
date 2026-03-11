@@ -375,16 +375,18 @@ class WSDailyEventController(BaseController):
 
     @staticmethod
     @utl.get_request
-    def get(request: flask.Request, repo: DataRepository, ids = tp.Iterable[int], user_id: int = None,
-                            limit: int = None, offset: int = None, require_last_num: bool = False):
+    def get(request: flask.Request, repo: DataRepository, ids=tp.Iterable[int], user_id: int = None,
+            limit: int = None, offset: int = None, require_last_num: bool = False):
         """Получает однодневные события РП."""
         ids = request.args.getlist(CommonStruct.ids)
+        date = request.args.get(CommonStruct.date)
+
         if not utl.check_list_is_digit(ids):
             return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
                                                                    'One of ids is not integer'))
         ids = utl.list_to_int(ids)
         try:
-            result = repo.get_ws_daily_events_by_id(ids, user_id, limit, offset, require_last_num)
+            result = repo.get_ws_daily_events_by_id(ids, user_id, date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
         except err.IntegrityError as e:
@@ -421,6 +423,7 @@ class WSManyDaysEventController(BaseController):
                                 offset: int = None, require_last_num: bool = False):
         """Получает многодневные события РП."""
         ids = request.args.getlist(CommonStruct.ids)
+        included_date = request.args.get(CommonStruct.included_date)
         try:
             ids = utl.list_to_int(ids)
         except ValueError:
@@ -428,7 +431,7 @@ class WSManyDaysEventController(BaseController):
                                                                    'One of ids is not integer'))
 
         try:
-            result = repo.get_ws_many_days_events_by_id(ids, user_id, limit, offset, require_last_num)
+            result = repo.get_ws_many_days_events_by_id(ids, user_id, included_date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
         except err.IntegrityError as e:
@@ -443,6 +446,7 @@ class PersonalDailyEventController(BaseController):
                                   offset: int = None, require_last_num: bool = False):
         """Получает личные однодневные события."""
         ids = request.args.getlist(CommonStruct.ids)  # ToDo: проверка доступа
+        date = request.args.get(CommonStruct.date)
 
         if not user_id:  # ToDo: такая же проверка для каждого CRUD-а с фильтрацией
             user_id = request.args.get(CommonStruct.user_id)
@@ -456,7 +460,7 @@ class PersonalDailyEventController(BaseController):
                                                                    'One of ids is not integer'))
 
         try:
-            result = repo.get_personal_daily_events_by_id(ids, user_id, limit, offset, require_last_num)
+            result = repo.get_personal_daily_events_by_id(ids, user_id, date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
         except err.IntegrityError as e:
@@ -468,9 +472,11 @@ class PersonalManyDaysEventController(BaseController):
     @staticmethod
     @utl.get_request
     def get(request: flask.Request, repo: DataRepository, user_id: int = None, limit: int = None,
-                                      offset: int = None, require_last_num: bool = False):
+            offset: int = None, require_last_num: bool = False):
         """Получает личные многодневные события."""
         ids = request.args.getlist(CommonStruct.ids)
+        included_date = request.args.get(CommonStruct.included_date)
+
         try:
             ids = utl.list_to_int(ids)
         except ValueError:
@@ -478,7 +484,7 @@ class PersonalManyDaysEventController(BaseController):
                                                                    'One of ids is not integer'))
 
         try:
-            result = repo.get_personal_many_days_events_by_id(ids, user_id, limit, offset, require_last_num)
+            result = repo.get_personal_many_days_events_by_id(ids, user_id, included_date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
         except err.IntegrityError as e:

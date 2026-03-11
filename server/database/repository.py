@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from sqlalchemy.orm.session import sessionmaker, Select, Session
-from sqlalchemy.sql import select, delete, text
+from sqlalchemy.sql import select, delete, text, and_
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 import typing as tp
@@ -178,7 +178,7 @@ class DataRepository:
 
     @exc_mapped
     def get_user_hashed_password(self, login: str) -> str | None:
-        """Возвращает хэш пароля пользователь с заданным логином. Если такого пользователя нет - возвращает None."""
+        """Возвращает хэш пароля пользователя с заданным логином. Если такого пользователя нет - возвращает None."""
         with self._session_maker() as session, session.begin():
             query = select(cm.User).where(cm.User.username == login)
             result = session.execute(query).scalars().all()
@@ -341,13 +341,15 @@ class DataRepository:
 
     @exc_mapped
     def get_ws_daily_events_by_id(self, ids: tp.Iterable[int] | list[int] = None, notified_id: int = None,
-                                  limit: int = None, offset: int = None, require_last_num: bool = False,
+                                  date: datetime.date = None, limit: int = None, offset: int = None, require_last_num: bool = False,
                                   serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.WSDailyEvent)
         if ids:
             query = query.where(cm.WSDailyEvent.id.in_(ids))
         if notified_id:
             query = query.where(cm.WSDailyEvent.notified.any(cm.User.id == notified_id))
+        if date:
+            query = query.where(cm.WSDailyEvent.date == date)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
@@ -364,7 +366,8 @@ class DataRepository:
         self._execute_update(models, cm.WSDailyEvent)
 
     @exc_mapped
-    def get_ws_many_days_events_by_id(self, ids: tp.Iterable[int] = None, notified_id: int = None, limit: int = None,
+    def get_ws_many_days_events_by_id(self, ids: tp.Iterable[int] = None, notified_id: int = None,
+                                      included_date: datetime.date = None, limit: int = None,
                                       offset: int = None, require_last_num: bool = False,
                                       serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.WSManyDaysEvent)
@@ -372,6 +375,8 @@ class DataRepository:
             query = query.where(cm.WSManyDaysEvent.id.in_(ids))
         if notified_id:
             query = query.where(cm.WSManyDaysEvent.notified.any(cm.User.id == notified_id))
+        if included_date:
+            query = query.where(and_(cm.WSManyDaysEvent.datetime_start <= included_date, included_date <= cm.WSManyDaysEvent.datetime_start))
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
@@ -388,14 +393,16 @@ class DataRepository:
         self._execute_update(models, cm.WSManyDaysEvent)
 
     @exc_mapped
-    def get_personal_daily_events_by_id(self, ids: tp.Iterable[int], owner_id: int = None, limit: int = None,
-                                        offset: int = None, require_last_num: bool = False,
+    def get_personal_daily_events_by_id(self, ids: tp.Iterable[int], owner_id: int = None, date: datetime.date = None,
+                                        limit: int = None, offset: int = None, require_last_num: bool = False,
                                         serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.PersonalDailyEvent)
         if ids:
             query = query.where(cm.PersonalDailyEvent.id.in_(ids))
         if owner_id:
             query = query.where(cm.PersonalDailyEvent.owner_id == owner_id)
+        if date:
+            query = query.where(cm.PersonalDailyEvent.date == date)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
@@ -412,7 +419,8 @@ class DataRepository:
         self._execute_update(models, cm.PersonalDailyEvent)
 
     @exc_mapped
-    def get_personal_many_days_events_by_id(self, ids: tp.Iterable[int] = None, owner_id: int = None, limit: int = None,
+    def get_personal_many_days_events_by_id(self, ids: tp.Iterable[int] = None, owner_id: int = None,
+                                            included_date: datetime.date = None, limit: int = None,
                                             offset: int = None, require_last_num: bool = False,
                                             serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.PersonalManyDaysEvent)
@@ -420,6 +428,9 @@ class DataRepository:
             query = query.where(cm.PersonalManyDaysEvent.id.in_(ids))
         if owner_id:
             query = query.where(cm.PersonalManyDaysEvent.owner_id == owner_id)
+        if included_date:
+            query = query.where(and_(cm.PersonalManyDaysEvent.datetime_start <= included_date, included_date <= cm.PersonalManyDaysEvent.datetime_end))
+
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped

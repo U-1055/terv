@@ -40,6 +40,7 @@ class CommonStruct:
     not_completed = 'not_completed'
     completed_task_status_id = 'completed_task_status_id'
     plan_deadline = 'plan_deadline'
+    included_date = 'included_date'
 
     limit = 'limit'
     offset = 'offset'
