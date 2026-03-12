@@ -152,11 +152,73 @@ def set_db_get_config(request: pytest.FixtureRequest):
             DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
         ],
         [
-            '/personal_daily_events', valid_response_schema, {CommonStruct.date: datetime.date(2026, 3, 15)},
+            '/personal_daily_events', valid_response_schema,
+            {CommonStruct.date: datetime.date(2026, 3, 15)},
             200, DatabaseManager.getting_config_personal_tasks, IGNORE, [2, 4, 6, 8, 10]
         ],
         [
-            '/personal_many_days_events', valid_response_schema, {CommonStruct.included_date: datetime.date(2026, 3, 10)},
+            '/personal_many_days_events', valid_response_schema,
+            {CommonStruct.included_date: datetime.date(2026, 3, 10), CommonStruct.user_id: 1},
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
+        ],
+        [
+            '/ws_daily_events', valid_response_schema,
+            {
+                CommonStruct.notified_ids: [1],
+                CommonStruct.workspace_id: 1
+            },
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(1, 11)]
+        ],
+        [
+            '/ws_daily_events', valid_response_schema,
+            {
+                CommonStruct.notified_ids: [1],
+                CommonStruct.workspace_id: [2]
+            },
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(11, 21)]
+        ],
+        [
+            '/ws_daily_events', valid_response_schema,
+            {
+                CommonStruct.date: datetime.date(2026, 4, 2)
+            },
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [2, 4, 6, 8, 10]
+        ],
+        [
+            '/ws_tasks', valid_response_schema,
+            {
+                CommonStruct.plan_deadline: datetime.datetime(2026, 3, 15)
+            },
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [2, 4, 6, 8, 10]
+        ],
+        [
+            '/ws_tasks', valid_response_schema,
+            {
+                CommonStruct.executor_id: 2
+            },
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(11, 21)]
+        ],
+        [
+            '/ws_tasks', valid_response_schema,
+            {
+                CommonStruct.workspace_id: 2
+            },
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(11, 21)]
+        ],
+        [
+            '/ws_many_days_events', valid_response_schema,
+            {
+                CommonStruct.included_date: datetime.date(2026, 3, 1),
+                CommonStruct.workspace_id: 1
+            },
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
+        ],
+        [
+            '/ws_many_days_events', valid_response_schema,
+            {
+                CommonStruct.notified_ids: [1],
+                CommonStruct.included_date: datetime.date(2026, 3, 1),
+            },
             200, DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
         ]
     ],

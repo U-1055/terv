@@ -177,7 +177,10 @@ def _convert_to_datetime_format(string: str, error_id: int, param: str, type_: t
         using_format = CommonStruct.date_format
 
     try:
-        return datetime.datetime.strptime(string, using_format)
+        result = datetime.datetime.strptime(string, using_format)
+        if using_format == CommonStruct.date_format:
+            result = result.date()
+        return result
     except ValueError as e:
         logger.exception(f'ValueError during converting string to date: {e}')
         raise controller_exc.IncorrectParamException(
@@ -228,7 +231,7 @@ def string_to_int(value: str, param: str, error_id: int) -> int:
     """
     try:
         return int(value)
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         logger.exception(f'ValueError during converting string to int: {e}')
         raise controller_exc.IncorrectParamException(
             {

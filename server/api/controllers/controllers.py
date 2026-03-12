@@ -53,7 +53,7 @@ class WSTaskController(BaseController):
     @staticmethod
     @utl.get_request
     def get(request: Request, repo: DataRepository, user_id: int = None, limit: int = None, offset: int = None,
-            require_last_num: bool = False):  # ToDo: авторизация
+            require_last_num: bool = False):
         """
         Возвращает задачи РП.
         """
@@ -348,13 +348,22 @@ class WSDailyEventController(BaseController):
         """Получает однодневные события РП."""
         ids = request.args.getlist(CommonStruct.ids)
         date = request.args.get(CommonStruct.date)
+        workspace_id = request.args.get(CommonStruct.workspace_id)
 
         ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_ws_daily_events_ids.value)
         if date:
             date = utl.string_to_date(date, CommonStruct.date, ErrorCodes.incorrect_date.value)
+        if user_id:
+            notified_ids = [user_id]
+        else:
+            notified_ids = request.args.getlist(CommonStruct.notified_ids)
+            if notified_ids:
+                notified_ids = utl.list_to_int(notified_ids, CommonStruct.notified_ids, ErrorCodes.incorrect_notified_ids.value)
+        if workspace_id:
+            workspace_id = utl.string_to_int(workspace_id, CommonStruct.workspace_id, ErrorCodes.incorrect_workspace_id.value)
 
         try:
-            result = repo.get_ws_daily_events_by_id(ids, user_id, date, limit, offset, require_last_num)
+            result = repo.get_ws_daily_events_by_id(ids, workspace_id, notified_ids, date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
         except BaseRepoException as e:
@@ -378,12 +387,20 @@ class WSManyDaysEventController(BaseController):
         """Получает многодневные события РП."""
         ids = request.args.getlist(CommonStruct.ids)
         included_date = request.args.get(CommonStruct.included_date)
+        workspace_id = request.args.get(CommonStruct.workspace_id)
         ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_ws_many_days_events_ids.value)
         if included_date:
             included_date = utl.string_to_date(included_date, CommonStruct.included_date, ErrorCodes.incorrect_date.value)
+        if user_id:
+            notified_ids = [user_id]
+        else:
+            notified_ids = request.args.getlist(CommonStruct.notified_ids)
+            notified_ids = utl.list_to_int(notified_ids, CommonStruct.notified_ids, ErrorCodes.incorrect_notified_ids.value)
+        if workspace_id:
+            workspace_id = utl.string_to_int(workspace_id, CommonStruct.workspace_id, ErrorCodes.incorrect_workspace_id.value)
 
         try:
-            result = repo.get_ws_many_days_events_by_id(ids, user_id, included_date, limit, offset, require_last_num)
+            result = repo.get_ws_many_days_events_by_id(ids, workspace_id, notified_ids, included_date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
         except BaseRepoException as e:
@@ -395,11 +412,17 @@ class PersonalDailyEventController(BaseController):
     @staticmethod
     @utl.get_request
     def get(request: flask.Request, repo: DataRepository, user_id: int = None, limit: int = None,
-                                  offset: int = None, require_last_num: bool = False):
+            offset: int = None, require_last_num: bool = False):
         """Получает личные однодневные события."""
         ids = request.args.getlist(CommonStruct.ids)
         date = request.args.get(CommonStruct.date)
         ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_personal_daily_events_ids.value)
+        if date:
+            date = utl.string_to_date(date, CommonStruct.date, ErrorCodes.incorrect_date.value)
+        if not user_id:
+            user_id = request.args.get(CommonStruct.user_id)
+            if user_id:
+                user_id = utl.string_to_int(user_id, CommonStruct.user_id, ErrorCodes.incorrect_user_id.value)
 
         try:
             result = repo.get_personal_daily_events_by_id(ids, user_id, date, limit, offset, require_last_num)
@@ -422,6 +445,10 @@ class PersonalManyDaysEventController(BaseController):
         if included_date:
             included_date = utl.string_to_date(included_date, ErrorCodes.incorrect_included_date.value,
                                                CommonStruct.included_date)
+        if not user_id:
+            user_id = request.args.get(CommonStruct.user_id)
+            if user_id:
+                user_id = utl.string_to_int(user_id, CommonStruct.user_id, ErrorCodes.incorrect_user_id.value)
 
         try:
             result = repo.get_personal_many_days_events_by_id(ids, user_id, included_date, limit, offset, require_last_num)

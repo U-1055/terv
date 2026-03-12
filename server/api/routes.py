@@ -305,35 +305,24 @@ def workspace_users(workspace_id: int):  # ToDo: протестировать
 
 
 @exceptions_handler
-@app.route('/workspaces/<int:workspace_id>/ws_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def ws_daily_events(workspace_id: int):  # ToDo: ВСЕ МЕТОДЫ СОБЫТИЙ НЕ ВОЗВРАЩАЮТ СОБЫТИЯ
+@app.route('/ws_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def ws_daily_events():
     response = None
 
     if request.method == 'GET':
         response = handlers.WSDailyEventController.get(request, repo)
-    if request.method == 'POST':
-        response = handlers.WSDailyEventController.add(request, workspace_id, repo)
-    if request.method == 'PUT':
-        response = handlers.WSDailyEventController.update(request, workspace_id, repo)
-    if request.method == 'DELETE':
-        pass
 
     return response
 
 
 @exceptions_handler
-@app.route('/workspaces/<int:workspace_id>/ws_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def ws_many_days_events(workspace_id: int):
+@app.route('/ws_many_days_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
+def ws_many_days_events():
     response = None
 
     if request.method == 'GET':
         response = handlers.WSManyDaysEventController.get(request, repo)
-    if request.method == 'POST':
-        response = handlers.WSDailyEventController.add(request, workspace_id, repo)
-    if request.method == 'PUT':
-        response = handlers.WSDailyEventController.update(request, workspace_id, repo)
-    if request.method == 'DELETE':
-        pass
+
 
     return response
 

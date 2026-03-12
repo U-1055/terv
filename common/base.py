@@ -41,6 +41,7 @@ class CommonStruct:
     completed_task_status_id = 'completed_task_status_id'
     plan_deadline = 'plan_deadline'
     included_date = 'included_date'
+    notified_ids = 'notified_ids'
 
     limit = 'limit'
     offset = 'offset'
@@ -229,6 +230,8 @@ class ErrorCodes(enum.Enum):
     incorrect_personal_task_events_ids = 33  # Некорректные ID личных мероприятий-задач
     incorrect_ws_task_events_ids = 34  # Некорректные ID мероприятий-задач РП
     incorrect_user_id = 35  # Некорректный ID пользователя
+    incorrect_notified_ids = 36  # Некорректные ID уведомляемых пользователей
+
 
 def check_password(password: str) -> bool:
     """Проверяет пароль на соответствие требованиям: длине (10-50), сложности (наличие букв, цифр, символов)."""

@@ -327,13 +327,14 @@ class Requester(IRequests):
     async def get_ws_daily_events_by_user(self, user_id: int, ws_daily_events_ids: list[int], access_token: str,
                                           date: datetime.date = None, limit: int = None, offset: int = 0):
 
-        path = f'{self._server}/users/{user_id}/ws_daily_events'
+        path = f'{self._server}/ws_daily_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={
                                       CommonStruct.limit: limit,
                                       CommonStruct.offset: offset,
                                       CommonStruct.ids: ws_daily_events_ids,
-                                      CommonStruct.date: date
+                                      CommonStruct.date: date,
+                                      CommonStruct.user_id: user_id
                                   }
                                   )
         if date:
@@ -346,13 +347,14 @@ class Requester(IRequests):
     async def get_ws_many_days_events_by_user(self, user_id: int, ws_many_days_events_ids: list[int], access_token: str,
                                               date: datetime.date = None, limit: int = None, offset: int = None):
 
-        path = f'{self._server}/users/{user_id}/ws_many_days_events'
+        path = f'{self._server}/ws_many_days_events'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                           query_params={
                               CommonStruct.limit: limit,
                               CommonStruct.offset: offset,
                               CommonStruct.ids: ws_many_days_events_ids,
-                              CommonStruct.included_date: date
+                              CommonStruct.included_date: date,
+                              CommonStruct.user_id: user_id
                           }
                           )
         if date:

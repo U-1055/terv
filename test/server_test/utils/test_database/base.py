@@ -27,7 +27,6 @@ class DatabaseManager:
         self.session_maker = sessionmaker(bind=engine)
 
     def _set_getting_config_personal_tasks(self):
-        current_date = datetime.date.today()
 
         users_params = [[self._faker.name(), self._faker.email()] for _ in range(10)]
         statuses_params = [[self._faker.name()] for _ in range(5)]
@@ -58,11 +57,68 @@ class DatabaseManager:
             } for i in range(10)
         ]
 
+        workspaces_params = [
+            {
+                DBFields.name: self._faker.name(),
+            } for i in range(2)
+        ]
+
+        ws_tasks_params = [  # Дедлайн: 14.02.2026 ИЛИ 15.03.2026
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.status_id: 1 if i % 2 == 0 else 2,
+                DBFields.plan_deadline: datetime.datetime(2026, 2, 14) if i % 2 == 0 else datetime.datetime(2026, 3, 15)
+            } for i in range(10)
+        ]
+
+        other_ws_tasks_params = [  # Дедлайн: 14.02.2026 ИЛИ 14.04.2026
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.status_id: 2 if i % 2 == 0 else 1,
+                DBFields.plan_deadline: datetime.datetime(2026, 2, 14) if i % 2 == 0 else datetime.datetime(2026, 4, 14)
+            } for i in range(10)
+        ]
+
+        ws_daily_events_params = [  # 02.04.2026 ИЛИ 02.03.2026
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.date: datetime.date(2026, 3, 2) if i % 2 == 0 else datetime.date(2026, 4, 2),
+                DBFields.time_start: datetime.time(hour=12, minute=15),
+                DBFields.time_end: datetime.time(hour=12, minute=30)
+            } for i in range(10)
+        ]
+
+        other_ws_daily_events_params = [  # 02.03.2026 ИЛИ 03.05.2026
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.date: datetime.date(2026, 3, 2) if i % 2 == 0 else datetime.date(2026, 5, 3),
+                DBFields.time_start: datetime.time(hour=12, minute=15),
+                DBFields.time_end: datetime.time(hour=12, minute=30)
+            } for i in range(10)
+        ]
+
+        ws_many_days_events_params = [  # 14.02.2026-14.03.2026 ИЛИ 15.03.2026-14.04.2026
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.datetime_start: datetime.datetime(2026, 2, 14) if i % 2 == 0 else datetime.datetime(2026, 3, 15),
+                DBFields.datetime_end: datetime.datetime(2026, 3, 14) if i % 2 == 0 else datetime.datetime(2026, 4, 14)
+            } for i in range(10)
+        ]
+
+        other_ws_many_days_events_params = [  # 14.02.26-14.03.2026 ИЛИ 14.05.2026-14.06.2026
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.datetime_start: datetime.datetime(2026, 2, 14) if i % 2 == 0 else datetime.datetime(2026, 5, 14),
+                DBFields.datetime_end: datetime.datetime(2026, 3, 14) if i % 2 == 0 else datetime.datetime(2026, 6, 14)
+            } for i in range(10)
+        ]
+
         with self.session_maker() as session, session.begin():
             users = [cm.User(username=param[0], hashed_password='_', email=param[1]) for param in users_params]
 
             session.add_all(users)
             user = session.execute(select(cm.User).where(cm.User.id == 1)).scalars().all()[0]
+            other_user = session.execute(select(cm.User).where(cm.User.id == 2)).scalars().all()[0]
 
             statuses = [cm.PersonalTaskStatus(name=param[0], owner=user) for param in statuses_params]
             session.add_all(statuses)
@@ -79,6 +135,59 @@ class DatabaseManager:
             personal_many_days_events = [cm.PersonalManyDaysEvent(**param, owner=user)
                                          for param in personal_many_days_events_params]
             session.add_all(personal_many_days_events)
+
+            other_personal_tasks = [
+                cm.PersonalTask(owner=other_user, name='PT', plan_deadline=datetime.datetime(2026, 2, 14), status_id=1)
+                for i in range(10)
+            ]
+            other_personal_daily_events = [
+                cm.PersonalDailyEvent(owner=other_user, name='PDE', date=datetime.date(2026, 2, 14),
+                                      time_start=datetime.time(0, 0), time_end=datetime.time(0, 0))
+                for i in range(10)
+            ]
+            other_personal_many_days_events = [
+                cm.PersonalManyDaysEvent(owner=other_user, name='PMDE',
+                                         datetime_start=datetime.datetime(2026, 3, 10),
+                                         datetime_end=datetime.datetime(2026, 4, 10))
+                for i in range(10)
+            ]
+            session.add_all(other_personal_tasks)
+            session.add_all(other_personal_daily_events)
+            session.add_all(other_personal_many_days_events)
+            # Создание объектов РП
+            creator = session.execute(select(cm.User).where(cm.User.id == 3)).scalars().all()[0]
+            workspaces = [cm.Workspace(**params, creator=creator if i % 2 == 0 else other_user,
+                                       users=[creator, user, other_user]) for i, params in enumerate(workspaces_params)]
+            session.add_all(workspaces)
+            ws_task_status_1 = cm.WSTaskStatus(name='WSStatus', workspace=workspaces[0])
+            ws_task_status_2 = cm.WSTaskStatus(name='WSStatus', workspace=workspaces[1])
+            workspaces[0].completed_task_status_id = 1
+            workspaces[1].completed_task_status_id = 2
+            session.add_all([ws_task_status_2, ws_task_status_1])
+
+            ws_tasks = [cm.WSTask(**params, workspace=workspaces[0], creator=creator, executors=[user], entrusted=creator)
+                        for params in ws_tasks_params]
+            session.add_all(ws_tasks)
+            other_ws_tasks = [cm.WSTask(**params, workspace=workspaces[1], creator=other_user, entrusted=other_user,
+                              executors=[other_user, user]) for params in other_ws_tasks_params]
+            session.add_all(other_ws_tasks)
+
+            ws_daily_events = [cm.WSDailyEvent(**params, creator=creator, notified=[other_user, user, creator],
+                                               workspace=workspaces[0])
+                               for params in ws_daily_events_params]
+            session.add_all(ws_daily_events)
+            other_ws_daily_events = [cm.WSDailyEvent(**params, creator=other_user, notified=[other_user, user],
+                                     workspace=workspaces[1]) for params in other_ws_daily_events_params]
+            session.add_all(other_ws_daily_events)
+
+            ws_many_days_events = [cm.WSManyDaysEvent(**params, creator=creator, notified=[other_user, user, creator],
+                                                      workspace=workspaces[0]) for params in ws_many_days_events_params]
+            session.add_all(ws_many_days_events)
+
+            other_ws_many_days_events = [cm.WSManyDaysEvent(**params, creator=other_user,
+                                                            notified=[other_user, creator], workspace=workspaces[1])
+                                         for params in other_ws_many_days_events_params]
+            session.add_all(other_ws_many_days_events)
 
     def set_authentication_test_config(self):
         with self.session_maker() as session, session.begin():
@@ -192,8 +301,8 @@ class DatabaseManager:
     def add_new_user(self):
         """Добавляет пользователя со случайными email и username."""
         with self.session_maker() as session, session.begin():
-            user = cm.User(username=self._faker.name(), hashed_password=str(datetime.datetime.now()),
-                           email=self._faker.email())
+            user = cm.User(username='____', hashed_password=str(datetime.datetime.now()),
+                           email='EMAIL')
             session.add(user)
 
     def choose_db_config(self, num: int):

@@ -337,16 +337,19 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
-    def get_ws_daily_events_by_id(self, ids: tp.Iterable[int] | list[int] = None, notified_id: int = None,
-                                  date: datetime.date = None, limit: int = None, offset: int = None, require_last_num: bool = False,
+    def get_ws_daily_events_by_id(self, ids: tp.Iterable[int] | list[int] = None, workspace_id: int | None = None,
+                                  notified_ids: tp.Sequence[int] = None, date: datetime.date = None, limit: int = None,
+                                  offset: int = None, require_last_num: bool = False,
                                   serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.WSDailyEvent)
         if ids:
             query = query.where(cm.WSDailyEvent.id.in_(ids))
-        if notified_id:
-            query = query.where(cm.WSDailyEvent.notified.any(cm.User.id == notified_id))
+        if notified_ids:
+            query = query.where(cm.WSDailyEvent.notified.any(cm.User.id.in_(notified_ids)))
         if date:
             query = query.where(cm.WSDailyEvent.date == date)
+        if workspace_id:
+            query = query.where(cm.WSDailyEvent.workspace_id == workspace_id)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
@@ -363,17 +366,19 @@ class DataRepository:
         self._execute_update(models, cm.WSDailyEvent)
 
     @exc_mapped
-    def get_ws_many_days_events_by_id(self, ids: tp.Iterable[int] = None, notified_id: int = None,
-                                      included_date: datetime.date = None, limit: int = None,
-                                      offset: int = None, require_last_num: bool = False,
+    def get_ws_many_days_events_by_id(self, ids: tp.Iterable[int] = None, workspace_id: int | None = None,
+                                      notified_ids: tp.Sequence[int] = None, included_date: datetime.date = None,
+                                      limit: int = None, offset: int = None, require_last_num: bool = False,
                                       serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.WSManyDaysEvent)
         if ids:
             query = query.where(cm.WSManyDaysEvent.id.in_(ids))
-        if notified_id:
-            query = query.where(cm.WSManyDaysEvent.notified.any(cm.User.id == notified_id))
+        if notified_ids:
+            query = query.where(cm.WSManyDaysEvent.notified.any(cm.User.id.in_(notified_ids)))
         if included_date:
-            query = query.where(and_(cm.WSManyDaysEvent.datetime_start <= included_date, included_date <= cm.WSManyDaysEvent.datetime_start))
+            query = query.where(and_(cm.WSManyDaysEvent.datetime_start <= included_date, included_date <= cm.WSManyDaysEvent.datetime_end))
+        if workspace_id:
+            query = query.where(cm.WSManyDaysEvent.workspace_id == workspace_id)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 

@@ -211,7 +211,7 @@ class PersonalTask(Base):
     status_id: Mapped[int] = mapped_column(ForeignKey('personal_task_status.id'))
 
     name: Mapped[str] = mapped_column(String[60], nullable=False)
-    description: Mapped[str] = mapped_column(String[1000])
+    description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     plan_deadline: Mapped[datetime.datetime] = mapped_column(nullable=False)
     fact_deadline: Mapped[datetime.datetime] = mapped_column(nullable=True)
     plan_time: Mapped[datetime.datetime] = mapped_column(nullable=True)
