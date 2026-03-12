@@ -296,7 +296,7 @@ def workspace_users(workspace_id: int):  # ToDo: протестировать
     if request.method == 'POST':
         response = handlers.WorkspaceController.add(request, repo)
     if request.method == 'DELETE':
-        response = handlers.WorkspaceController.delete(request, repo)
+        response = handlers.WorkspaceController.kick(request, repo)
     if request.method == 'GET':
         request.args.update({DBFields.workspace_id: workspace_id})  # Не заработает, ToDo: убрать
         response = handlers.UserController.get(request, repo, authenticator)
@@ -306,7 +306,7 @@ def workspace_users(workspace_id: int):  # ToDo: протестировать
 
 @exceptions_handler
 @app.route('/workspaces/<int:workspace_id>/ws_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def ws_daily_events(workspace_id: int):
+def ws_daily_events(workspace_id: int):  # ToDo: ВСЕ МЕТОДЫ СОБЫТИЙ НЕ ВОЗВРАЩАЮТ СОБЫТИЯ
     response = None
 
     if request.method == 'GET':
@@ -364,7 +364,7 @@ def user_ws_daily_events(user_id: int):
 
 @exceptions_handler
 @app.route('/personal_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
-def personal_daily_events():  # С фильтрацией по user_id и дате
+def personal_daily_events():
     """Ресурс личных однодневных событий."""
     response = None
 
@@ -402,13 +402,14 @@ def personal_task_events():
 @app.route('/ws_task_events', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def ws_task_events():
     """Ресурс личных задачи-мероприятий."""
-    # ToDo: фильтрация по статусам
     response = None
 
     if request.method == 'GET':
         response = handlers.WSTaskEventController.get(request, repo)
 
     return response
+
+# ToDo: добавить error_id к исключениям
 
 
 @exceptions_handler

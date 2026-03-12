@@ -150,6 +150,14 @@ def set_db_get_config(request: pytest.FixtureRequest):
             '/personal_tasks', valid_response_schema,
             {CommonStruct.plan_deadline: datetime.datetime(2026, 2, 14, 0, 10)}, 200,
             DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
+        ],
+        [
+            '/personal_daily_events', valid_response_schema, {CommonStruct.date: datetime.date(2026, 3, 15)},
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [2, 4, 6, 8, 10]
+        ],
+        [
+            '/personal_many_days_events', valid_response_schema, {CommonStruct.included_date: datetime.date(2026, 3, 10)},
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
         ]
     ],
 )

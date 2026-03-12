@@ -1,4 +1,6 @@
 """Функции для обработки разных видов запросов."""
+import datetime
+
 import flask
 from flask import Request, Response
 import sqlalchemy.exc as err
@@ -14,7 +16,9 @@ import server.utils.api_utils as utl
 from server.auth.auth_module import Authenticator
 import server.services.services as services
 from server.database.exceptions import BaseRepoException
-from server.api.controllers.exceptions import IncorrectParamException, VALUE, MESSAGE
+from server.api.controllers.exceptions import (IncorrectParamException, VALUE, MESSAGE, map_repo_to_controller_exc,
+                                               map_service_to_controller_exc)
+from server.services.exceptions import BaseServiceException
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -59,23 +63,22 @@ class WSTaskController(BaseController):
         not_completed = request.args.get(CommonStruct.not_completed)
         date = request.args.get(CommonStruct.date)
         plan_deadline = request.args.get(CommonStruct.plan_deadline)
-
-        if not executor_id:
-            executor_id = user_id
-
         workspace_id = request.args.get(CommonStruct.workspace_id)
 
-        for id_ in ids:
-            if not id_.isdigit():
-                return utl.form_response(400,
-                                         APIAn.invalid_data_error(
-                                             CommonStruct.ws_tasks_ids,
-                                             request.endpoint,
-                                             f'Incorrect id: {id_}',
-                                         ),
-                                         error_id=ErrorCodes.incorrect_id.value
-                                         )
-        ids = [int(id_) for id_ in ids]
+        if plan_deadline:
+            plan_deadline = utl.string_to_datetime(plan_deadline, ErrorCodes.incorrect_plan_deadline.value,
+                                                   CommonStruct.plan_deadline)
+        if date:
+            date = utl.string_to_date(date, ErrorCodes.incorrect_plan_deadline.value, CommonStruct.date)
+        if status_ids:
+            status_ids = utl.list_to_int(status_ids, CommonStruct.status_ids, ErrorCodes.incorrect_status_ids.value)
+        if executor_id:
+            executor_id = utl.string_to_int(executor_id, CommonStruct.executor_id, ErrorCodes.incorrect_executor_id.value)
+        if workspace_id:
+            workspace_id = utl.string_to_int(workspace_id, CommonStruct.workspace_id, ErrorCodes.incorrect_workspace_id.value)
+        if ids:
+            ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_ws_tasks_ids.value)
+
         tasks = repo.get_ws_tasks(ids, workspace_id, executor_id, date, plan_deadline, status_ids, not_completed, limit, offset)
 
         return utl.form_response(200, 'OK', content=tasks.content,
@@ -128,13 +131,8 @@ class WSTaskController(BaseController):
         tasks = request.json.get(CommonStruct.ws_tasks)
         try:
             repo.update_ws_tasks(tasks)
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during updating WSTasks: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ws_tasks, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
         return utl.form_response(200, 'OK')
 
@@ -142,21 +140,12 @@ class WSTaskController(BaseController):
     def delete(request: Request, repo: DataRepository):
         """Удаляет задачи РП по их id."""
         ids = request.args.getlist(CommonStruct.ids)
-        if not utl.check_list_is_digit(ids):
-            return utl.form_response(400, APIAn.invalid_data_error(
-                CommonStruct.ids, request.endpoint, 'One of params is not integer'))
-        ids = utl.list_to_int(ids)
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_ws_tasks_ids.value)
 
         try:
             repo.delete_ws_tasks_by_id(ids)
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during deleting WSTasks: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ids, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
-
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
         return utl.form_response(200, 'OK')
 
     @staticmethod
@@ -164,6 +153,10 @@ class WSTaskController(BaseController):
         """Изменяет статус задаче."""
         status = request.args.get(CommonStruct.task_status)
         status_id = request.args.get(CommonStruct.status_ids)
+
+        if status_id:
+            status_id = utl.string_to_int(status_id, CommonStruct.status_id, ErrorCodes.incorrect_status_id.value)
+
         task = repo.get_ws_tasks([task_id])
         if status in (TasksStatuses.default_completed_task_status_name, TasksStatuses.default_task_status_name):  # Если передан стандартный статус
             if not task.content:
@@ -183,19 +176,12 @@ class UserController(BaseController):
     @staticmethod
     def delete(request: Request, repo: DataRepository):
         ids = request.args.getlist(CommonStruct.ids)
-        if not utl.check_list_is_digit(ids):
-            return utl.form_response(400, APIAn.invalid_data_error(
-                CommonStruct.ids, request.endpoint, 'One of params is not integer'))
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_user_ids.value)
 
         try:
             repo.delete_users(ids)
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during deleting Users: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ids, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
         return utl.form_response(200, 'OK')
 
@@ -213,19 +199,16 @@ class UserController(BaseController):
                 user_ids = [authenticator.get_user_id(access_token)]
                 result = repo.get_users_by_id(user_ids, limit=limit, offset=offset)
                 return utl.form_response(200, 'OK', content=result.content)
-
             except ValueError:
                 return utl.form_response(401, 'Expired access token', error_id=ErrorCodes.invalid_access.value)
 
-        if not utl.check_list_is_digit(ids):
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, 'One of ids is not integer.'))
-        ids = utl.list_to_int(ids)
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_user_ids.value)
 
         try:
             result = repo.get_users_by_id(ids, limit=limit, offset=offset)
             return utl.form_success_response(result.content)
         except BaseRepoException as e:
-            pass
+            raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
     def update(request: Request, repo: DataRepository):
@@ -238,13 +221,8 @@ class UserController(BaseController):
         users = request.json.get(CommonStruct.users)
         try:
             repo.update_users(users)
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during updating Users: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.users, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
         return utl.form_response(200, 'OK')
 
@@ -264,8 +242,8 @@ class UserController(BaseController):
         try:
             response = repo.search_users(username, email_, limit, offset, require_last_num)
             return utl.form_success_response(content=response.content)
-        except BaseRepoException as e:  # ToDo: посылать исключения в метод и обогащать их контекстом (сущностью, значением параметра).
-            pass
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
 
 class PersonalTaskController(BaseController):
@@ -278,16 +256,21 @@ class PersonalTaskController(BaseController):
 
         params = request.args
         ids = params.getlist(CommonStruct.ids)
-        require_last_num = params.get(CommonStruct.require_last_num)
         date = request.args.get(CommonStruct.date)
         not_completed = request.args.get(CommonStruct.not_completed)
         status_ids = request.args.getlist(CommonStruct.status_ids)
         plan_deadline = request.args.get(CommonStruct.plan_deadline)
 
-        if not utl.check_list_is_digit(ids):
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
-                                                                   'One of ids is not integer'))
-        ids = utl.list_to_int(ids)
+        if plan_deadline:
+            plan_deadline = utl.string_to_datetime(plan_deadline, ErrorCodes.incorrect_plan_deadline.value,
+                                                   CommonStruct.plan_deadline)
+        if ids:
+            ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_personal_tasks_ids.value)
+        if date:
+            date = utl.string_to_date(date, ErrorCodes.incorrect_date.value, CommonStruct.date)
+        if status_ids:
+            status_ids = utl.list_to_int(status_ids, CommonStruct.status_ids, ErrorCodes.incorrect_status_ids.value)
+
         try:
             result = repo.get_personal_tasks_by_id(ids, date, plan_deadline, status_ids, not_completed, limit, offset)
             if limit or offset or require_last_num:  # Проверка запроса лимита или offset-а
@@ -295,13 +278,8 @@ class PersonalTaskController(BaseController):
                                          records_left=result.records_left, content=result.content)
             else:
                 return utl.form_response(200, 'OK', content=result.content)
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during receiving PersonalTasks: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ws_tasks, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
     def add(request: Request, repo: DataRepository):
@@ -313,13 +291,8 @@ class PersonalTaskController(BaseController):
         try:
             result = repo.add_personal_tasks(personal_tasks)
             return utl.form_success_response(content=result.ids)
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during creating PersonalTasks: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ws_tasks, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
     def update(request: Request, repo: DataRepository):
@@ -328,34 +301,29 @@ class PersonalTaskController(BaseController):
         try:
             repo.update_personal_tasks(personal_tasks)
             return utl.form_success_response()
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during updating PersonalTasks: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ws_tasks, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
     def delete(request: Request, repo: DataRepository):
         """Удаляет модели личных задач. Принимает в параметре список ID удаляемых моделей."""
         ids = request.args.getlist(CommonStruct.ids)
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_personal_tasks_ids)
         try:
             repo.delete_personal_tasks(ids)
             return utl.form_success_response()
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during updating PersonalTasks: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ws_tasks, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
     def change_status(request: Request, task_id: int, repo: DataRepository):
         """Изменяет статус задаче."""
         status = request.args.get(CommonStruct.task_status)
         status_id = request.args.get(CommonStruct.status_ids)
+
+        if status_id:
+            status_id = utl.string_to_int(status_id, CommonStruct.status_id, ErrorCodes.incorrect_status_id.value)
+
         task = repo.get_personal_tasks_by_id([task_id])
         if status in (TasksStatuses.default_completed_task_status_name,
                       TasksStatuses.default_task_status_name):  # Если передан стандартный статус
@@ -381,61 +349,45 @@ class WSDailyEventController(BaseController):
         ids = request.args.getlist(CommonStruct.ids)
         date = request.args.get(CommonStruct.date)
 
-        if not utl.check_list_is_digit(ids):
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
-                                                                   'One of ids is not integer'))
-        ids = utl.list_to_int(ids)
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_ws_daily_events_ids.value)
+        if date:
+            date = utl.string_to_date(date, CommonStruct.date, ErrorCodes.incorrect_date.value)
+
         try:
             result = repo.get_ws_daily_events_by_id(ids, user_id, date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
-        except err.IntegrityError as e:
-            return utl.form_response(400, APIAn.database_write_error(
-                '', request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
     def update(request: flask.Request, workspace_id: int, repo: DataRepository):
-        services.WSDailyEventService.update()
+        pass
 
     @staticmethod
     def add(request: flask.Request, workspace_id: int, repo: DataRepository):
         """Добавляет однодневные события РП."""
-        ws_daily_events = request.json.getlist(CommonStruct.ws_daily_events)
-        try:
-            repo.add_ws_daily_events(ws_daily_events)
-            return utl.form_success_response()
-        except err.IntegrityError as e:
-            logger.warning(f'DB-error occurred during creating WSDailyEvent: {e}')
-            return utl.form_response(400, APIAn.database_write_error(
-                CommonStruct.ws_daily_events, request.endpoint,
-                'Database error occurred',
-                str(e)
-            ))
+        pass
 
 
 class WSManyDaysEventController(BaseController):
     @staticmethod
     @utl.get_request
     def get(request: flask.Request, repo: DataRepository, user_id: int = None, limit: int = None,
-                                offset: int = None, require_last_num: bool = False):
+            offset: int = None, require_last_num: bool = False):
         """Получает многодневные события РП."""
         ids = request.args.getlist(CommonStruct.ids)
         included_date = request.args.get(CommonStruct.included_date)
-        try:
-            ids = utl.list_to_int(ids)
-        except ValueError:
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
-                                                                   'One of ids is not integer'))
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_ws_many_days_events_ids.value)
+        if included_date:
+            included_date = utl.string_to_date(included_date, CommonStruct.included_date, ErrorCodes.incorrect_date.value)
 
         try:
             result = repo.get_ws_many_days_events_by_id(ids, user_id, included_date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
-        except err.IntegrityError as e:
-            pass
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
 
 class PersonalDailyEventController(BaseController):
@@ -445,26 +397,16 @@ class PersonalDailyEventController(BaseController):
     def get(request: flask.Request, repo: DataRepository, user_id: int = None, limit: int = None,
                                   offset: int = None, require_last_num: bool = False):
         """Получает личные однодневные события."""
-        ids = request.args.getlist(CommonStruct.ids)  # ToDo: проверка доступа
+        ids = request.args.getlist(CommonStruct.ids)
         date = request.args.get(CommonStruct.date)
-
-        if not user_id:  # ToDo: такая же проверка для каждого CRUD-а с фильтрацией
-            user_id = request.args.get(CommonStruct.user_id)
-            if str(user_id).isdigit():
-                user_id = int(user_id)
-
-        try:
-            ids = utl.list_to_int(ids)
-        except ValueError:
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
-                                                                   'One of ids is not integer'))
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_personal_daily_events_ids.value)
 
         try:
             result = repo.get_personal_daily_events_by_id(ids, user_id, date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
-        except err.IntegrityError as e:
-            pass
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
 
 class PersonalManyDaysEventController(BaseController):
@@ -476,19 +418,17 @@ class PersonalManyDaysEventController(BaseController):
         """Получает личные многодневные события."""
         ids = request.args.getlist(CommonStruct.ids)
         included_date = request.args.get(CommonStruct.included_date)
-
-        try:
-            ids = utl.list_to_int(ids)
-        except ValueError:
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids, request.endpoint,
-                                                                   'One of ids is not integer'))
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_personal_many_days_events_ids.value)
+        if included_date:
+            included_date = utl.string_to_date(included_date, ErrorCodes.incorrect_included_date.value,
+                                               CommonStruct.included_date)
 
         try:
             result = repo.get_personal_many_days_events_by_id(ids, user_id, included_date, limit, offset, require_last_num)
             return utl.form_response(200, 'OK', result.content, last_rec_num=result.last_record_num,
                                      records_left=result.records_left)
-        except err.IntegrityError as e:
-            pass
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
 
 class WorkspaceController(BaseController):
@@ -498,49 +438,28 @@ class WorkspaceController(BaseController):
         """Добавляет пользователей в ПП. Структура запроса: api/endpoint&workspace_id,user_ids."""
         ids = request.args.getlist(CommonStruct.ids)
         workspace_id = request.args.get(CommonStruct.workspace_id)
-
-        if workspace_id.isdigit():
-            workspace_id = int(workspace_id)
-        else:
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workspace_id, request.endpoint,
-                                                                   'Parameter must be digit'))
-
-        if utl.check_list_is_digit(ids):
-            ids = utl.list_to_int(ids)
-        else:
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids,
-                                                                   request.endpoint, 'All of values must be digits'))
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_workspaces_ids.value)
+        workspace_id = utl.string_to_int(workspace_id, CommonStruct.workspace_id, ErrorCodes.incorrect_workspace_id.value)
 
         try:
             services.WorkspaceService.add_users(ids, workspace_id, repo)
-        except ValueError as e:
-            logger.warning(f'Error during adding users to workspace: {e}')
-            return utl.form_response(400, "Invalid params in request's params")  # ToDo: разобраться с обработкой ошибок (например, ввести исключения сервисного слоя)
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
         return utl.form_success_response()
 
     @staticmethod
-    def delete(request: flask.Request, repo: DataRepository):
+    def kick(request: flask.Request, repo: DataRepository):
         """Удаляет пользователей из ПП. Структура запроса: api/endpoint&workspace_id,user_ids."""
         ids = request.args.getlist(CommonStruct.ids)
         workspace_id = request.args.get(CommonStruct.workspace_id)
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_workspaces_ids.value)
+        workspace_id = utl.string_to_int(workspace_id, CommonStruct.workspace_id, ErrorCodes.incorrect_workspace_id.value)
 
-        if workspace_id.isdigit():
-            workspace_id = int(workspace_id)
-        else:
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.workspace_id, request.endpoint,
-                                                                   'Parameter must be digit'))
-
-        if utl.check_list_is_digit(ids):
-            ids = utl.list_to_int(ids)
-        else:
-            return utl.form_response(400, APIAn.invalid_data_error(CommonStruct.ids,
-                                                                   request.endpoint, 'All of values must be digits'))
         try:
             services.WorkspaceService.delete_users(workspace_id, ids, repo)
-        except ValueError as e:
-            logger.warning(f'Error during deleting users to workspace: {e}')
-            return utl.form_response(400,
-                                     "Invalid params in request's params")
+        except BaseServiceException as e:
+            map_service_to_controller_exc(e, {})
         return utl.form_success_response()
 
 
@@ -553,8 +472,14 @@ class PersonalTaskEventController(BaseController):
             require_last_num: bool = False):
         ids = request.args.getlist(CommonStruct.ids)
         user_id = request.args.get(CommonStruct.user_id)
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_personal_task_events_ids.value)
+        if user_id:
+            user_id = utl.string_to_int(user_id, CommonStruct.user_id, ErrorCodes.incorrect_user_id.value)
 
-        response = repo.get_personal_task_events_by_user(ids, user_id, limit, offset, require_last_num)
+        try:
+            response = repo.get_personal_task_events_by_user(ids, user_id, limit, offset, require_last_num)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
         return utl.form_success_response(content=response.content)
 
@@ -569,7 +494,13 @@ class WSTaskEventController(BaseController):
         ids = request.args.getlist(CommonStruct.ids)
         workspace_id = request.args.get(CommonStruct.workspace_id)
         executor_id = request.args.get(CommonStruct.executor_id)
+
+        ids = utl.list_to_int(ids, CommonStruct.ids, ErrorCodes.incorrect_ws_task_events_ids.value)
+        if workspace_id:
+            workspace_id = utl.string_to_int(workspace_id, CommonStruct.workspace_id, ErrorCodes.incorrect_workspace_id.value)
+        if executor_id:
+            executor_id = utl.string_to_int(executor_id, CommonStruct.executor_id, ErrorCodes.incorrect_executor_id.value)
+
         response = repo.get_ws_task_events(ids, workspace_id, executor_id, limit, offset, require_last_num)
         return utl.form_success_response(content=response.content)
-
 

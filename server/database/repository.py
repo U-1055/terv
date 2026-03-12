@@ -2,7 +2,7 @@ import datetime
 import logging
 
 from sqlalchemy.orm.session import sessionmaker, Select, Session
-from sqlalchemy.sql import select, delete, text, and_
+from sqlalchemy.sql import select, delete, text, and_, func
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 
 import typing as tp
@@ -120,13 +120,10 @@ class DataRepository:
             db_models = session.execute(select(base_model).where(base_model.id.in_(ids))).scalars().all()
             db_models = {db_model.id: db_model for db_model in db_models}
 
-            result = [(user.username, user.email) for user in session.execute(select(cm.User)).scalars().all()]
-
             for model in models:  # Сериализация + обновление даты в updated_at
                 model[DBFields.updated_at] = get_datetime_now()
                 db_model = db_models.get(model.get(DBFields.id))
                 schema.load(model, session=session, partial=True, instance=db_model)
-                pass
 
     @exc_mapped
     def get_users_by_username(self, usernames: tp.Iterable[str] = None, require_last_rec_num: bool = False, limit: int = None, offset: int = 0,
@@ -633,7 +630,7 @@ if __name__ == '__main__':
         repo.add_personal_tasks([{DBFields.name: 'Name', DBFields.description: 'Desc', DBFields.status_id: 1, DBFields.owner_id: 1,
                                   DBFields.plan_deadline: datetime.datetime.now()}])
         repo.update_personal_tasks({DBFields.status_id: 2})
-        # print(repo.get_personal_task_statuses_by_id([]).content)
+
     except IntegrityError as e:
         print(e.orig)
 

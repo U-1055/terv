@@ -40,13 +40,23 @@ class DatabaseManager:
                 if i % 2 == 0 else datetime.datetime(2026, 3, 3, 0, 10)
             } for i in range(10)
         ]
-        personal_tasks_events_params = [
+
+        personal_daily_events_params = [
             {
-                DBFields.task_id: i,
-                DBFields.date: datetime.date.today(),
-                DBFields.time_start: datetime.time(hour=i * 2, minute=15 * (i % 2)),
-                DBFields.time_end: datetime.time(hour=i * 2 + 2, minute=15 * (i % 2))
-            } for i in range(10)]
+                DBFields.name: self._faker.name(),
+                DBFields.date: datetime.date(2026, 2, 14) if i % 2 == 0 else datetime.date(2026, 3, 15),
+                DBFields.time_start: datetime.time(hour=12, minute=15),
+                DBFields.time_end: datetime.time(hour=12, minute=30)
+            } for i in range(10)
+        ]
+
+        personal_many_days_events_params = [
+            {
+                DBFields.name: self._faker.name(),
+                DBFields.datetime_start: datetime.datetime(2026, 3, 2) if i % 2 == 0 else datetime.datetime(2026, 4, 2),
+                DBFields.datetime_end: datetime.datetime(2026, 3, 12) if i % 2 == 0 else datetime.datetime(2026, 4, 12)
+            } for i in range(10)
+        ]
 
         with self.session_maker() as session, session.begin():
             users = [cm.User(username=param[0], hashed_password='_', email=param[1]) for param in users_params]
@@ -61,8 +71,14 @@ class DatabaseManager:
             personal_tasks = [cm.PersonalTask(**param, owner=user) for param in personal_tasks_params]
             session.add_all(personal_tasks)
 
-            personal_tasks_events = [cm.PersonalTaskEvent(**param) for param in personal_tasks_events_params]
-            session.add_all(personal_tasks_events)
+            personal_daily_events = [
+                cm.PersonalDailyEvent(**param, owner=user) for param in personal_daily_events_params
+            ]
+            session.add_all(personal_daily_events)
+
+            personal_many_days_events = [cm.PersonalManyDaysEvent(**param, owner=user)
+                                         for param in personal_many_days_events_params]
+            session.add_all(personal_many_days_events)
 
     def set_authentication_test_config(self):
         with self.session_maker() as session, session.begin():

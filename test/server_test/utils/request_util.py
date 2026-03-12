@@ -87,7 +87,7 @@ def sent_requests(address: str, thread: int, process: int):
 def sent_requests_in_threads(args_list: tuple[int, str, str]):
     with ThreadPoolExecutor(args_list[0]) as executor:
         for i in range(args_list[0]):
-            executor.submit(lambda: sent_requests(args_list[1], i + 1, args_list[2]))
+            executor.submit(lambda idx=i: sent_requests(args_list[1], idx + 1, args_list[2]))
 
 
 if __name__ == '__main__':
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     address_ = input('Адрес сервера: ')
     if not address_:
-        address_ = 'http://127.0.0.1:80'
+        address_ = 'http://127.0.0.1:8080'
     processes = int(input('Использовать процессов: '))
     if processes > 4:
         processes = 4

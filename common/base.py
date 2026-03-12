@@ -52,10 +52,10 @@ class CommonStruct:
 
     max_password_length = 50
     min_password_length = 10
-    'YYYY-MM-DDTHH: MM:SS.mmmmmm'
+
     date_format = '%Y-%m-%d'
     time_format = '%H:%M:%S'
-    datetime_format = f'{date_format}T{time_format}'
+    datetime_format = f'{date_format} {time_format}'
     max_name_length = 60  # Максимальная длина названий объектов
     max_description_length = 1000  # Максимальная длина описаний объектов
 
@@ -211,7 +211,24 @@ class ErrorCodes(enum.Enum):
     incorrect_limit = 15  # Некорректный limit
     incorrect_offset = 16  # Некорректный offset
     forbidden_access_to_personal_object = 17  # Попытка получить доступ к личному объекту другого пользователя
-
+    incorrect_plan_deadline = 18  # Невалидный plan_deadline
+    incorrect_status_ids = 19  # Некорректные ID статусов
+    incorrect_executor_id = 20  # Некорректный ID исполнителя
+    incorrect_workspace_id = 21  # Некорректный ID РП
+    incorrect_personal_tasks_ids = 22  # Некорректные ID личных задач
+    incorrect_ws_tasks_ids = 23  # Некорректные ID задач РП
+    incorrect_status_id = 24  # Некорректный статус задачи
+    incorrect_user_ids = 25  # Некорректные ID пользователей
+    incorrect_date = 26  # Некорректная дата
+    incorrect_ws_daily_events_ids = 27  # Некорректные ID однодневных мероприятий РП
+    incorrect_ws_many_days_events_ids = 28  # Некорректные ID многодневных мероприятий РП
+    incorrect_personal_daily_events_ids = 29  # Некорректные ID личных однодневных мероприятий
+    incorrect_personal_many_days_events_ids = 30  # Некорректные ID личных многодневных мероприятий
+    incorrect_included_date = 31  # Некорректная дата из диапазона многодневного мероприятия
+    incorrect_workspaces_ids = 32  # Некорректные ID РП
+    incorrect_personal_task_events_ids = 33  # Некорректные ID личных мероприятий-задач
+    incorrect_ws_task_events_ids = 34  # Некорректные ID мероприятий-задач РП
+    incorrect_user_id = 35  # Некорректный ID пользователя
 
 def check_password(password: str) -> bool:
     """Проверяет пароль на соответствие требованиям: длине (10-50), сложности (наличие букв, цифр, символов)."""

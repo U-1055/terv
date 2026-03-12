@@ -46,7 +46,7 @@ def synchronized_request(func) -> tp.Callable[..., Request]:
             thread.start()
             time.sleep(0.1)
 
-        future = asyncio.run_coroutine_threadsafe(func(*args), loop)
+        future = asyncio.run_coroutine_threadsafe(func(*args, **kwargs), loop)
 
         request = Request(future, loop)
         if CHECK_TIME:  # Замер времени выполнения
@@ -263,7 +263,8 @@ class Requester(IRequests):
     @synchronized_request
     async def get_personal_tasks(self, user_id: int, access_token: str, on_date: datetime.date,
                                  tasks_ids: list[int] = None, status_ids: tp.Sequence[int] = None,
-                                 not_completed: bool = False, limit: int = None, offset: int = None) -> Response:
+                                 not_completed: bool = False, plan_deadline: datetime.datetime = None,
+                                 limit: int = None, offset: int = None) -> Response:
         """
         Получает личные задачи (конкретную или по user_id).
 
@@ -274,6 +275,7 @@ class Requester(IRequests):
         :param status_ids: ID статусов задач.
         :param not_completed: Должна ли задача не быть выполненной? Если True, то возвращаются все подходящие задачи,
                               кроме задач, статус которых соответствует статусу выполненных личных задач.
+        :param plan_deadline: Планируемый дедлайн задачи.
 
         """
 
@@ -284,7 +286,8 @@ class Requester(IRequests):
                                       CommonStruct.offset: offset,
                                       CommonStruct.date: on_date,
                                       CommonStruct.status_ids: status_ids,
-                                      CommonStruct.not_completed: not_completed
+                                      CommonStruct.not_completed: not_completed,
+                                      CommonStruct.plan_deadline: plan_deadline
                           })
         response = await self._choose_request_type(request, limit)
 
@@ -329,7 +332,8 @@ class Requester(IRequests):
                                   query_params={
                                       CommonStruct.limit: limit,
                                       CommonStruct.offset: offset,
-                                      CommonStruct.ids: ws_daily_events_ids
+                                      CommonStruct.ids: ws_daily_events_ids,
+                                      CommonStruct.date: date
                                   }
                                   )
         if date:
@@ -347,7 +351,8 @@ class Requester(IRequests):
                           query_params={
                               CommonStruct.limit: limit,
                               CommonStruct.offset: offset,
-                              CommonStruct.ids: ws_many_days_events_ids
+                              CommonStruct.ids: ws_many_days_events_ids,
+                              CommonStruct.included_date: date
                           }
                           )
         if date:
@@ -364,7 +369,8 @@ class Requester(IRequests):
                               CommonStruct.limit: limit,
                               CommonStruct.offset: offset,
                               CommonStruct.user_id: user_id,
-                              CommonStruct.ids: []
+                              CommonStruct.ids: [],
+                              CommonStruct.included_date: date
                           }
                           )
         if date:
@@ -381,7 +387,8 @@ class Requester(IRequests):
                                       CommonStruct.limit: limit,
                                       CommonStruct.offset: offset,
                                       CommonStruct.user_id: user_id,
-                                      CommonStruct.ids: []
+                                      CommonStruct.ids: [],
+                                      CommonStruct.date: date
                                       }
                                   )
         if date:
@@ -391,8 +398,8 @@ class Requester(IRequests):
 
     @synchronized_request
     async def get_ws_tasks_by_user(self, user_id: int, access_token: str, date: datetime.date = None,
-                                   status_ids: tp.Sequence[int] = None, not_completed: bool = False, limit: int = None,
-                                   offset: int = None):
+                                   status_ids: tp.Sequence[int] = None, not_completed: bool = False,
+                                   plan_deadline: datetime.datetime = None, limit: int = None, offset: int = None):
         path = f'{self._server}/users/{user_id}/ws_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={
@@ -400,7 +407,8 @@ class Requester(IRequests):
                                       CommonStruct: offset,
                                       CommonStruct.date: date,
                                       CommonStruct.status_ids: status_ids,
-                                      CommonStruct.not_completed: not_completed
+                                      CommonStruct.not_completed: not_completed,
+                                      CommonStruct.plan_deadline: plan_deadline
                                   })
         response = await self._choose_request_type(request, limit)
         return response

@@ -6,12 +6,13 @@ import server.database.exceptions as repo_exc
 
 VALUE = 'value'
 MESSAGE = 'message'
+ERROR_ID = 'error_id'
 
 
 class BaseControllerException(Exception):
     """Базовое исключение слоя контроллеров."""
 
-    def __init__(self, params: dict[str, dict[str, str | tp.Any]]):
+    def __init__(self, params: dict[str, dict[str, tp.Any]]):
         self.params = params
         self.message = f'Incorrect params: {self.params}'
 
@@ -24,15 +25,23 @@ class IncorrectParamException(BaseControllerException):
     """Исключение, соответствующее неверному параметру в запросе."""
 
 
-def map_repo_to_controller_exc(exc: repo_exc.BaseRepoException, param_values: dict[str, tp.Any]) -> BaseControllerException:
-    type_ = type(exc)
-    res_params: dict[str, dict[str, str | tp.Any]] = {}
+def map_repo_to_controller_exc(exc: repo_exc.BaseRepoException, param_values: dict[str, tp.Sequence]) -> BaseControllerException:
+    """
+    Сопоставляет исключение репозитория и исключение контроллера.
 
-    if type_ is repo_exc.DataIntegrityError:
+    :param exc: Исключение репозитория.
+    :param param_values: Значения ошибочных параметров вида {<Название параметра>: (<Значение параметра>, <error_id>)}.
+
+    """
+
+    type_ = type(exc)
+    res_params: dict[str, dict[str, tp.Any]] = {}
+
+    if type_ is repo_exc.DataIntegrityError:  # ToDo: случай, если параметры param_values не переданы
         exc: repo_exc.DataIntegrityError
         for param in param_values:
             if param in exc.data:
-                res_params[param] = {VALUE: param_values[param], MESSAGE: exc.data[param]}
+                res_params[param] = {VALUE: param_values[param][0], MESSAGE: exc.data[param], ERROR_ID: param[1]}
         return IncorrectParamException(res_params)
     elif type_ is repo_exc.NotUniqueValue:
         exc: repo_exc.NotUniqueValue

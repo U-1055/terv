@@ -2,6 +2,7 @@ import flask
 from flask import Response, jsonify, Request
 from sqlalchemy.exc import SQLAlchemyError
 
+import datetime
 import typing as tp
 import functools
 
@@ -85,9 +86,29 @@ def check_list_is_digit(list_: list[str]) -> bool:
     return True
 
 
-def list_to_int(list_: list[str]) -> list[int]:
-    """Приводит все элементы списка к типу int."""
-    return [int(el) for el in list_]
+def list_to_int(list_: list[str], param: str, error_id: int) -> list[int]:
+    """
+    Приводит все элементы списка к типу int. Если элемент не приводится, выбрасывается исключение
+    IncorrectParamsError.
+
+    :param list_: Список для приведения.
+    :param param: Название параметра в API.
+    :param error_id: ID ошибки в случае, если элемент списка не приводится к int.
+
+    """
+    try:
+        return [int(el) for el in list_]
+    except ValueError as e:
+        logger.exception(f'ValueError during converting list to int: {e}')
+        raise controller_exc.IncorrectParamException(
+            {
+                param: {
+                    controller_exc.VALUE: list_,
+                    controller_exc.ERROR_ID: error_id,
+                    controller_exc.MESSAGE: "This list contains params that can't be converted to int."
+                }
+            }
+        )
 
 
 def exceptions_handler(func: tp.Callable):
@@ -147,4 +168,76 @@ def get_request(func: tp.Callable):
         return func(request, *args, **kwargs, limit=limit, offset=offset, require_last_num=require_last_num)
 
     return prepare
+
+
+def _convert_to_datetime_format(string: str, error_id: int, param: str, type_: tp.Type[datetime.date]) -> tp.Any:
+    if type_ is datetime.datetime:
+        using_format = CommonStruct.datetime_format
+    else:
+        using_format = CommonStruct.date_format
+
+    try:
+        return datetime.datetime.strptime(string, using_format)
+    except ValueError as e:
+        logger.exception(f'ValueError during converting string to date: {e}')
+        raise controller_exc.IncorrectParamException(
+            {
+                param: {
+                    controller_exc.MESSAGE: f'This parameter is incorrect for date format:'
+                                            f' {using_format}.',
+                    controller_exc.VALUE: string, controller_exc.ERROR_ID: error_id
+                }
+            }
+        )
+
+
+def string_to_date(string: str, error_id: int, param: str) -> datetime.date:
+    """
+    Превращает строку в дату. Если строка невалидна для формата CommonStruct.date_format -
+    выбрасывает IncorrectParamsError.
+
+    :param string: Преобразуемая строка.
+    :param error_id: ID ошибки, в случае, если строка невалидна.
+    :param param: Название параметра, значение которого передаётся в string.
+
+    """
+    return _convert_to_datetime_format(string, error_id, param, datetime.date)
+
+
+def string_to_datetime(string: str, error_id: int, param: str):
+    """
+    Превращает строку в datetime.datetime.
+    Если строка невалидна для формата CommonStruct.datetime_format, выбрасывает IncorrectParamsError.
+
+    :param string: Преобразуемая строка.
+    :param error_id: ID ошибки, в случае, если строка невалидна.
+    :param param: Название параметра, значение которого передаётся в string.
+
+    """
+    return _convert_to_datetime_format(string, error_id, param, datetime.datetime)
+
+
+def string_to_int(value: str, param: str, error_id: int) -> int:
+    """
+    Превращает строку в число. Если строка невалидна, выбрасывает IncorrectParamsError.
+
+    :param value: Строка.
+    :param param: Название параметра в API.
+    :param error_id: ID ошибки в случае, если строка невалидна.
+
+    """
+    try:
+        return int(value)
+    except ValueError as e:
+        logger.exception(f'ValueError during converting string to int: {e}')
+        raise controller_exc.IncorrectParamException(
+            {
+                param: {
+                    controller_exc.MESSAGE: f"This parameter is not valid int.",
+                    controller_exc.VALUE: value,
+                    controller_exc.ERROR_ID: error_id
+                }
+            }
+        )
+
 
