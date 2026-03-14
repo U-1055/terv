@@ -13,7 +13,7 @@ import jwt
 import os
 import typing as tp
 
-from common.base import CommonStruct
+from common.base import CommonStruct, TasksStatuses
 from test.server_test.utils.test_database.base import DatabaseManager
 from test.conftest import SERVER_CONFIG_PATH, SERVER_WORKING_DIR, TEST_CONFIG_PATH, TEST_DB_PATH
 from server.storage.server_model import Model
@@ -247,3 +247,48 @@ def test_get_model(set_config, client: FlaskClient, uri: str, expected_schema: B
     if exp_content_ids != IGNORE:
         ids = [dict_.get("id") for dict_ in response.json.get(CommonStruct.content)]
         assert tuple(ids) == tuple(exp_content_ids), f'Response: {response.json}'
+
+
+@pytest.mark.f_data(base_params)
+@pytest.mark.parametrize(
+    [
+        'uri', 'expected_schema', 'query_params', 'exp_status_code', 'config_num', 'checking_uri', 'checking_method',
+        'checking_query_params', 'checking_body', 'checking_exp_content', 'checking_exp_ids', 'checking_exp_status_code'
+    ],
+    [
+        [
+            '/ws_tasks/2/status', valid_response_schema, {CommonStruct.task_status: TasksStatuses.completed.value},
+            200, DatabaseManager.getting_config_personal_tasks, '/ws_tasks', 'GET', {CommonStruct.not_completed: True},
+            None, IGNORE, [i for i in range(4, 21, 2)], 200
+        ],
+        [
+            '/personal_tasks/2/status', valid_response_schema, {CommonStruct.task_status: TasksStatuses.completed.value},
+            200, DatabaseManager.getting_config_personal_tasks, '/ws_tasks', 'GET', {CommonStruct.not_completed: True},
+            None, IGNORE, [i for i in range(4, 21, 2)], 200
+        ],
+
+    ]
+)
+def test_update_model(set_config, client: FlaskClient, uri: str, expected_schema: BaseSchema, query_params: tp.Sequence,
+                      exp_status_code: int, set_db_get_config, controller_access_token: str, config_num: int | None,
+                      checking_uri: str, checking_method: str, checking_query_params: str, checking_body: dict,
+                      checking_exp_content: str, checking_exp_ids: tp.Sequence[int],
+                      checking_exp_status_code: int):
+    response = client.put(uri, query_string=query_params, headers={'Authorization': controller_access_token})
+    js.validate(response.json, schema=expected_schema.schema)
+
+    assert response.status_code == exp_status_code
+    if checking_uri:  # Если есть метод для проверки
+        checking_data = {
+            "path": checking_uri, "method": checking_method, "query_string": checking_query_params,
+            "headers": {'Authorization': controller_access_token}
+                         }
+        if checking_body:
+            checking_data.update({"json": checking_body})
+        checking_response = client.open(**checking_data)
+        assert checking_response.status_code == checking_exp_status_code, response.json
+        if checking_exp_content != IGNORE:  # Валидация контента
+            assert checking_response.json.get(CommonStruct.content) == checking_exp_content, response.json
+        if checking_exp_ids:  # Валидация ID в контенте
+            actual_ids = [model.get("id") for model in checking_response.json.get(CommonStruct.content)]
+            assert checking_exp_ids == actual_ids, response.json
