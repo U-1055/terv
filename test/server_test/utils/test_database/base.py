@@ -40,6 +40,14 @@ class DatabaseManager:
             } for i in range(10)
         ]
 
+        personal_tasks_events_params = [
+            {
+                DBFields.date: datetime.date(2026, 2, 14) if i % 2 == 0 else datetime.date(2026, 3, 15),
+                DBFields.time_start: datetime.time(hour=12, minute=15),
+                DBFields.time_end: datetime.time(hour=12, minute=30)
+            } for i in range(10)
+        ]
+
         personal_daily_events_params = [
             {
                 DBFields.name: self._faker.name(),
@@ -68,6 +76,14 @@ class DatabaseManager:
                 DBFields.name: self._faker.name(),
                 DBFields.status_id: 1 if i % 2 == 0 else 2,
                 DBFields.plan_deadline: datetime.datetime(2026, 2, 14) if i % 2 == 0 else datetime.datetime(2026, 3, 15)
+            } for i in range(10)
+        ]
+
+        ws_tasks_events_params = [
+            {
+                DBFields.date: datetime.date(2026, 2, 14) if i % 2 == 0 else datetime.date(2026, 3, 15),
+                DBFields.time_start: datetime.time(hour=12, minute=15),
+                DBFields.time_end: datetime.time(hour=12, minute=30)
             } for i in range(10)
         ]
 
@@ -126,6 +142,9 @@ class DatabaseManager:
 
             personal_tasks = [cm.PersonalTask(**param, owner=user) for param in personal_tasks_params]
             session.add_all(personal_tasks)
+            personal_tasks_events = [cm.PersonalTaskEvent(**personal_tasks_events_params[i], task=task)
+                                     for i, task in enumerate(personal_tasks)]
+            session.add_all(personal_tasks_events)
 
             personal_daily_events = [
                 cm.PersonalDailyEvent(**param, owner=user) for param in personal_daily_events_params
@@ -137,7 +156,7 @@ class DatabaseManager:
             session.add_all(personal_many_days_events)
 
             other_personal_tasks = [
-                cm.PersonalTask(owner=other_user, name='PT', plan_deadline=datetime.datetime(2026, 2, 14), status_id=1)
+                cm.PersonalTask(owner=other_user, owner_id=other_user.id, name='PT', plan_deadline=datetime.datetime(2026, 2, 14), status_id=1)
                 for i in range(10)
             ]
             other_personal_daily_events = [
@@ -168,6 +187,10 @@ class DatabaseManager:
             ws_tasks = [cm.WSTask(**params, workspace=workspaces[0], creator=creator, executors=[user], entrusted=creator)
                         for params in ws_tasks_params]
             session.add_all(ws_tasks)
+
+            ws_tasks_events = [cm.WSTaskEvent(**ws_tasks_events_params[i], task=task) for i, task in enumerate(ws_tasks)]
+            session.add_all(ws_tasks_events)
+
             other_ws_tasks = [cm.WSTask(**params, workspace=workspaces[1], creator=other_user, entrusted=other_user,
                               executors=[other_user, user]) for params in other_ws_tasks_params]
             session.add_all(other_ws_tasks)

@@ -1,4 +1,4 @@
-"""Основной файл сервера. Содержит слой роутеров."""
+"""Основной модуль сервера. Содержит слой роутеров."""
 from flask import Flask, request
 from sqlalchemy.orm.session import sessionmaker
 
@@ -7,7 +7,7 @@ from pathlib import Path
 from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
-from server.database.models.db_utils import launch_db, init_db
+from server.database.models.db_utils import launch_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
@@ -15,7 +15,7 @@ from common.base import CommonStruct, check_password, ErrorCodes as ErCodes, DBF
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from server.utils.data_checkers import check_email
-from server.utils.api_utils import form_response, exceptions_handler, form_success_response
+from server.utils.api_utils import form_response, exceptions_handler
 import server.api.controllers.controllers as handlers
 
 
@@ -323,7 +323,6 @@ def ws_many_days_events():
     if request.method == 'GET':
         response = handlers.WSManyDaysEventController.get(request, repo)
 
-
     return response
 
 
@@ -397,6 +396,24 @@ def ws_task_events():
         response = handlers.WSTaskEventController.get(request, repo)
 
     return response
+
+
+@exceptions_handler
+@app.route('/workspaces', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def workspaces():
+    """Ресурс РП."""
+    response = None
+    if request.method == 'GET':
+        response = handlers.WorkspaceController.get(request, repo)
+    elif request.method == 'POST':
+        response = handlers.WorkspaceController.add(request, repo)
+    elif request.method == 'PUT':
+        response = handlers.WorkspaceController.update(request, repo)
+    elif request.method == 'DELETE':
+        response = handlers.WorkspaceController.delete(request, repo)
+
+    return response
+
 
 # ToDo: добавить error_id к исключениям
 

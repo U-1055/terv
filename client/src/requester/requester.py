@@ -136,7 +136,7 @@ class Requester(IRequests):
         except err.APIError as e:
             raise e
 
-    async def _prepare_requests_sequence(self, request: InternalRequest, limit: int | None):  # ToDo: а что делать, если в процессе отправки истечёт access?
+    async def _prepare_requests_sequence(self, request: InternalRequest, limit: int | None):
         """
         Посылает запросы на URL переданного запроса, меняя их offset до тех пор, пока не будут получены все записи
         или не будет достигнут limit.
@@ -406,11 +406,11 @@ class Requester(IRequests):
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={
                                       CommonStruct.limit: limit,
-                                      CommonStruct: offset,
+                                      CommonStruct.offset: offset,
                                       CommonStruct.date: date,
                                       CommonStruct.status_ids: status_ids,
                                       CommonStruct.not_completed: not_completed,
-                                      CommonStruct.plan_deadline: plan_deadline
+                                      CommonStruct.plan_deadline: plan_deadline,
                                   })
         response = await self._choose_request_type(request, limit)
         return response

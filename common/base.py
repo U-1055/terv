@@ -61,7 +61,7 @@ class CommonStruct:
     max_description_length = 1000  # Максимальная длина описаний объектов
 
 
-class TasksStatuses:
+class TasksStatuses(enum.Enum):
     """Статусы задач."""
     completed = 'completed'
     default_task_status_name = 'Запланировано'
@@ -231,7 +231,8 @@ class ErrorCodes(enum.Enum):
     incorrect_ws_task_events_ids = 34  # Некорректные ID мероприятий-задач РП
     incorrect_user_id = 35  # Некорректный ID пользователя
     incorrect_notified_ids = 36  # Некорректные ID уведомляемых пользователей
-
+    incorrect_not_completed = 37  # Некорректный параметр not_completed
+    incorrect_status = 38  # Некорректный статус задачи
 
 def check_password(password: str) -> bool:
     """Проверяет пароль на соответствие требованиям: длине (10-50), сложности (наличие букв, цифр, символов)."""

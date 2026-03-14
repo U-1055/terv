@@ -23,7 +23,7 @@ def get_full_files_count(dir_: Path, full_file_size: int) -> int:
 def config_logger(module: str, type_: str, log_dir: Path, backup_files_count: int = 25,
                   max_file_size: int = 10 * 1024, logging_level: int = logging.INFO) -> logging.Logger:
     """
-    Настраивает логгер. Если нет
+    Настраивает логгер.
 
     :param module: Название модуля.
     :param type_: Тип (клиент или сервер)
@@ -33,7 +33,6 @@ def config_logger(module: str, type_: str, log_dir: Path, backup_files_count: in
     :param logging_level: Уровень логирования. DEBUG - INFO - WARNING - ERROR - CRITICAL
 
     """
-
     logger = logging.getLogger(module)
     logger.setLevel(logging_level)
 
@@ -43,9 +42,9 @@ def config_logger(module: str, type_: str, log_dir: Path, backup_files_count: in
         formatter = logging.Formatter(f"{module} - [%(asctime)s] - %(levelname)s - MSG: %(message)s")
         file_handler = RotatingFileHandler(log_file, maxBytes=10 * 1024, backupCount=backup_files_count)  # 10 КБ
         file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
     else:  # ToDo: как оповещать об отсутствии директории файлов логов?
         logging.basicConfig(level=logging.INFO)
         logging.error(f'There is no dir in: {log_dir}')
         print(f'ERROR: There is no dir in: {log_dir}')
-
     return logger

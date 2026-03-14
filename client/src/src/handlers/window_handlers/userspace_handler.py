@@ -1,3 +1,5 @@
+import logging
+
 from PySide6.QtCore import QTimer, Signal
 
 import dataclasses
@@ -18,7 +20,7 @@ from client.src.client_model.links_handler import LinksHandler
 from common.logger import config_logger, CLIENT
 from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
-logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
+logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, logging.DEBUG)
 
 
 class UserSpaceWindowHandler(BaseWindowHandler):
@@ -246,27 +248,27 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._place_settable_widgets()
 
     def _set_personal_daily_events(self, events: tuple[dict, ...]):
-        logger.debug(f'Personal daily events received: {events}.')
+        logger.info(f'Personal daily events received: {events}.')
         if events:
             self._data_model.personal_daily_events = [cm.PersonalDailyEvent(**event) for event in events]
 
     def _set_personal_many_days_events(self, events: tuple[dict, ...]):
-        logger.debug(f'Personal many days events received.')
+        logger.info(f'Personal many days events received: {events}')
         if events:
             self._data_model.personal_many_days_events = [cm.PersonalManyDaysEvent(**event) for event in events]
 
     def _set_ws_many_days_events(self, events: tuple[dict, ...]):
-        logger.debug(f'ws many days events received.')
+        logger.info(f'ws many days events received: {events}')
         if events:
             self._data_model.ws_many_days_events = [cm.WSManyDaysEvent(**event) for event in events]
 
     def _set_ws_daily_events(self, events: tuple[dict, ...]):
-        logger.debug(f'ws daily events received')
+        logger.info(f'ws daily events received: {events}')
         if events:
             self._data_model.ws_daily_events = [cm.WSDailyEvent(**event) for event in events]
 
     def _set_schedule_widget(self):
-        logger.debug(f'Setting schedule widget. Events data received: '
+        logger.info(f'Setting schedule widget. Events data received: '
                       f'WSDaily: {self._data_model.ws_daily_events and True}. '
                       f'WSManyDays: {self._data_model.ws_many_days_events and True}. '
                       f'PersonalDaily: {self._data_model.personal_daily_events and True}. '
@@ -294,8 +296,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 event: cm.WSDailyEvent
                 description.update({
                     f'{GuiLabels.title}': event.name,
-                    f'{GuiLabels.workspace}': f'#{event.workspace_id}',
-                    f'{GuiLabels.creator}': f'#{event.creator_id}',
+                    f'{GuiLabels.workspace}': f'#{event.workspace}',
+                    f'{GuiLabels.creator}': f'#{event.creator}',
                     f'{GuiLabels.description}': event.description,
                     f'{GuiLabels.notifieds}': iterable_to_str(event.notified, ',', '#')
                 })
@@ -316,12 +318,12 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
             if event.__tablename__ == ObjectTypes.ws_many_days_event:
                 description.update({
-                    f'{GuiLabels.workspace}': f'#{event.workspace_id}',
-                    f'{GuiLabels.creator}': f'#{event.creator_id}',
+                    f'{GuiLabels.workspace}': f'#{event.workspace}',
+                    f'{GuiLabels.creator}': f'#{event.creator}',
                     f'{GuiLabels.notifieds}': f'{iterable_to_str(event.notified, ',', '#')}'
                 })
 
-            wdg_event = self._events_today_widget.add_event(event.name, date_start, date_end, description)
+            self._events_today_widget.add_event(event.name, date_start, date_end, description)
 
         self._events_today_widget.event_tooltip_content_clicked.connect(self._on_id_clicked)
 

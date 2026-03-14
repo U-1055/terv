@@ -152,6 +152,14 @@ def set_db_get_config(request: pytest.FixtureRequest):
             DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
         ],
         [
+            '/personal_tasks', valid_response_schema, {CommonStruct.user_id: 1}, 200,
+            DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(1, 11)]
+        ],
+        [
+            '/personal_tasks', valid_response_schema, {CommonStruct.date: datetime.date(2026, 2, 14)},
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
+        ],
+        [
             '/personal_daily_events', valid_response_schema,
             {CommonStruct.date: datetime.date(2026, 3, 15)},
             200, DatabaseManager.getting_config_personal_tasks, IGNORE, [2, 4, 6, 8, 10]
@@ -197,6 +205,10 @@ def set_db_get_config(request: pytest.FixtureRequest):
                 CommonStruct.executor_id: 2
             },
             200, DatabaseManager.getting_config_personal_tasks, IGNORE, [i for i in range(11, 21)]
+        ],
+        [
+            '/ws_tasks', valid_response_schema, {CommonStruct.date: datetime.date(2026, 2, 14)},
+            200, DatabaseManager.getting_config_personal_tasks, IGNORE, [1, 3, 5, 7, 9]
         ],
         [
             '/ws_tasks', valid_response_schema,

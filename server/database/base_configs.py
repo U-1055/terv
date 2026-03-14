@@ -48,17 +48,27 @@ def set_db_config_1(engine: Engine,
 
         default_personal_task_status = cm.PersonalTaskStatus(name='default_status', owner=user_1)
         session.add(default_personal_task_status)
+        completed_task_status = cm.PersonalTaskStatus(name='completed_status', owner=user_1)
+        session.add(completed_task_status)
+        user_1.default_task_status_id = default_personal_task_status.id
+        user_1.completed_task_status_id = completed_task_status.id
 
         if personal_tasks_params:
             personal_tasks = [
                 cm.PersonalTask(owner=user_1, name=params[0], description=params[1], plan_deadline=datetime.date.today(),
-                                status=default_personal_task_status)
+                                status=default_personal_task_status, owner_id=user_1.id)
                 for params in personal_tasks_params]
         else:
             personal_tasks = [
                 cm.PersonalTask(owner=user_1, name=f'personal_task.{i}', plan_deadline=datetime.date.today(),
                                 description=''.join(['Description ' for i in range(50)]), status=default_personal_task_status) for i in range(10)]
         session.add_all(personal_tasks)
+
+        personal_tasks_events = [cm.PersonalTaskEvent(task=personal_task, date=datetime.date.today(),
+                                                      time_start=datetime.datetime.now().time(),
+                                                      time_end=datetime.datetime.now().time())
+                                 for personal_task in personal_tasks]
+        session.add_all(personal_tasks_events)
 
         workspace = cm.Workspace(creator=ws_creator, users=[ws_creator, user_2, user_1], name=workspace_name)
         session.add(workspace)
@@ -78,6 +88,11 @@ def set_db_config_1(engine: Engine,
                 for i in range(10)]
         session.add_all(workspace_tasks)
 
+        ws_tasks_events = [cm.WSTaskEvent(task=ws_task, date=datetime.date.today(), time_start=datetime.datetime.now().time(),
+                                          time_end=datetime.datetime.now().time())
+                           for ws_task in workspace_tasks]
+        session.add_all(ws_tasks_events)
+
         today = datetime.date.today()
         datetime_now = datetime.datetime.now()
         time_now = datetime.datetime.now().time()
@@ -95,7 +110,8 @@ def set_db_config_1(engine: Engine,
 
         if ws_daily_events_params:
             ws_daily_events = [cm.WSDailyEvent(name=params[0], description=params[1], time_start=params[2], workspace=workspace,
-                                               time_end=params[3], date=today, creator=ws_creator, notified=[user_1, user_2])
+                                               time_end=params[3], date=today, creator=ws_creator, notified=[user_1, user_2],
+                                               )
                                for params in ws_daily_events_params]
         else:
             ws_daily_events = [cm.WSDailyEvent(name=f'ws_daily_event.{i}', description='Description',
@@ -110,7 +126,7 @@ def set_db_config_1(engine: Engine,
 
         if personal_many_days_events_params:
             personal_many_days_events = [cm.PersonalManyDaysEvent(
-                name=params[0], description=params[1], owner=user_1,
+                name=params[0], description=params[1], owner=user_1, owner_id=user_1.id,
                 datetime_start=datetime.datetime(year=params[2].year, month=params[2].month, day=params[2].day),
                 datetime_end=datetime.datetime(year=params[3].year, month=params[3].month, day=params[3].day))
                                          for params in personal_many_days_events_params]
@@ -118,7 +134,7 @@ def set_db_config_1(engine: Engine,
             personal_many_days_events = [cm.PersonalManyDaysEvent(
                 name=f'personal_many_days_event.{i}', description='Description',
                 datetime_start=last_day, owner=user_1,
-                datetime_end=next_day,)
+                datetime_end=next_day)
                                          for i in range(10)]
 
         session.add_all(personal_many_days_events)
@@ -175,9 +191,9 @@ if __name__ == '__main__':
                                                   ('Матеша', 'Неравенства из книжки', datetime.time(14, 45), datetime.time(16, 45))),
                     ws_daily_events_params=(('Проект', 'Доработка документации', datetime.time(17, 00), datetime.time(20, 15)),),
                     personal_many_days_events_params=(('Разбор физики', 'Закрыть модули курса по электростатике',
-                                                       datetime.date(2026, 2, 14), datetime.date(2026, 2, 20)), ),
+                                                       datetime.date(2026, 2, 14), datetime.date(2026, 3, 20)), ),
 
-                    ws_many_days_events_params=(('Окончательная доработка проекта', 'Оформить результаты', datetime.date(2026, 2, 14), datetime.date(2026, 2, 20)
+                    ws_many_days_events_params=(('Окончательная доработка проекта', 'Оформить результаты', datetime.date(2026, 2, 14), datetime.date(2026, 3, 20)
                                                      ), ))
 
     repo = DataRepository(sessionmaker(bind=engine))

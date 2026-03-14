@@ -162,7 +162,7 @@ def get_request(func: tp.Callable):
         else:
             offset = None
 
-        if require_last_num and require_last_num != '0':
+        if require_last_num and require_last_num != '0' and require_last_num.lower() != 'false':
             require_last_num = True
 
         return func(request, *args, **kwargs, limit=limit, offset=offset, require_last_num=require_last_num)

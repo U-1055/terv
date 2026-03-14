@@ -318,9 +318,9 @@ class DataRepository:
         return self._get_permissions(query)
 
     @exc_mapped
-    def get_personal_tasks_by_id(self, ids: tp.Iterable[int] = None, working_date: datetime.date = None,
-                                 plan_deadline: datetime.datetime = None, status_ids: tp.Sequence[int] = None,
-                                 not_completed: bool = False, limit: int = None,
+    def get_personal_tasks_by_id(self, ids: tp.Iterable[int] = None, owner_id: int | None = None,
+                                 working_date: datetime.date = None, plan_deadline: datetime.datetime = None,
+                                 status_ids: tp.Sequence[int] = None, not_completed: bool = False, limit: int = None,
                                  offset: int = None, require_last_num: bool = False, serialize: bool = True):
         query = select(cm.PersonalTask)
         if ids:
@@ -333,6 +333,8 @@ class DataRepository:
             query = query.where(cm.PersonalTask.owner.has(cm.User.completed_task_status_id != cm.PersonalTask.status_id))
         if plan_deadline:
             query = query.where(cm.PersonalTask.plan_deadline == plan_deadline)
+        if owner_id:
+            query = query.where(cm.PersonalTask.owner_id == owner_id)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
