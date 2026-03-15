@@ -1,8 +1,6 @@
 """Слой API."""
 from __future__ import annotations
 
-import os
-
 from PySide6.QtCore import QObject, Signal
 import httpx
 
@@ -13,6 +11,8 @@ import typing as tp
 import asyncio
 import threading
 import functools
+import os
+import pathlib
 
 import client.src.requester.errors as err
 from common.base import CommonStruct, ErrorCodes
@@ -314,7 +314,7 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_workspaces(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = None):
+    async def get_workspaces(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = 0):
         path = f'{self._server}/workspaces'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={CommonStruct.limit: limit, CommonStruct.offset: offset,
@@ -334,7 +334,7 @@ class Requester(IRequests):
                                       CommonStruct.offset: offset,
                                       CommonStruct.ids: ws_daily_events_ids,
                                       CommonStruct.date: date,
-                                      CommonStruct.user_id: user_id
+                                      CommonStruct.notified_ids: [user_id]
                                   }
                                   )
         if date:

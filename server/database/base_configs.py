@@ -50,8 +50,10 @@ def set_db_config_1(engine: Engine,
         session.add(default_personal_task_status)
         completed_task_status = cm.PersonalTaskStatus(name='completed_status', owner=user_1)
         session.add(completed_task_status)
-        user_1.default_task_status_id = default_personal_task_status.id
-        user_1.completed_task_status_id = completed_task_status.id
+        statuses = session.execute(select(cm.PersonalTaskStatus)).scalars().all()
+
+        user_1.default_task_status_id = statuses[0].id
+        user_1.completed_task_status_id = statuses[1].id
 
         if personal_tasks_params:
             personal_tasks = [
@@ -74,12 +76,19 @@ def set_db_config_1(engine: Engine,
         session.add(workspace)
         default_ws_task_status = cm.WSTaskStatus(name='default_status', workspace=workspace)
         session.add(default_ws_task_status)
+        completed_ws_task_status = cm.WSTaskStatus(name='completed_status', workspace=workspace)
+        session.add(completed_ws_task_status)
+
+        statuses = session.execute(select(cm.WSTaskStatus)).scalars().all()
+
+        workspace.default_task_status_id = statuses[0].id
+        workspace.completed_task_status_id = statuses[1].id
 
         if workspace_tasks_params:
             workspace_tasks = [cm.WSTask(name=params[0], description=params[1], workspace=workspace, creator=ws_creator,
                                          entrusted=ws_creator, executors=[user_1, user_2], plan_deadline=datetime.date.today(),
                                          status=default_ws_task_status)
-                              for params in workspace_tasks_params]
+                               for params in workspace_tasks_params]
         else:
             workspace_tasks = [
                 cm.WSTask(name=f'ws_task.{i}', description='Description', creator=ws_creator, entrusted=ws_creator,
@@ -197,9 +206,11 @@ if __name__ == '__main__':
                                                      ), ))
 
     repo = DataRepository(sessionmaker(bind=engine))
-    print(repo.get_workspaces())
+    print(repo.get_personal_tasks_by_id(not_completed=True))
     with sessionmaker(bind=engine)() as session, session.begin():
-        result = session.execute(select(cm.PersonalTask).where(cm.PersonalTask.id == 1)).scalars().all()
+        result = session.execute(select(cm.PersonalTask)).scalars().all()
+        user_result = session.execute(select(cm.User)).scalars().all()
+        print([user.completed_task_status_id for user in user_result])
         print([[model.status_id, model.name] for model in result])
 
 

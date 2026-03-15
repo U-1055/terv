@@ -5,11 +5,12 @@
 
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 from marshmallow_sqlalchemy.fields import fields
-from marshmallow import EXCLUDE
+from marshmallow import EXCLUDE, post_dump, pre_load
 from sqlalchemy.orm.session import Session
 
 from server.data_const import DBStruct
 import server.database.models.common_models as cm
+from common.base import DBFields
 
 
 class BaseMeta:

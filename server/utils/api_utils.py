@@ -78,6 +78,12 @@ def form_forbidden_response(resource: str, endpoint: str, role: str, permission:
                               f'operation with resource {resource}.')
 
 
+def form_get_success_response(content: tp.Any | None = None, last_rec_num: int | None = None,
+                              records_left: int | None = None):
+    """Формирует ответ на GET-запрос."""
+    return form_response(200, "OK", content, last_rec_num, records_left)
+
+
 def check_list_is_digit(list_: list[str]) -> bool:
     """Проверяет, все ли элементы списка могут быть приведены к типу int."""
     for el in list_:
@@ -119,16 +125,15 @@ def exceptions_handler(func: tp.Callable):
         try:
             return func(request)
         except controller_exc.IncorrectParamException as e:
-            params = ''
-            for param in e.params:
-                value = e.params[controller_exc.VALUE]
-                message = e.params[controller_exc.MESSAGE]
-                params = f'{params}{param}={value}  -  {message}  '
+            if len(e.params) == 1:
+                param = list(e.params.keys())[0]
+                error_id = int(e.params[param][controller_exc.ERROR_ID])
+                status_code = 400
+            else:
+                error_id = ErrorCodes.server_error.value
+                status_code = 500
             message = f'Incorrect params in request to endpoint {request.endpoint}. Params: {e.params}.'
-            return form_response(400, message)
-        except Exception as e:
-            logger.critical(f'Unknown error was excepted during preparing request: {request}.')
-            return form_response(500, 'Unknown server error', error_id=ErrorCodes.server_error.value)
+            return form_response(status_code, message, error_id=error_id)
 
     return prepare
 
@@ -160,7 +165,7 @@ def get_request(func: tp.Callable):
             except ValueError:
                 return form_invalid_offset_response(request.endpoint)
         else:
-            offset = None
+            offset = 0
 
         if require_last_num and require_last_num != '0' and require_last_num.lower() != 'false':
             require_last_num = True

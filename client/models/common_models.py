@@ -54,6 +54,7 @@ class Workspace(Base):
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
+    creator: int
     projects: list[int]
     tasks: list[int]
     users: list[int]
@@ -92,6 +93,12 @@ class WSTask(Base):
     plan_start_work_date: datetime.datetime | None
     fact_start_work_date: datetime.datetime | None
 
+    creator: int
+    project: int | None = None
+    workspace: int
+    work_direction: int | None = None
+    parent_task: int | None = None
+
     responsible: list[int]
     executors: list[int]
     child_tasks: list[int]
@@ -106,6 +113,7 @@ class PersonalTask(Base):
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
+    owner: int
     plan_deadline: datetime.datetime
     fact_deadline: datetime.datetime | None
     plan_time: datetime.datetime | None
@@ -122,6 +130,7 @@ class WSWorkDirection(Base):
     workspace_id: int | None = None
     name: str = Field(max_length=30)
 
+    workspace: int
     tasks: list[int]
 
 
@@ -146,6 +155,7 @@ class PersonalDailyEvent(Base):
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
+    owner: int
     date: datetime.date
     time_start: datetime.time
     time_end: datetime.time
@@ -162,6 +172,8 @@ class PersonalManyDaysEvent(Base):
     datetime_start: datetime.datetime
     datetime_end: datetime.datetime
 
+    owner: int
+
 
 class WSDailyEvent(Base):
     """Однодневное мероприятие РП."""
@@ -177,6 +189,8 @@ class WSDailyEvent(Base):
     time_start: datetime.time
     time_end: datetime.time
 
+    creator: int
+    workspace: int
     notified: list[int]  # Оповещаемые пользователи
 
 
@@ -193,6 +207,8 @@ class WSManyDaysEvent(Base):
     datetime_start: datetime.datetime
     datetime_end: datetime.datetime
 
+    creator: int
+    workspace: int
     notified: list[int] # Оповещаемые пользователи
 
 

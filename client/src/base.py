@@ -152,6 +152,7 @@ class GuiLabels:
     enter_account = 'Войдите в аккаунт'
     executors = 'Исполнители'
     username = 'Имя пользователя'
+    name = 'Название'
 
     loading = 'Загрузка...'
     ready = 'Готово!'
@@ -189,6 +190,12 @@ db_fields_labels = {  # Соответствие между полями БД и
     DBFields.workspace: GuiLabels.workspace,
     DBFields.creator: GuiLabels.creator,
     DBFields.email: GuiLabels.email,
-    DBFields.username: GuiLabels.username
+    DBFields.username: GuiLabels.username,
+    DBFields.name: GuiLabels.name,
+    DBFields.description: GuiLabels.description
 }
+
+id_fields = [  # Название полей с ID
+    DBFields.workspace, DBFields.creator
+]
 

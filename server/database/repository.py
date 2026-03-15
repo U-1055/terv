@@ -148,28 +148,14 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
     @exc_mapped
-    def get_workspaces(self,
-                      workspace_ids: tp.Iterable[int] = None,
-                      name: str = None,
-                      require_last_rec_num: bool = False,
-                      limit: int = None,
-                      offset: int = 0,
-                      serialize: bool = True
-                      ) -> 'RepoSelectResponse':
-        """
-        Возвращает рабочие пространства (Workspaces).
-        :param workspace_ids:
-        :param name:
-        :param limit:
-        :param offset:
-        :return:
-        """
-
+    def get_workspaces(self, workspace_ids: tp.Sequence[int] | None = None, creator_ids: tp.Sequence[int] | None = None,
+                       limit: int = None, offset: int = 0, require_last_rec_num: bool = False,
+                       serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.Workspace)
         if workspace_ids:
             query = query.where(cm.Workspace.id.in_(workspace_ids))
-        if name:
-            query = query.where(cm.Workspace.name.contains(name))
+        if creator_ids:
+            query = query.where(cm.Workspace.creator.id.in_(creator_ids))
 
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 

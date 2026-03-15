@@ -36,16 +36,16 @@ def launch(model_class, model_params: tuple, view_class, view_params: tuple, pre
 
 def run_main_config(check_ram: bool = False):
     if check_ram:
-        thread = threading.Thread(target=check_memory, args=[Path('../log/memory_client.txt')], daemon=True)
+        thread = threading.Thread(target=check_memory, args=[Path('../log/memory_client_1.txt')], daemon=True)
         thread.start()
     requester = Requester('http://localhost:5000')
 
     launch(
         Model, (Path('data\\config_data\\storage'), Path('..\\..\\data'), DataStructConst()),
         MainWindow, (),
-        Logic, (LinksHandler(Path('data/config_data/records_storage')), requester, 0.1)
+        Logic, (LinksHandler(Path('data/config_data/records_storage')), requester, 0)
     )
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # ToDo: глобальная обработка исключений
     run_main_config(True)

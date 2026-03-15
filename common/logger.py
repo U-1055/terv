@@ -1,10 +1,38 @@
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+import os
 
 
 CLIENT = 'client'
 SERVER = 'server'
+
+
+class CustomRotatingFileHandler(RotatingFileHandler):
+
+    def doRollover(self):
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+
+        if self.backupCount > 0:
+            for i in range(self.backupCount - 1, 0, -1):
+                sfn = self.rotation_filename(f"{self.baseFilename}.{i}")
+                dfn = self.rotation_filename(f"{self.baseFilename}.{i + 1}")
+                if os.path.exists(sfn):
+                    if os.path.exists(dfn):
+                        os.remove(dfn)
+                    os.rename(sfn, dfn)
+
+            base, ext = os.path.splitext(self.baseFilename)
+            dfn = self.rotation_filename(f"{base}_1{ext}")
+
+            if os.path.exists(dfn):
+                os.remove(dfn)
+            os.rename(self.baseFilename, dfn)
+
+        if not self.delay:
+            self.stream = self._open()
 
 
 def format_log_file_name(number: int, type_: str) -> str:
@@ -33,14 +61,18 @@ def config_logger(module: str, type_: str, log_dir: Path, backup_files_count: in
     :param logging_level: Уровень логирования. DEBUG - INFO - WARNING - ERROR - CRITICAL
 
     """
-    logger = logging.getLogger(module)
+    logger = logging.getLogger(type_)
+
+    if logger.handlers:
+        return logger
+
     logger.setLevel(logging_level)
 
     if log_dir.is_dir():
         files_count = get_full_files_count(log_dir, max_file_size)
         log_file = Path(log_dir, format_log_file_name(files_count + 1, type_))
         formatter = logging.Formatter(f"{module} - [%(asctime)s] - %(levelname)s - MSG: %(message)s")
-        file_handler = RotatingFileHandler(log_file, maxBytes=10 * 1024, backupCount=backup_files_count)  # 10 КБ
+        file_handler = CustomRotatingFileHandler(log_file, maxBytes=10 * 1024, backupCount=backup_files_count)  # 10 КБ
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     else:  # ToDo: как оповещать об отсутствии директории файлов логов?

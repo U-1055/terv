@@ -7,7 +7,7 @@ import datetime
 import threading
 
 from client.src.src.handlers.window_handlers.base import (BaseWindowHandler, MainWindow, Requester, Model, Request)
-from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels, db_fields_labels
+from client.src.base import DataStructConst, widgets_labels, labels_widgets, GuiLabels, db_fields_labels, id_fields
 from client.src.gui.windows.userspace_window import UserSpaceWindow
 from client.src.gui.widgets_view.userspace_view import (TaskWidgetView, ScheduleWidgetView, NotesWidgetView,
                                                        WidgetSettingsMenu)
@@ -19,6 +19,7 @@ from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.src.client_model.links_handler import LinksHandler
 from common.logger import config_logger, CLIENT
 from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+from common.base import DBFields
 
 logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, logging.DEBUG)
 
@@ -79,11 +80,12 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
     def _on_task_completed(self, type_: str, id_: int):
         """Обрабатывает выполнение задачи в виджете задач."""
+        logger.info(f"Task completed: TYPE: {type_}; ID: {id_}")
         access = self._model.get_access_token()
         if type_ == ObjectTypes.ws_task:
-            request = self._requester.set_ws_task_status(id_, TasksStatuses.completed, access)
+            request = self._requester.set_ws_task_status(id_, TasksStatuses.completed.value, access)
         elif type_ == ObjectTypes.personal_task:
-            request = self._requester.set_personal_task_status(id_, TasksStatuses.completed, access)
+            request = self._requester.set_personal_task_status(id_, TasksStatuses.completed.value, access)
         else:
             return
 
@@ -132,9 +134,13 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         structured_tooltip = {}
         for key in info:
             if key in db_fields_labels:
-                structured_tooltip[db_fields_labels.get(key)] = info.get(key)
+                content = info.get(key)
+                if key in id_fields:
+                    content = f'#{content}'
+                structured_tooltip[db_fields_labels.get(key)] = content
 
-        tooltip.show_structured_tooltip(field, structured_tooltip, False)
+        tooltip.show_structured_tooltip(field, structured_tooltip)
+        tooltip.tooltip_field_clicked.connect(self._on_id_clicked)
 
     def _set_tasks_widget(self):
         """Обрабатывает данные для виджета задач."""

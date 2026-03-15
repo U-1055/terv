@@ -75,10 +75,8 @@ def check_memory(file_path: Path, late: int = 2):
 
 
 if __name__ == '__main__':
-    data = get_memory_data('../../log/memory_server.txt')
+    data = get_memory_data('../../log/memory_client_1.txt')
     print(
         f'MIDDLE: {data[0]} MB | MIN: {data[1]} MB | MAX: {data[2]} MB'
     )
-    plot('../../log/memory_server.txt')
-
-
+    plot('../../log/memory_client_1.txt')

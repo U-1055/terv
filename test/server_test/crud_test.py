@@ -261,12 +261,16 @@ def test_get_model(set_config, client: FlaskClient, uri: str, expected_schema: B
             200, DatabaseManager.getting_config_personal_tasks, '/ws_tasks', 'GET', {CommonStruct.not_completed: True},
             None, IGNORE, [i for i in range(4, 21, 2)], 200
         ],
-        [
+        [  # ToDo: падают два теста - не обновляется статус
             '/personal_tasks/2/status', valid_response_schema, {CommonStruct.task_status: TasksStatuses.completed.value},
             200, DatabaseManager.getting_config_personal_tasks, '/ws_tasks', 'GET', {CommonStruct.not_completed: True},
             None, IGNORE, [i for i in range(4, 21, 2)], 200
         ],
-
+        [
+            '/personal_tasks/4/status', valid_response_schema, {CommonStruct.task_status: TasksStatuses.completed.value},
+            200, DatabaseManager.getting_config_personal_tasks, '/ws_tasks', 'GET', {CommonStruct.not_completed: True},
+            None, IGNORE, [2, *[i for i in range(6, 21, 2)]], 200
+        ],
     ]
 )
 def test_update_model(set_config, client: FlaskClient, uri: str, expected_schema: BaseSchema, query_params: tp.Sequence,

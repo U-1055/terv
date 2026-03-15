@@ -170,7 +170,7 @@ class String(BaseParam):
         if self._regexp:
             is_valid_for_regexp = re.match(self._regexp, self.value)
         if self._allowed:
-            is_valid_value = self.value in self._allowed
+            is_valid_value = value in self._allowed
         if self._condition == self.AND:
             if not is_valid_value or not is_valid_for_regexp:
                 raise self._form_exc(value)

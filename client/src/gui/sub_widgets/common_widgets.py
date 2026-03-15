@@ -32,9 +32,18 @@ class QStructuredText(QWidget):
     :param content_alignment: выравнивание содержимого (AlignmentFlag).
     :param field_suffix: окончание, добавляемое к названиям полей. По умолчанию отсутствует.
 
+    :var content_clicked: Сигнал, испускаемый при нажатии на содержимое поля. Передаёт название поля и экземпляр виджета.
+    :var field_clicked: Сигнал, испускаемый при нажатии на поле. Передаёт название поля и экземпляр виджета.
+    :var tooltip_content_clicked: Сигнал, испускаемый при нажатии на содержимое поля подсказки.
+                                  Передаёт название поля и экземпляр виджета подсказки.
+    :var tooltip_field_clicked: Сигнал, испускаемый при нажатии на поле подсказки.
+                                Передаёт название поля и экземпляр виджета подсказки.
+
     """
     content_clicked = Signal(str, tp.Any)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
     field_clicked = Signal(str, tp.Any)  # Сигнал, вызываемый при нажатии на поле. Передаёт название поля
+    tooltip_content_clicked = Signal(str, tp.Any)
+    tooltip_field_clicked = Signal(str, tp.Any)
 
     field_column = 0  # Столбцы, в которых размещаются виджеты
     content_column = 1
@@ -106,6 +115,12 @@ class QStructuredText(QWidget):
     def click_content(self, field: str):
         self.content_clicked.emit(field, self)
 
+    def click_tooltip_feld(self, field: str, wdg_struct: 'QStructuredText'):
+        self.tooltip_field_clicked.emit(field, wdg_struct)
+
+    def click_tooltip_content(self, field: str, wdg_struct: 'QStructuredText'):
+        self.tooltip_content_clicked.emit(field, wdg_struct)
+
     def delete_field(self, field: str):
         self._structure.pop(field)
         self._place_fields()
@@ -175,12 +190,15 @@ class QStructuredText(QWidget):
     def field_suffix(self) -> str:
         return self._field_suffix
 
-    def show_structured_tooltip(self, field: str, tooltip: dict, on_field: bool = True):
+    def show_structured_tooltip(self, field: str, tooltip: dict):
         menu = QMenu()
         wdg_action = QWidgetAction(menu)
         menu.setStyleSheet(self.styleSheet())
         wdg_structured_text = QStructuredText(tooltip)
         wdg_structured_text.setStyleSheet(self.styleSheet())
+        wdg_structured_text.field_clicked.connect(self.tooltip_field_clicked)
+        wdg_structured_text.content_clicked.connect(self.tooltip_content_clicked)
+
         wdg_action.setDefaultWidget(wdg_structured_text)
         menu.addAction(wdg_action)
 

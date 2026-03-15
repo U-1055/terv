@@ -12,7 +12,7 @@ ERROR_ID = 'error_id'
 class BaseControllerException(Exception):
     """Базовое исключение слоя контроллеров."""
 
-    def __init__(self, params: dict[str, dict[str, tp.Any]]):
+    def __init__(self, params: dict[str, dict[str, tp.Any]]):  # ToDo: параметры params - в датаклассы
         self.params = params
         self.message = f'Incorrect params: {self.params}'
 

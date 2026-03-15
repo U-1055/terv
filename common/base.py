@@ -42,6 +42,7 @@ class CommonStruct:
     plan_deadline = 'plan_deadline'
     included_date = 'included_date'
     notified_ids = 'notified_ids'
+    creator_ids = 'creator_ids'
 
     limit = 'limit'
     offset = 'offset'
@@ -233,6 +234,8 @@ class ErrorCodes(enum.Enum):
     incorrect_notified_ids = 36  # Некорректные ID уведомляемых пользователей
     incorrect_not_completed = 37  # Некорректный параметр not_completed
     incorrect_status = 38  # Некорректный статус задачи
+    incorrect_creator_ids = 39  # Некорректные ID создателей
+
 
 def check_password(password: str) -> bool:
     """Проверяет пароль на соответствие требованиям: длине (10-50), сложности (наличие букв, цифр, символов)."""

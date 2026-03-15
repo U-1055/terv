@@ -121,7 +121,7 @@ class Logic:
         if isinstance(self._opened_now, SettingsWindowHandler):
             self._opened_now.set_mode_log_in()
             self._opened_now.set_mode_log_out()
-            self._opened_now.update_state()  # ToDo: обновление данных пользователя
+            self._opened_now.update_state()
 
     def _on_btn_log_in_pressed(self):
         logger.debug("Opening authorize window by user's request")

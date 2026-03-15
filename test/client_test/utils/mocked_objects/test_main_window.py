@@ -38,6 +38,9 @@ class TestMainWindow(QObject):
     def press_btn_open_userspace(self):
         self.btn_open_userspace_pressed.emit()
 
+    def press_btn_open_settings(self):
+        self.btn_open_settings_pressed.emit()
+
     def press_btn(self):
         self.btn_pressed.emit()
 

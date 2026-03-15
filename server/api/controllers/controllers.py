@@ -153,13 +153,15 @@ class WSTaskController(BaseController):
             if not task.content:
                 raise IncorrectParamException({"task_id": {VALUE: task, MESSAGE: "Incorrect task's ID"}})
             task = task.content[0]
-            workspace = repo.get_workspaces([task.get(DBFields.workspace_id)]).content[0]
+            workspace = repo.get_workspaces([task.get(DBFields.workspace)]).content[0]
 
-            if status.value == TasksStatuses.default_completed_task_status_name.value:
+            if status.value == TasksStatuses.completed.value:
                 completed_status_id = workspace.get(CommonStruct.completed_task_status_id)
-                repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: completed_status_id})
+                repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: completed_status_id}])
+                return utl.form_success_response()
         else:  # Если нестандартный
-            repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: status_id.value})
+            repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: status_id.value}])
+            return utl.form_success_response()
 
 
 class UserController(BaseController):
@@ -254,9 +256,8 @@ class PersonalTaskController(BaseController):
                              ErrorCodes.incorrect_status_ids.value)
         plan_deadline = DateTime(CommonStruct.plan_deadline, request.args.get(CommonStruct.plan_deadline),
                                  ErrorCodes.incorrect_plan_deadline.value)
-
         if user_id:
-            owner_id = user_id
+            owner_id = Int(CommonStruct.user_id, user_id, ErrorCodes.incorrect_user_id.value)
         else:
             owner_id = Int(CommonStruct.user_id, request.args.get(CommonStruct.user_id), ErrorCodes.incorrect_user_id.value)
 
@@ -315,19 +316,20 @@ class PersonalTaskController(BaseController):
                            request.args.get(CommonStruct.status_ids),
                            ErrorCodes.incorrect_status_id.value)
 
-        task = repo.get_ws_tasks([task_id])
+        task = repo.get_personal_tasks_by_id([task_id])
         if status.value in TasksStatuses:  # Если передан стандартный статус
             if not task.content:
                 raise IncorrectParamException({"task_id": {VALUE: task, MESSAGE: "Incorrect task's ID"}})
             task = task.content[0]
-            task = task.content[0]
-            owner = repo.get_users_by_id([task.get(DBFields.owner_id)]).content[0]
+            owner = repo.get_users_by_id([task.get(DBFields.owner)]).content[0]
 
-            if status.value == TasksStatuses.default_completed_task_status_name.value:
+            if status.value == TasksStatuses.completed.value:
                 completed_status_id = owner.get(CommonStruct.completed_task_status_id)
-                repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: completed_status_id})
+                repo.update_personal_tasks([{DBFields.id: task_id, DBFields.status_id: completed_status_id}])
+                return utl.form_success_response()
         else:  # Если нестандартный
-            repo.update_ws_tasks({DBFields.id: task_id, DBFields.status_id: status_id.value})
+            repo.update_personal_tasks([{DBFields.id: task_id, DBFields.status_id: status_id.value}])
+            return utl.form_success_response()
 
 
 class WSDailyEventController(BaseController):
@@ -468,6 +470,22 @@ class WorkspaceController(BaseController):
         except BaseServiceException as e:
             map_service_to_controller_exc(e, {})
         return utl.form_success_response()
+
+    @staticmethod
+    @utl.get_request
+    def get(request: flask.Request, repo: DataRepository, limit: int = None, offset: int = None,
+            require_last_num: bool = False):
+        """
+        Query: ids (ID РП), creator_ids (ID создателей)
+        """
+        ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_workspaces_ids.value)
+        creator_ids = IntList(CommonStruct.creator_ids, request.args.getlist(CommonStruct.creator_ids),
+                              ErrorCodes.incorrect_creator_ids.value)
+        try:
+            response = repo.get_workspaces(ids.value, creator_ids.value, limit, offset, require_last_num)
+            return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
 
 class PersonalTaskEventController(BaseController):
