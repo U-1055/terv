@@ -37,22 +37,22 @@ def test_windows_switching(timeout: int):
     assert isinstance(opened_handler, UserSpaceWindowHandler), f'Window was not opened. Logic._opened_now = {opened_handler}'  # Проверка открытия окна
     assert len(handlers) == 1, f'Handler was not added to win_handlers. Logic._win_handlers = {handlers}'
 
-    time.sleep(timeout + 1)  # timeout + задержка, т.к. удаление происходит чуть позднее таймаута
-    view.press_btn_open_personal_tasks_window()
+    time.sleep(timeout + 5)  # timeout + задержка, т.к. удаление происходит чуть позднее таймаута
+    view.press_btn_open_settings()
     view.press_btn_open_userspace()
 
     assert is_closed, f'Window was not closed after timeout'   # Проверка закрытия окна
 
     view.press_btn_open_userspace()  # Открыли ПП
     first_handler = logic._opened_now
-    view.press_btn_open_personal_tasks_window()  # Переключили на другое окно
+    view.press_btn_open_settings()  # Переключили на другое окно
 
     win_handlers = logic._win_handlers  # В списке окон должно быть два окна
     opened_handler = logic._opened_now
     assert len(win_handlers) == 2, f'Handler was not added to win_handlers. Logic._win_handlers = {handlers}'
     assert isinstance(opened_handler, PersonalTasksWindowHandler), f'Window was not switched'
 
-    view.press_btn_open_userspace()  # Переключили обратно на ПП
+    view.press_btn_open_settings()  # Переключили обратно на ПП
     second_handler = logic._opened_now  # Должен использоваться тот же обработчик
     assert first_handler == second_handler, f'New handler created when timeout does not gone. Handler_type:{type(first_handler)}'
 

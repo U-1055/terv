@@ -57,6 +57,17 @@ class MainWindow(QMainWindow):
 
         self._opened_dialog_windows: list[QDialog] = []
         self._opened_message_windows: list[QMessageBox] = []
+        self._switching_buttons = [self._view.btn_userspace, self._view.btn_settings]
+
+    def _off_windows_buttons(self):
+        """Делает неактивными кнопки перехода между окнами."""
+        for btn in self._switching_buttons:
+            btn.setEnabled(False)
+
+    def _on_windows_buttons(self):
+        """Делает активными кнопки перехода между окнами."""
+        for btn in self._switching_buttons:
+            btn.setEnabled(True)
 
     def _show_progress_window(self, loading_time: int | None):
         """
@@ -66,8 +77,11 @@ class MainWindow(QMainWindow):
         """
         if not loading_time:
             return
+
+        self._off_windows_buttons()
+
         self._before_loading_window = self._view.wdg_window.currentWidget()
-        self._wdg_progress = QProgressWidget(text=GuiLabels.loading, minimum=0, maximum=100, time_interval=10, show_text=False, ready_text=GuiLabels.ready,
+        self._wdg_progress = QProgressWidget(text=GuiLabels.loading, minimum=0, maximum=100, time_interval=loading_time, show_text=False, ready_text=GuiLabels.ready,
                                              text_font=GUIStyles.title_font)
         self._wdg_progress.finished.connect(self._close_progress_window)
         self._view.wdg_window.insertWidget(-1, self._wdg_progress)
@@ -78,7 +92,9 @@ class MainWindow(QMainWindow):
         if self._wdg_progress:
             self._view.wdg_window.setCurrentWidget(self._before_loading_window)
             self._view.wdg_window.removeWidget(self._wdg_progress)
+            self._wdg_progress.destroy()
             self._wdg_progress = None
+            self._on_windows_buttons()
 
     def _destroy_window(self, idx: int):
         self._view.wdg_window.removeWidget(idx)
@@ -86,6 +102,9 @@ class MainWindow(QMainWindow):
 
     def _open_window(self, type_) -> BaseWindow:
         """Открытие окна"""
+        if self._wdg_progress:
+            self._wdg_progress.destroyed.connect(lambda: self._open_window(type_))
+
         window = type_()
         self._view.wdg_window.insertWidget(-1, window)
         current_idx = self._view.wdg_window.count()

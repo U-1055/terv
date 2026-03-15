@@ -127,9 +127,9 @@ class Authenticator:
             user_id = response.ids[0]
             # Создание стандартных статусов задач
             default_personal_task_status = {DBFields.owner_id: user_id,
-                                            DBFields.name: TasksStatuses.default_task_status_name}
+                                            DBFields.name: TasksStatuses.default_task_status_name.value}
             completed_personal_task_status = {DBFields.owner_id: user_id,
-                                              DBFields.name: TasksStatuses.default_completed_task_status_name}
+                                              DBFields.name: TasksStatuses.default_completed_task_status_name.value}
 
             # Добавление статусов
             status_response = self._repository.add_personal_task_statuses(

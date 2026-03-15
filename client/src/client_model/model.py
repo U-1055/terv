@@ -46,9 +46,9 @@ class Model:
     default_struct = {
         DataStructConst.access_token: '',
         DataStructConst.refresh_token: '',
-        DataStructConst.note: '',
+        DataStructConst.note: {},
         DataStructConst.settings: {DataStructConst.style: ''},
-        DataStructConst.reminders: [],
+        DataStructConst.reminders: dict(),
         DataStructConst.userspace_widgets: dict()
                       }
 
@@ -84,13 +84,15 @@ class Model:
             if self._ds_const.styles not in storage:  # Проверка наличия поля стилей в хранилище
                 storage[self._ds_const.styles] = dict()
 
-    def set_note(self, text: str):
+    def set_note(self, text: str, user_id: int):
         with shelve.open(self._storage, 'w') as storage:
-            storage[self._ds_const.note] = text
+            notes = storage[self._ds_const.note]
+            notes[user_id] = text
+            storage[self._ds_const.note] = notes
 
-    def get_note(self) -> str:
+    def get_note(self, user_id: int) -> str:
         with shelve.open(self._storage) as storage:
-            return storage.get(self._ds_const.note)
+            return storage.get(self._ds_const.note).get(user_id)
 
     def set_access_token(self, token_: str):
         with shelve.open(self._storage, 'w') as storage:
@@ -162,31 +164,39 @@ class Model:
                 dict_.pop(wdg_type)
             storage[self._ds_const.userspace_widgets] = dict_
 
-    def add_reminder(self, reminder: str):
+    def add_reminder(self, reminder: str, user_id: int):
         """Добавляет напоминание."""
         with shelve.open(self._storage, 'w') as storage:
             reminders = storage[self._ds_const.reminders]
-            reminders.append(reminder)
+            if user_id in reminders:
+                reminders[user_id].append(reminder)
+            else:
+                reminders[user_id] = [reminder]
             storage[self._ds_const.reminders] = reminders
 
-    def get_reminders(self) -> tuple[str, ...]:
+    def get_reminders(self, user_id: int) -> tuple[str, ...] | None:
         with shelve.open(self._storage) as storage:
-            reminders = storage[self._ds_const.reminders]
+            reminders = storage[self._ds_const.reminders].get(user_id)
             return reminders
 
-    def delete_reminder(self, reminder: str):
+    def delete_reminder(self, reminder: str, user_id: int):
         with shelve.open(self._storage, 'w') as storage:
             reminders = storage[self._ds_const.reminders]
-            reminders.remove(reminder)
+            if user_id in reminders:
+                reminders[user_id].remove(reminder)
             storage[self._ds_const.reminders] = reminders
 
-    def set_reminders(self, reminders: tuple[str, ...] | list[str]):
+    def set_reminders(self, reminders: tuple[str, ...] | list[str], user_id: int):
         with shelve.open(self._storage, 'w') as storage:
-            storage[self._ds_const.reminders] = reminders
+            saved_reminders = storage[self._ds_const.reminders]
+            saved_reminders[user_id] = reminders
+            storage[self._ds_const.reminders] = saved_reminders
 
-    def clear_reminders(self):
+    def clear_reminders(self, user_id: int):
         with shelve.open(self._storage, 'w') as storage:
-            storage[self._ds_const.reminders] = []
+            reminders = storage[self._ds_const.reminders]
+            if user_id in reminders:
+                reminders[user_id] = []
 
     def set_style(self, style_name: str, style_color: str):
         with shelve.open(self._storage, 'w') as storage:

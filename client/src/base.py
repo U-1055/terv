@@ -61,8 +61,8 @@ class DataStructConst:
 
     max_requests = 10  # Максимальное число хранимых запросов в реквестере
     max_request_id = max_requests * 10  # Максимальное ID запроса
-
-    userspace_loading_time = 1000  # Число миллисекунд, в течение которых работает окно загрузки перед открытием окна ПП
+    # ToDo: это не число миллисекунд, а что-то другое
+    userspace_loading_time = 10  # Число миллисекунд, в течение которых работает окно загрузки перед открытием окна ПП
 
     char_plus = '+'
 
@@ -140,7 +140,7 @@ class GuiLabels:
     lasting = 'Длительность'
     days = 'дней'
 
-    userspace = 'Моё пространство'
+    userspace = 'Мое пространство'
     tasks = 'Задачи'
     calendar = 'Календарь'
     knowledge_base = 'База знаний'
@@ -153,6 +153,9 @@ class GuiLabels:
     executors = 'Исполнители'
     username = 'Имя пользователя'
     name = 'Название'
+
+    by_email = 'По email'
+    by_username = 'По имени'
 
     loading = 'Загрузка...'
     ready = 'Готово!'

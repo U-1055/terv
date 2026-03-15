@@ -279,7 +279,7 @@ class Requester(IRequests):
 
         """
 
-        path = f'{self._server}/users/{user_id}/personal_tasks'
+        path = f'{self._server}/personal_tasks'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={
                                       CommonStruct.limit: limit,
@@ -287,7 +287,8 @@ class Requester(IRequests):
                                       CommonStruct.date: on_date,
                                       CommonStruct.status_ids: status_ids,
                                       CommonStruct.not_completed: not_completed,
-                                      CommonStruct.plan_deadline: plan_deadline
+                                      CommonStruct.plan_deadline: plan_deadline,
+                                      CommonStruct.user_id: user_id
                           })
         response = await self._choose_request_type(request, limit)
 
@@ -354,7 +355,7 @@ class Requester(IRequests):
                               CommonStruct.offset: offset,
                               CommonStruct.ids: ws_many_days_events_ids,
                               CommonStruct.included_date: date,
-                              CommonStruct.user_id: user_id
+                              CommonStruct.notified_ids: [user_id]
                           }
                           )
         if date:
@@ -411,6 +412,7 @@ class Requester(IRequests):
                                       CommonStruct.status_ids: status_ids,
                                       CommonStruct.not_completed: not_completed,
                                       CommonStruct.plan_deadline: plan_deadline,
+                                      CommonStruct.executor_id: user_id
                                   })
         response = await self._choose_request_type(request, limit)
         return response
@@ -444,11 +446,24 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
+    async def search_users(self, username: str, email: str, access_token: str):
+        """Отправляет запрос на поиск пользователей с заданными username и email."""
+        path = f'{self._server}/users/search'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token}, query_params={
+            CommonStruct.username: username,
+            CommonStruct.email: email
+        })
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
     async def retry(self, access_token: str, request: InternalRequest) -> Response:
         """
         Повторяет один из предыдущих запросов, предварительно меняя его access_token на переданный.
+
         :param access_token: access токен.
         :param request: запрос.
+
         """
 
         if request.headers.get('Authorization'):

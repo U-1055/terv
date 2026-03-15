@@ -210,7 +210,7 @@ class ScheduleWidgetView(BaseView):
             line_height = i * self._hour_step // 1 + 0.5 * text_height  # 0.5 * text_height, чтобы линия оказывалась посередине надписи
             scene.addLine(padding, line_height, self._graphics_size.width(), line_height, self._marking_color)
 
-            lbl_height = line_height - 0.75 * text_height  # ToDo: проверить коэффициент 0.75 в разных конфигурациях окон
+            lbl_height = line_height - 0.75 * text_height
             text = datetime.time(hour=i, minute=0).strftime('%H:%M')
             lbl = scene.addText(text)
             lbl.setDefaultTextColor(self._marking_color)

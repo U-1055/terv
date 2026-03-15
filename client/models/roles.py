@@ -14,7 +14,7 @@ class WSRole(Base):
     __tablename__ = 'ws_role'
 
     id: int
-    workspace_id: int
+    workspace_id: int | None
     name: str = Field(max_length=30)
     color: str = Field(max_length=30)
 

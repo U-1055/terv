@@ -64,7 +64,6 @@ class SettingsWindow(BaseWindow):
         self._place_image(image)
 
 
-
 if __name__ == '__main__':
     wdg = SettingsWindow()
     wdg_themes = wdg.place_theme_widget()

@@ -7,7 +7,6 @@ from client.src.gui.widgets_view.userspace_view import (TaskWidgetView, NotesWid
                                                        BaseUserSpaceWidget, ReminderWidgetView, EventsTodayWidget)
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.aligns import AlignBottom
-from client.utils.qt_utils import filled_rows_count, filled_columns_count, get_next_widget_grid_pos
 from common.logger import config_logger, CLIENT
 from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 

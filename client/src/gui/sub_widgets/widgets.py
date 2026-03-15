@@ -7,6 +7,7 @@ from client.src.base import DataStructConst, GuiLabels, ObjectNames
 from client.src.ui.ui_event_widget import Ui_Form as EventView
 from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.src.gui.sub_widgets.util_widgets import QMouseActivatingLineEdit, QClickableLabel
+from client.src.ui.ui_user_widget import Ui_Form as UserView
 
 
 class UserSpaceTask(QWidget):
@@ -259,6 +260,31 @@ class QEventWidget(QWidget):
     def setStyleSheet(self, styleSheet: str, /):
         self._menu.setStyleSheet(styleSheet)
         super().setStyleSheet(styleSheet)
+
+
+class UserWidget(QWidget):
+    """Виджет, содержащий информацию о пользователе."""
+
+    def __init__(self, username: str | None = None, email: str | None = None):
+        super().__init__()
+        self._view = UserView()
+        self._view.setupUi(self)
+        if username:
+            self._view.lbl_username.setText(username)
+        if email:
+            self._view.lbl_email.setText(email)
+
+    def set_email(self, email: str):
+        self._view.lbl_email.setText(email)
+
+    def set_username(self, username: str):
+        self._view.lbl_username.setText(username)
+
+    def email(self) -> str:
+        return self._view.lbl_email.text()
+
+    def username(self) -> str:
+        return self._view.lbl_username.setText()
 
 
 if __name__ == '__main__':

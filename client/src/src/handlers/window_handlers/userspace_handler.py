@@ -54,7 +54,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
 
     def _on_note_changed(self):
         note = self._notes_widget.notes()
-        self._model.set_note(note)
+        self._model.set_note(note, self._data_model.user.id)
 
     def _on_btn_set_widgets_pressed(self):
         selected_widgets = []
@@ -69,14 +69,14 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self._main_view.show_dialog_window(settings_window, title=GuiLabels.widgets_settings_window, modality=False)
 
     def _on_reminder_edited(self, last_name: str, current_name: str):
-        self._model.delete_reminder(last_name)
-        self._model.add_reminder(current_name)
+        self._model.delete_reminder(last_name, self._data_model.user.id)
+        self._model.add_reminder(current_name, self._data_model.user.id)
 
     def _on_reminder_completed(self, reminder: str):
-        self._model.delete_reminder(reminder)
+        self._model.delete_reminder(reminder, self._data_model.user.id)
 
     def _on_reminder_added(self, reminder: str):
-        self._model.add_reminder(reminder)
+        self._model.add_reminder(reminder, self._data_model.user.id)
 
     def _on_task_completed(self, type_: str, id_: int):
         """Обрабатывает выполнение задачи в виджете задач."""
@@ -140,7 +140,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 structured_tooltip[db_fields_labels.get(key)] = content
 
         tooltip.show_structured_tooltip(field, structured_tooltip)
-        tooltip.tooltip_field_clicked.connect(self._on_id_clicked)
+        tooltip.tooltip_content_clicked.connect(self._on_id_clicked)
 
     def _set_tasks_widget(self):
         """Обрабатывает данные для виджета задач."""
@@ -156,13 +156,13 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             if task.__tablename__ == ObjectTypes.ws_task:
                 task: cm.WSTask
                 description = {GuiLabels.title: task.name, GuiLabels.description: task.description,
-                               GuiLabels.workspace: f'#{task.workspace_id}', GuiLabels.plan_deadline: plan_deadline}
+                               GuiLabels.workspace: f'#{task.workspace}', GuiLabels.plan_deadline: plan_deadline}
                 if task.project_id:
-                    description.update({GuiLabels.project: f'#{task.project_id}'})
+                    description.update({GuiLabels.project: f'#{task.project}'})
                 if task.responsible:
                     description.update({GuiLabels.responsible: iterable_to_str(task.responsible, ',', '#')})
                 if task.entrusted_id:
-                    description.update({GuiLabels.entrusted: f'#{task.entrusted_id}'})
+                    description.update({GuiLabels.entrusted: f'#{task.entrusted}'})
                 if task.executors:
                     description.update({GuiLabels.executors: iterable_to_str(task.executors, ',', '#')})
 
@@ -197,6 +197,10 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         else:
             marking_color = DataStructConst.dark_marking_color
 
+        if not self._data_model.user:  # Обработка отсутствия данных пользователя
+            self._prepare_no_data(self._get_user_info, self._requests.user_request, self._place_settable_widgets)
+            return
+
         for widget_type in self._data_const.names_widgets:
             result = self._model.get_widget_settings(widget_type)
             if not result:
@@ -210,7 +214,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
             if widget_type == self._data_const.notes_widget:
                 widget_view = self._window.place_notes_widget()
                 self._notes_widget = widget_view
-                note = self._model.get_note()
+                note = self._model.get_note(self._data_model.user.id)
                 self._notes_widget.set_notes(note)
                 self._notes_widget.text_changed.connect(self._on_note_changed)
                 logger.debug('Notes widget placed')
@@ -223,11 +227,12 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                 self._get_schedule_widget_data()
                 logger.debug('Schedule widget placed')
             if widget_type == self._data_const.reminder_widget:
-                reminders = self._model.get_reminders()
+                reminders = self._model.get_reminders(self._data_model.user.id)
                 widget_view = self._window.place_reminder_widget()
                 handler = ReminderViewHandler(widget_view)
                 handler.set_max_reminder_length(DataStructConst.max_reminder_length)
-                handler.set_reminders(reminders)
+                if reminders:
+                    handler.set_reminders(reminders)
                 handler.reminder_completed.connect(self._on_reminder_completed)
                 handler.reminder_added.connect(self._on_reminder_added)
                 handler.reminder_edited.connect(self._on_reminder_edited)
@@ -246,7 +251,7 @@ class UserSpaceWindowHandler(BaseWindowHandler):
         self.user_data_received.emit()
 
     def update_state(self):
-        logger.debug('UserSpaceWInHandler state updated')
+        logger.debug("UserSpaceWinHandler's state updated")
         self._get_user_info()
         self._place_settable_widgets()
 
