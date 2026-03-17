@@ -22,3 +22,15 @@ Light:
 <img width="1918" height="1004" alt="Настройки - светлая" src="https://github.com/user-attachments/assets/0ab5b8a0-d82b-4c81-87f5-7f1f18025701" />
 
 You can use this link to see more screenshots and videos: https://drive.google.com/drive/folders/1LnIVxPQJKyuTwaDee0xMTJS7EILdkmtY?dmr=1&ec=wgc-drive-hero-goto. 
+
+# Installation
+You must have Python 3.12.4.
+1. Download source by SSH or an another way.
+2. Create a virtual environment and execute: `pip install -r requirements.txt`
+
+
+# Contacts
+If you have any questions or problems with installation, you can write to me by email: `filatov_truba@mail.ru`
+
+
+
