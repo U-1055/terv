@@ -1,0 +1,7 @@
+To run a server you must run server/run.py or server/api/routes.py if you want to run debug-mode.
+To run client you must run client/main.py.
+Server use WSGI-server Waitress in test and prod environment and Werkzeug dev-server in dev environment.
+A default listening port is 8080.
+You can set URL for connection in client/main.py (for client) and in server/run.py (for server).
+
+

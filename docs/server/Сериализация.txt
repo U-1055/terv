@@ -1,0 +1,20 @@
+Сериализация происходит следующим образом:
+
+Запись:
+Передаются объекты <entity_id> и <entities>, содержащие ID соответствующих сущностей. Например:
+
+PersonalTask:
+
+owner_id: ID
+work_direction_id: ID
+tags: [ID#1, ID#2, ... ID#N]
+
+
+Чтение:
+Передаются объекты <entity> и <entities>, содержащие ID соотв. сущностей. Например:
+
+PersonalTask:
+
+owner: ID
+work_direction_id: ID
+tags: [ID#1, ID#2, ... ID#N]
