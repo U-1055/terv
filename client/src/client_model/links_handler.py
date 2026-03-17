@@ -56,7 +56,7 @@ class LinksModel:
         self._update()
 
     def _update(self):
-        with shelve.open(self._storage_path) as storage:
+        with shelve.open(self._storage_path, 'n') as storage:
             storage[self.users] = dict()
             storage[self.workspaces] = dict()
             storage[self.ws_tasks] = dict()
