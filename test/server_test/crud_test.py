@@ -15,15 +15,16 @@ import typing as tp
 
 from common.base import CommonStruct, TasksStatuses
 from test.server_test.utils.test_database.base import DatabaseManager
-from test.conftest import SERVER_CONFIG_PATH, SERVER_WORKING_DIR, TEST_CONFIG_PATH, TEST_DB_PATH
+from test.conftest import (SERVER_CONFIG_PATH, SERVER_WORKING_DIR, TEST_CONFIG_PATH, TEST_DB_PATH, test_db_path,
+                           limit_offset_test_config_path, server_config_path)
 from server.storage.server_model import Model
 
 IGNORE = f'IGNORE_VALUE_{datetime.datetime.now()}'  # Константа, помечающая параметр теста как игнорируемый
 base_params = {
     SERVER_WORKING_DIR: '../../server/api',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    TEST_CONFIG_PATH: '../../test/server_test/utils/server_configs/limit_offset_test_config.json',
-    TEST_DB_PATH: 'sqlite:///../../test/server_test/utils/test_database/database'
+    SERVER_CONFIG_PATH: server_config_path,
+    TEST_CONFIG_PATH: limit_offset_test_config_path,
+    TEST_DB_PATH: test_db_path
               }
 
 

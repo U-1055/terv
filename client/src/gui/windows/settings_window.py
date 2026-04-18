@@ -45,7 +45,10 @@ class SettingsWindow(BaseWindow):
         self._view.btn_account_ops.setText(GuiLabels.authorize)
         self._view.btn_account_ops.setObjectName(ObjectNames.btn_log_in)
         if self._is_connections:
-            self._view.btn_account_ops.clicked.disconnect(self.press_btn_log_out)
+            try:
+                self._view.btn_account_ops.clicked.disconnect(self.press_btn_log_out)
+            except RuntimeWarning:
+                print('WARNING')
         self._view.btn_account_ops.clicked.connect(self.press_btn_log_in)
         self._is_connections = True
 
@@ -53,7 +56,10 @@ class SettingsWindow(BaseWindow):
         self._view.btn_account_ops.setText(GuiLabels.exit)
         self._view.btn_account_ops.setObjectName(ObjectNames.btn_exit)
         if self._is_connections:
-            self._view.btn_account_ops.clicked.disconnect(self.press_btn_log_in)
+            try:
+                self._view.btn_account_ops.clicked.disconnect(self.press_btn_log_in)
+            except RuntimeWarning:
+                print('WARNING')
         self._view.btn_account_ops.clicked.connect(self.press_btn_log_out)
         self._is_connections = True
 

@@ -1,9 +1,10 @@
 """Тест обработки limit&offset."""
 import pytest
+from pathlib import Path
 
 from test.server_test.utils.requester import TestRequester
 import test.conftest as cf
-from common.base import CommonStruct, DBFields
+from common.base import CommonStruct, DBFields, project_root
 
 set_config = cf.set_config
 config_limit_offset_test_db = cf.config_limit_offset_test_db
@@ -11,10 +12,10 @@ access_token = cf.access_token
 requester = cf.requester
 
 base_params = {
-    cf.TEST_DB_PATH: 'sqlite:///utils/test_database/database',
-    cf.TEST_CONFIG_PATH: 'utils/server_configs/limit_offset_test_config.json',
-    cf.SERVER_CONFIG_PATH: '../../server/config.json',
-    cf.SERVER_WORKING_DIR: '../../server/api',
+    cf.TEST_DB_PATH: cf.test_db_path,
+    cf.TEST_CONFIG_PATH: cf.limit_offset_test_config_path,
+    cf.SERVER_CONFIG_PATH: Path(project_root() / "server" / "config.json"),
+    cf.SERVER_WORKING_DIR: Path(project_root() / "server" / "api"),
     cf.LOGIN: 'login',
     cf.PASSWORD: 'password_1',
     cf.EMAIL: 'email',

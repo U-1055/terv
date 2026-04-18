@@ -6,6 +6,7 @@ from server.database.repository import DataRepository
 from test.server_test.utils.test_database.base import DatabaseManager
 from common.base import DBFields
 import server.services.exceptions as err
+from test.conftest import test_db_path
 
 
 def string(len_: int = 30) -> str:
@@ -14,7 +15,7 @@ def string(len_: int = 30) -> str:
 
 @pytest.fixture(scope='session')
 def config_db() -> sqlalchemy.orm.session.sessionmaker:
-    db_manager = DatabaseManager('sqlite:///utils/test_database/database')
+    db_manager = DatabaseManager(test_db_path)
     db_manager.set_workspace_service_test_config(20)
     return db_manager.session_maker
 

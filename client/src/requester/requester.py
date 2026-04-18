@@ -11,11 +11,10 @@ import typing as tp
 import asyncio
 import threading
 import functools
-import os
-import pathlib
+from pathlib import Path
 
 import client.src.requester.errors as err
-from common.base import CommonStruct, ErrorCodes
+from common.base import CommonStruct, ErrorCodes, project_root
 from client.src.requester.requester_interface import IRequests
 from client.utils.timeout_list import TimeoutList
 from common_utils.log_utils.request_time_logger import RequestsTimeHandler
@@ -25,8 +24,8 @@ from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LE
 logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 
-CHECK_TIME = True  # ToDo: при попытке импорта из точки входа возникает круговой импорт !!!МЕНЯТЬ ПУТЬ ПРИ ЗАПУСКЕ НАГРУЗОЧНОГО ТЕСТА!!!
-request_time_handler = RequestsTimeHandler('../log/requests_time_load.txt')
+CHECK_TIME = True
+request_time_handler = RequestsTimeHandler(Path(project_root() / 'log' / 'requests_time.txt'))
 
 
 def run_loop(loop: asyncio.AbstractEventLoop):

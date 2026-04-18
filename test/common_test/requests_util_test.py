@@ -1,13 +1,13 @@
-import datetime
-
+from pathlib import Path
 import pytest
 
 from common_utils.log_utils.request_time_logger import RequestsTimeHandler
+from common.base import project_root
 
 
 @pytest.fixture()
 def requests_time_handler() -> RequestsTimeHandler:
-    return RequestsTimeHandler('../../log/requests_time_load.txt')
+    return RequestsTimeHandler(project_root() / "log" / "requests_time.txt")
 
 
 @pytest.mark.parametrize(

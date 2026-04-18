@@ -12,9 +12,7 @@ from test.server_test.utils.test_database.base import DatabaseManager
 from server.database.schemes.common_schemes import UserSchema
 from test.server_test.utils.test_data.repository_test_data import test_updating_objects_data
 from server.database.exceptions import BaseRepoException, DataIntegrityError, IncorrectLinkError, NotUniqueValue
-from test.conftest import TEST_DB_PATH
-
-test_database_path = 'sqlite:///utils/test_database/database'
+from test.conftest import TEST_DB_PATH, test_db_path
 
 TEST_LOGIN = 'username'
 TEST_WS_NAME = 'workspace'
@@ -22,7 +20,7 @@ REPOSITORY = 'repository'
 CREATING_METHOD = 'creating_method'
 OBJ_DATA = 'obj_data'
 
-params = {TEST_DB_PATH: test_database_path}
+params = {TEST_DB_PATH: test_db_path}
 
 
 @pytest.fixture(scope='function')
@@ -39,7 +37,7 @@ def repository(config_db) -> DataRepository:
 
 @pytest.fixture(scope='function')
 def clear_db():
-    DatabaseManager(test_database_path)  # DataBaseManager при инициализации пересоздаёт базу
+    DatabaseManager(test_db_path)  # DataBaseManager при инициализации пересоздаёт базу
 
 
 @pytest.fixture(scope='function')

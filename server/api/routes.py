@@ -11,7 +11,7 @@ from server.database.models.db_utils import launch_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
-from common.base import CommonStruct, check_password, ErrorCodes as ErCodes, DBFields
+from common.base import CommonStruct, check_password, ErrorCodes as ErCodes, DBFields, project_root
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from server.utils.data_checkers import check_email
@@ -22,7 +22,7 @@ import server.api.controllers.controllers as handlers
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
 app = Flask(__name__)
-config = Config('../config.json')
+config = Config(Path(project_root() / "server" / "config.json"))
 database_path = config.database_path
 engine = launch_db(database_path)
 
@@ -31,7 +31,7 @@ logger.info(f'Module is running. Environment: {config.env}. DB path: {database_p
 
 session = sessionmaker(bind=engine)
 repo = DataRepository(session)
-model = Model(Path('../storage/storage'))
+model = Model(Path(project_root() / "server" / "storage" / "storage"))
 ds_const = DataStruct()
 common_struct = CommonStruct()
 authenticator = Authenticator(
@@ -433,7 +433,7 @@ def run():
 def launch(check_ram: bool = False):
     import threading
     if check_ram:
-        thread = threading.Thread(target=check_memory, args=[Path('../../log/memory_server.txt')], daemon=True)
+        thread = threading.Thread(target=check_memory, args=[Path(project_root() / "log" / "memory_server.txt")], daemon=True)
         thread.start()
 
     thread = threading.Thread(target=run)

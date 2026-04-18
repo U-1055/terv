@@ -1,4 +1,5 @@
 """Общие константы, используемые и клиентом и сервером. (Названия параметров, элементов ответа, требования к данным)."""
+from pathlib import Path
 import enum
 import datetime
 
@@ -252,6 +253,11 @@ def get_datetime_now() -> datetime.datetime:
     formatted_dt = datetime_now.strftime(CommonStruct.datetime_format)
     result = datetime.datetime.strptime(formatted_dt, CommonStruct.datetime_format)
     return result
+
+
+def project_root() -> Path:
+    """Возвращает путь к корню проекта."""
+    return Path(__file__).resolve().parent.parent
 
 
 if __name__ == '__main__':

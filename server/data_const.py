@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import json
 
-from common.base import CommonStruct
+from common.base import CommonStruct, project_root
 
 logging.basicConfig(level=logging.WARN)
 
@@ -31,7 +31,7 @@ class DataStruct:
 
     default_access_token_lifetime = datetime.timedelta(seconds=15 * 60)
     default_refresh_token_lifetime = datetime.timedelta(seconds=24 * 3600)
-    default_database_path = 'sqlite:///../database/database'
+    default_database_path = f'sqlite:///{Path(project_root() / "server" / "database" / "database")}'
 
     login = 'login'
     email = 'email'

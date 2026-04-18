@@ -8,11 +8,17 @@ import typing as tp
 
 from test.server_test.utils.requester import TestRequester
 from common.base import CommonStruct as DataStruct
-from test.conftest import set_config, TEST_CONFIG_PATH, SERVER_CONFIG_PATH, SERVER_WORKING_DIR
+from test.conftest import set_config, TEST_CONFIG_PATH, SERVER_CONFIG_PATH, SERVER_WORKING_DIR, auth_config_path, server_config_path
 
 access_token_lifetime = 2  # Время жизни токенов (из auth_test_config.json)
 refresh_token_life_time = 10
 ds_const = DataStruct()
+
+test_params = {
+    TEST_CONFIG_PATH: auth_config_path,
+    SERVER_CONFIG_PATH: server_config_path,
+    SERVER_WORKING_DIR: '../../server/api'
+}
 
 
 def create_token(key: str, sub: str, exp: datetime.datetime, iat: datetime.datetime):
@@ -37,11 +43,7 @@ def invalid_token() -> tp.Callable:
     yield create_token
 
 
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 def test_no_register(requester, set_config):
 
     response = requester.authorize('___', '_')
@@ -54,11 +56,7 @@ def test_no_register(requester, set_config):
     assert content is None, f'Content of the response is not None: {content}'
 
 
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login1', 'sth_password1', 'sth_email15']]
@@ -88,11 +86,7 @@ def test_expired_access_token(requester, set_config, login: str, password: str, 
     assert get_content is None, f'Content of the response is not None: {get_content}'
 
 
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login1', 'sth_password1', 'sth_email1']]
@@ -113,11 +107,7 @@ def test_expired_refresh_token(requester, set_config, login: str, password: str,
     assert content is None, f'Content of the response is not None: {content}'
 
 
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 @pytest.mark.parametrize(
     ['login', 'password', 'email', 'exp', 'iat'],
     [[
@@ -168,11 +158,7 @@ def test_invalid_access(
         datetime.datetime.now(),
         datetime.datetime.now() + datetime.timedelta(seconds=access_token_lifetime)]]
 )
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 def test_invalid_refresh(
         requester,
         set_config,
@@ -204,11 +190,7 @@ def test_invalid_refresh(
     assert access_status_code == 400, f'Status code {access_status_code} muse be 401. Response: {access_status_code}'
 
 
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 @pytest.mark.skip(reason='Токен с временем жизни в 2 сек. успевает истечь. Запускать отдельно от других тестов и '
                          'менять access_token_lifetime в auth_test_config')
 @pytest.mark.parametrize(
@@ -239,11 +221,7 @@ def test_recall_tokens(requester, login: str, password: str, email: str, set_con
     assert update_status_code == 400, f'Status code {status_code} must be 400. Response: {update_response}'
 
 
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login2', 'sth_password2', 'sth_email2']]
@@ -263,11 +241,7 @@ def test_not_unique_credentials(requester, set_config, login: str, password: str
     assert existing_email_status_code == 400, f'Status code {existing_email_status_code} must be 400. Response: {existing_email_response.json()}'
 
 
-@pytest.mark.f_data({
-    TEST_CONFIG_PATH: 'utils/server_configs/auth_test_config.json',
-    SERVER_CONFIG_PATH: '../../server/config.json',
-    SERVER_WORKING_DIR: '../../server/api'
-})
+@pytest.mark.f_data(test_params)
 @pytest.mark.parametrize(
     ['login', 'password', 'email'],
     [['sth_login5', 'sth_password5', 'sth_email5']]

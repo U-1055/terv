@@ -7,7 +7,7 @@ import contextlib
 
 from test.client_test.utils.test_server import launch
 from test.server_test.utils.test_database.base import DatabaseManager
-from common.base import CommonStruct
+from common.base import CommonStruct, project_root
 from test.server_test.utils.requester import TestRequester
 from client.src.requester.requester import Requester
 from client.src.requester.errors import LoginAlreadyExists
@@ -25,6 +25,11 @@ REQUEST_LIMIT = 'request_limit'
 TIMEOUT = 'timeout'
 
 LEN_TEST_REPO_CONTENT = 1000
+
+test_db_path = f'sqlite:///{Path(project_root()) / "test" / "server_test" / "utils" / "test_database" / "database"}'
+auth_config_path = Path(project_root()) / "test" / "server_test" / "utils" / "server_configs" / "auth_test_config.json"
+limit_offset_test_config_path = Path(project_root()) / "test" / "server_test" / "utils" / "server_configs" / "limit_offset_test_config.json"
+server_config_path = Path(project_root()) / "server" / "config.json"
 
 
 @pytest.fixture(scope='function')
