@@ -18,6 +18,9 @@ class User(Base):
     completed_task_status_id: Mapped[int] = mapped_column(nullable=True)  # ID статуса выполненной задачи
     default_task_status_id: Mapped[int] = mapped_column(nullable=True)  # ID статуса задачи по умолчанию
 
+    days_no_break: Mapped[int] = mapped_column()  # Дней без перерыва
+    last_work_date: Mapped[datetime.date] = mapped_column()  # Последний день выполнял задачу
+
     # РП и проекты
     created_workspaces: Mapped[list['Workspace']] = relationship('Workspace', back_populates='creator')
     created_projects: Mapped[list['Project']] = relationship('Project', back_populates='creator')

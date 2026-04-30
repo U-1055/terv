@@ -65,7 +65,7 @@ def map_marshmallow_exc_to_repo_exc(exc: MarshmallowError) -> 'BaseRepoException
 class BaseRepoException(Exception):
     """Базовый класс ошибок слоя доступа к данным."""
     message: str
-    orig: Exception
+    orig: Exception | None
 
     def __init__(self, orig: Exception | None):
         self.orig = orig
@@ -85,6 +85,26 @@ class UnknownRepoException(BaseRepoException):
     def __init__(self, exc: Exception):
         self.orig = exc
         self.message = f'{self.orig.__class__.__name__} - {exc.args[0]}'
+
+
+class IncorrectParam(BaseRepoException):
+    """
+    Передан некорректный параметр.
+
+    :var object_type: Тип объекта.
+    :var id: Переданный id.
+    :var param_type: Тип параметра.
+    :var descpription: Описание ошибки.
+
+    """
+
+    def __init__(self, object_type: str, id_: int, param_type: str, description: str | None = None):
+        self.orig = None
+        self.object_type = object_type
+        self.id = id_
+        self.param_type = param_type
+        self.description = description
+        self.message = f'This is incorrect param {param_type}: {id_} of object {object_type}. {description}'
 
 
 class NotUniqueValue(BaseRepoException):
