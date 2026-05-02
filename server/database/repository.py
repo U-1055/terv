@@ -13,7 +13,7 @@ from common.base import DBFields, get_datetime_now
 from server.database.schemes.base import schemes_models
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
-from server.database.exceptions import exc_mapped, BaseRepoException
+from server.database.exceptions import exc_mapped, BaseRepoException, IncorrectParam
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -253,7 +253,7 @@ class DataRepository:
 
     @exc_mapped
     def add_ws_tasks(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
-        return self._execute_insert(models, cm.User)
+        return self._execute_insert(models, cm.WSTask)
 
     @exc_mapped
     def delete_users(self, ids: tp.Iterable[int]):
@@ -580,6 +580,15 @@ class DataRepository:
             query = query.where(cm.PersonalTaskEvent.date == date)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_days_no_break(self, user_id: int) -> int:
+        query = select(cm.User).where(cm.User.id == user_id)
+        result = self._execute_select(query)
+        if not result.content:
+            raise IncorrectParam(str(cm.User), user_id, DBFields.id, f'There is no user with id {user_id}')
+        days = result.content[0].days_no_break
+        last_work_date = result.content[0].last_work_date
 
     @exc_mapped
     def search_users(self, username: str, email: str, limit: int = None, offset: int = None, require_last_num: bool = False,

@@ -7,7 +7,7 @@ from pathlib import Path
 from common_utils.log_utils.memory_logger import check_memory
 from server.data_const import APIAnswers as APIAn
 from server.auth.auth_module import Authenticator, Authorizer
-from server.database.models.db_utils import launch_db
+from server.database.models.db_utils import launch_db, init_db
 from server.database.repository import DataRepository
 from server.storage.server_model import Model
 from server.data_const import DataStruct, Config, Permissions
@@ -24,7 +24,7 @@ logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZ
 app = Flask(__name__)
 config = Config(Path(project_root() / "server" / "config.json"))
 database_path = config.database_path
-engine = launch_db(database_path)
+engine = init_db(database_path)
 
 logger.info(f'Module is running. Environment: {config.env}. DB path: {database_path}.'
             f'Access lifetime: {config.access_token_lifetime}. Refresh lifetime: {config.refresh_token_lifetime}')
@@ -268,15 +268,19 @@ def ws_tasks():
     """
 
     response = None
+    try:
+        user_id = authenticator.get_user_id(request.headers.get('Authorization'))
+    except ValueError:
+        return form_response(400, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
     if request.method == 'GET':
         response = handlers.WSTaskController.get(request, repo)
     elif request.method == 'POST':
-        response = handlers.WSTaskController.add(request, repo)
+        response = handlers.WSTaskController.add(request, repo, authenticator, authorizer, user_id)
     elif request.method == 'PUT':
-        response = handlers.WSTaskController.update(request, repo)
+        response = handlers.WSTaskController.update(request, repo, authenticator, authorizer, user_id)
     elif request.method == 'DELETE':
-        response = handlers.WSTaskController.delete(request, repo)
+        response = handlers.WSTaskController.delete(request, repo, authenticator, authorizer, user_id)
 
     return response
 

@@ -209,43 +209,14 @@ class Authorizer:
         """Проверяет доступ пользователя к личным объектам."""
         return user_id == owner_id
 
-    def check_permissions(self, user_id: int, objects: list[dict], object_type: str, permission: str) -> bool:
+    def check_permissions(self, user_id: int, operation_type: str) -> bool:
         """
-        Проверяет доступ пользователя к ресурсу.
-        :param user_id: ID пользователя, который делает запрос.
-        :param objects: сериализованные модели, к которым нужно получить доступ.
-        :param object_type: тип объекта (задача, проект, документ, однодневное мероприятие, многодневное мероприятие).
-        :param permission: получаемый доступ.
-        :return: наличие доступа
+        Проверяет право пользователя на выполнение операции.
+        :user_id: ID пользователя.
+        :operation_type: Тип выполняемой операции.
+
         """
-
-        if permission not in self._permissions:
-            raise ValueError(f'Unknown permission: {permission}')
-        workspaces_ids = []
-        for object_ in objects:
-            id_ = object_.get(DBFields.workspace_id)
-            if not id_:
-                raise ValueError(f'The serialized model have not field "workspace_id". Model: {object_}')
-
-        for id_ in workspaces_ids:  # Временная схема
-            role_id = self._repo.get_role_by_user_id(id_, user_id).content
-            if not role_id:
-                return False  # Нет роли - значит пользователя нет в РП
-            for object_ in objects:
-                object_id = object_.get(DBFields.id)
-                if object_type == self._data_const.task:
-                    permissions = self._repo.get_task_permissions(object_id, role_id)
-                elif object_type == self._data_const.project:
-                    permissions = self._repo.get_project_permissions(object_id, role_id)
-                elif object_type == self._data_const.document:
-                    permissions = self._repo.get_document_permissions(object_id, role_id)
-                elif object_type == self._data_const.daily_event:
-                    permissions = self._repo.get_daily_event_permissions(object_id, role_id)
-                elif object_type == self._data_const.many_days_event:
-                    permissions = self._repo.get_task_permissions(object_id, role_id)
-                else:
-                    raise ValueError(f'Unknown object type: {object_type}')
-                return permission in permissions
+        pass  # Запрос в БД за ролью, проверка роли и типа операции
 
 
 if __name__ == '__main__':

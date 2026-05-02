@@ -2,6 +2,8 @@
 import typing as tp
 
 import server.database.exceptions as repo_exc
+import server.services.exceptions as service_exc
+from common.base import ErrorCodes
 
 
 VALUE = 'value'
@@ -51,5 +53,16 @@ def map_repo_to_controller_exc(exc: repo_exc.BaseRepoException, param_values: di
         pass
 
 
-def map_service_to_controller_exc():
-    pass
+def map_service_to_controller_exc(exc: service_exc.BaseServiceException, param_values: dict) -> BaseControllerException:
+    """
+    Сопоставляет исключение сервиса и исключение контроллера.
+
+    :param exc: Исключение сервиса.
+    :param param_values: Значения параметров.
+
+    """
+    if isinstance(exc, service_exc.IncorrectParamError):
+        return IncorrectParamException({exc.param: {VALUE: None, MESSAGE: exc.message}})
+    elif isinstance(exc, service_exc.AccessDenied):
+        return IncorrectParamException({'access': {VALUE: None, MESSAGE: exc.message, ERROR_ID: ErrorCodes.forbidden_access_to_personal_object.value}})
+    return IncorrectParamException({'service': {VALUE: None, MESSAGE: exc.message}})

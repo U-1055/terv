@@ -70,6 +70,9 @@ class Model:
             tokens = storage[self._data_const.blacklist]
             return token_ in tokens
 
+    def add_day_to_score(self, user_id: int):
+        pass
+
 
 if __name__ == '__main__':
     model = Model(Path('storage'))

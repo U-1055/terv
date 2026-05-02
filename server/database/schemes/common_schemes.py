@@ -10,7 +10,6 @@ from sqlalchemy.orm.session import Session
 
 from server.data_const import DBStruct
 import server.database.models.common_models as cm
-from common.base import DBFields
 
 
 class BaseMeta:

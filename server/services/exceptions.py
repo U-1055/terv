@@ -14,3 +14,7 @@ class IncorrectParamError(BaseServiceException):
     def __init__(self, param: str, message: str):
         self.param = param
         self.message = message
+
+
+class AccessDenied(BaseRepoException):
+    """Исключение сервисного слоя, вызываемое при несовпадении роли и типа операции."""

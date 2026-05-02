@@ -1,8 +1,8 @@
 """Сервисы."""
 
-from common.base import CommonStruct, DBFields
+from common.base import CommonStruct, DBFields, get_datetime_now
 from server.database.repository import DataRepository
-from server.data_const import DBStruct
+from server.data_const import DataStruct, DBStruct, Permissions
 import server.services.exceptions as err
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL
@@ -17,7 +17,9 @@ class BaseService:
 
 
 class UserService(BaseService):
-    pass
+
+    def get_days_no_break(self, repo: DataRepository, user_id: int):
+        pass
 
 
 class WorkspaceService(BaseService):
@@ -160,16 +162,69 @@ class WSTaskService(BaseService):
     """Сервис задач РП."""
 
     @staticmethod
-    def create(ws_tasks: tuple[dict, ...], workspace_id: int, repo: DataRepository):
-        pass
+    def create(ws_tasks: tuple[dict, ...], project_id: int, user_id: int, repo: DataRepository, authorizer):
+        """
+        Создаёт задачи проекта.
+        Формирует словарь параметров задачи и передаёт его в метод репозитория add_ws_tasks.
+        Добавляет creator_id, entrusted_id (равны user_id) и status_id = 1.
+        """
+        # Проверяем доступ к созданию задач
+        if not authorizer.check_permissions(user_id, Permissions.create_task.value):
+            role_data = repo.get_role_by_user_id(project_id, user_id)
+            if role_data.content:
+                role_name = role_data.content[0].get(DBFields.name, 'unknown')
+            else:
+                role_name = 'unknown'
+            raise err.AccessDenied(f'Your role ({role_name}) can\'t create_task')
+
+        for task in ws_tasks:
+            task[DBFields.creator_id] = user_id
+            task[DBFields.entrusted_id] = user_id
+            task[DBFields.status_id] = 1
+
+        repo.add_ws_tasks(ws_tasks)
 
     @staticmethod
-    def update(ws_tasks: tuple[dict, ...], repo: DataRepository):
-        pass
+    def update(ws_tasks: tuple[dict, ...], user_id: int, repo: DataRepository, authorizer):
+        """
+        Редактирует поля задач.
+        Проверяет роль пользователя через authorizer перед обновлением.
+        """
+        # Проверяем доступ к редактированию задач
+        if not authorizer.check_permissions(user_id, Permissions.edit_task.value):
+            raise err.AccessDenied(f'Your role can\'t edit_task')
+
+        for task in ws_tasks:
+            task_id = task.get(DBFields.id)
+            if not task_id:
+                raise err.IncorrectParamError('task', f'Task must have id field: {task}')
+
+            # Получаем задачу для проверки существования
+            task_data = repo.get_ws_tasks([task_id])
+            if not task_data.content:
+                raise err.IncorrectParamError('task', f'There is no task with id {task_id}')
+
+            task[DBFields.updated_at] = get_datetime_now()
+
+        repo.update_ws_tasks(ws_tasks)
 
     @staticmethod
-    def update_status(ws_tasks: tuple[dict, ...]):
-        pass
+    def delete(task_ids: tuple[int, ...], user_id: int, repo: DataRepository, authorizer):
+        """
+        Удаляет задачи по их ID.
+        Проверяет роль пользователя через authorizer перед удалением.
+        """
+        # Проверяем доступ к удалению задач
+        if not authorizer.check_permissions(user_id, Permissions.del_task.value):
+            raise err.AccessDenied(f'Your role can\'t del_task')
+
+        for task_id in task_ids:
+            # Получаем задачу для проверки существования
+            task_data = repo.get_ws_tasks([task_id])
+            if not task_data.content:
+                raise err.IncorrectParamError('task', f'There is no task with id {task_id}')
+
+        repo.delete_ws_tasks_by_id(task_ids)
 
 
 class ProjectService(BaseService):

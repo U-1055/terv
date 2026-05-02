@@ -18,8 +18,8 @@ class User(Base):
     completed_task_status_id: Mapped[int] = mapped_column(nullable=True)  # ID статуса выполненной задачи
     default_task_status_id: Mapped[int] = mapped_column(nullable=True)  # ID статуса задачи по умолчанию
 
-    days_no_break: Mapped[int] = mapped_column()  # Дней без перерыва
-    last_work_date: Mapped[datetime.date] = mapped_column()  # Последний день выполнял задачу
+    days_no_break: Mapped[int] = mapped_column(nullable=True)  # Дней без перерыва
+    last_work_date: Mapped[datetime.date] = mapped_column(nullable=True)  # Последний день выполнял задачу
 
     # РП и проекты
     created_workspaces: Mapped[list['Workspace']] = relationship('Workspace', back_populates='creator')
@@ -30,8 +30,7 @@ class User(Base):
     # Задачи
     created_ws_tasks: Mapped[list['WSTask']] = relationship('WSTask', foreign_keys='WSTask.creator_id',
                                                             back_populates='creator')  # Созданные задачи workspace
-    assigned_to_user_tasks: Mapped[list['WSTask']] = relationship(secondary='executor_task',
-                                                                  back_populates='executors')  # Порученные пользователЮ
+    assigned_to_user_tasks: Mapped[list['WSTask']] = relationship('WSTask', foreign_keys='WSTask.executor_id', back_populates='executor')  # Порученные пользователЮ
     assigned_by_user_tasks: Mapped[list['WSTask']] = relationship('WSTask', foreign_keys='WSTask.entrusted_id',
                                                                   back_populates='entrusted')  # Порученные пользователЕМ
     responsibility_tasks: Mapped[list['WSTask']] = relationship(secondary='responsible_task',
@@ -180,6 +179,7 @@ class WSTask(Base):
     work_direction_id: Mapped[int] = mapped_column(ForeignKey('ws_work_direction.id'), nullable=True)  # Направление работы
     parent_task_id: Mapped[int] = mapped_column(ForeignKey('ws_task.id'), nullable=True)  # Родительская задача
     status_id: Mapped[int] = mapped_column(ForeignKey('ws_task_status.id'))  # Статус задачи
+    executor_id: Mapped[int] = mapped_column(ForeignKey('user.id'))  # Исполнитель
 
     name: Mapped[str] = mapped_column(String[60])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
@@ -191,7 +191,7 @@ class WSTask(Base):
     fact_start_work_date: Mapped[datetime.datetime] = mapped_column(nullable=True)
 
     responsible: Mapped[list[User]] = relationship(secondary='responsible_task', back_populates='responsibility_tasks')
-    executors: Mapped[list[User]] = relationship(secondary='executor_task', back_populates='assigned_to_user_tasks')
+    executor: Mapped[User] = relationship(User, foreign_keys='WSTask.executor_id',  back_populates='assigned_to_user_tasks')
     creator: Mapped[User] = relationship(User, foreign_keys='WSTask.creator_id', back_populates='created_ws_tasks')
     entrusted: Mapped[User] = relationship(User, foreign_keys='WSTask.entrusted_id', back_populates='assigned_by_user_tasks')
     workspace: Mapped[Workspace] = relationship(Workspace, back_populates='tasks')
