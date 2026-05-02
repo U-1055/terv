@@ -251,6 +251,11 @@ class MainWindow(QMainWindow):
     def open_workspaces_list_window(self, loading_time: int | None = None) -> WorkspacesListWindow:
         """Открывает окно списка рабочих пространств."""
         window = self._open_window(WorkspacesListWindow)
+        self._view.wdg_window.insertWidget(-1, window)
+        current_idx = self._view.wdg_window.count()
+        window.destroyed.connect(lambda: self._destroy_window(current_idx))
+        self._view.wdg_window.setCurrentWidget(window)
+        self.push_to_stack(window)
         self._show_progress_window(loading_time)
         return window
 
@@ -262,7 +267,7 @@ class MainWindow(QMainWindow):
         current_idx = self._view.wdg_window.count()
         window.destroyed.connect(lambda: self._destroy_window(current_idx))
         self._view.wdg_window.setCurrentWidget(window)
-        self._push_to_stack_if_needed(window)
+        self.push_to_stack(window)
         self._show_progress_window(loading_time)
         return window
 
@@ -274,7 +279,7 @@ class MainWindow(QMainWindow):
         current_idx = self._view.wdg_window.count()
         window.destroyed.connect(lambda: self._destroy_window(current_idx))
         self._view.wdg_window.setCurrentWidget(window)
-        self._push_to_stack_if_needed(window)
+        self.push_to_stack(window)
         self._show_progress_window(loading_time)
         return window
 
@@ -294,8 +299,10 @@ class MainWindow(QMainWindow):
 
         :param window: Окно, которое нужно добавить в стек.
         """
+        print(self._window_stack)
         self._window_stack.append(window)
         self._view.wdg_window.setCurrentWidget(window)
+        print(self._window_stack)
         logger.debug(f'Window pushed to stack: {window}')
 
     def go_back(self):
@@ -305,9 +312,13 @@ class MainWindow(QMainWindow):
         :return: Предыдущее окно или None, если стек пуст.
         """
         if len(self._window_stack) > 0:
-            previous_window = self._window_stack.pop()
+            self._window_stack.pop(-1)
+            previous_window = self._window_stack[-1]
+            self._view.wdg_window.insertWidget(-1, previous_window)
+            current_idx = self._view.wdg_window.count()
+            previous_window.destroyed.connect(lambda: self._destroy_window(current_idx))
             self._view.wdg_window.setCurrentWidget(previous_window)
-            logger.debug(f'Going back to window: {previous_window}')
+            print(self._window_stack)
             return previous_window
         else:
             logger.warning('Window stack is empty, cannot go back')
