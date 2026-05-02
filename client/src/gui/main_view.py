@@ -1,6 +1,5 @@
 from PySide6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QWidget, QDialog, QMessageBox
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QPixmap
 
 from client.src.ui.ui_main_window import Ui_Form
 from client.src.gui.sub_widgets.common_widgets import QProgressWidget

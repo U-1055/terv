@@ -184,7 +184,7 @@ class DatabaseManager:
             workspaces[1].completed_task_status_id = 2
             session.add_all([ws_task_status_2, ws_task_status_1])
 
-            ws_tasks = [cm.WSTask(**params, workspace=workspaces[0], creator=creator, executors=[user], entrusted=creator)
+            ws_tasks = [cm.WSTask(**params, workspace=workspaces[0], creator=creator, executor=user, entrusted=creator)
                         for params in ws_tasks_params]
             session.add_all(ws_tasks)
 
@@ -192,7 +192,7 @@ class DatabaseManager:
             session.add_all(ws_tasks_events)
 
             other_ws_tasks = [cm.WSTask(**params, workspace=workspaces[1], creator=other_user, entrusted=other_user,
-                              executors=[other_user, user]) for params in other_ws_tasks_params]
+                              executor=other_user) for params in other_ws_tasks_params]
             session.add_all(other_ws_tasks)
 
             ws_daily_events = [cm.WSDailyEvent(**params, creator=creator, notified=[other_user, user, creator],
@@ -242,7 +242,7 @@ class DatabaseManager:
                                  plan_deadline=datetime.datetime.now(),
                                  creator=creator,
                                  entrusted=creator,
-                                 executors=[user],
+                                 executor=user,
                                  workspace=workspace,
                                  description='',
                                  status=status
@@ -275,7 +275,7 @@ class DatabaseManager:
                                     plan_deadline=datetime.datetime.now(),
                                     creator=creator,
                                     entrusted=creator,
-                                    executors=[user],
+                                    executor=user,
                                     workspace=workspace,
                                     description='',
                                     status=ws_task_status

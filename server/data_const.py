@@ -96,6 +96,15 @@ class Permissions(enum.Enum):
     view = 'view'
 
 
+class Roles(enum.Enum):
+    """Роли РП."""
+
+    mentor = 'Наставник'
+    student = 'Ученик'
+    admin = 'Администратор'
+    team_lead = 'Тимлид'
+
+
 class APIAnswers:
 
     no_login_message = 'There is no login in the token'

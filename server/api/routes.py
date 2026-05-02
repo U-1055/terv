@@ -407,14 +407,199 @@ def ws_task_events():
 def workspaces():
     """Ресурс РП."""
     response = None
+
+    if request.method in ['PUT', 'POST', 'DELETE']:
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.WorkspaceController.create(request, repo, authenticator, authorizer, user_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
     if request.method == 'GET':
         response = handlers.WorkspaceController.get(request, repo)
     elif request.method == 'POST':
-        response = handlers.WorkspaceController.add(request, repo)
+        response = handlers.WorkspaceController.get(request, repo)
     elif request.method == 'PUT':
-        response = handlers.WorkspaceController.update(request, repo)
+        response = handlers.WorkspaceController.update(request, repo, authenticator, authorizer, user_id)
     elif request.method == 'DELETE':
-        response = handlers.WorkspaceController.delete(request, repo)
+        response = handlers.WorkspaceController.delete(request, repo, authenticator, authorizer, user_id)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/people', methods=['GET', 'POST', 'DELETE'])
+def workspace_people(workspace_id: int):
+    """Управление пользователями в рабочем пространстве."""
+    response = None
+    if request.method in ['PUT', 'POST', 'DELETE']:
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.WorkspaceController.create(request, repo, authenticator, authorizer, user_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    if request.method == 'GET':
+        response = handlers.WorkspaceController.get_workspace_users(request, repo, workspace_id)
+    elif request.method == 'POST':
+        response = handlers.WorkspaceController.add_user_to_workspace(request, repo, authenticator, authorizer, user_id, workspace_id)
+    elif request.method == 'DELETE':
+        response = handlers.WorkspaceController.remove_user_from_workspace(request, repo, authenticator, authorizer, user_id, workspace_id)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/people/<int:target_user_id>', methods=['DELETE'])
+def workspace_remove_user(workspace_id: int, target_user_id: int):
+    """Удаление пользователя из рабочего пространства."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.WorkspaceController.remove_user_from_workspace(request, repo, authenticator, authorizer, user_id, workspace_id, target_user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/people/<int:target_user_id>/role', methods=['PUT'])
+def workspace_set_user_role(workspace_id: int, target_user_id: int):
+    """Установка роли пользователя в рабочем пространстве."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.WorkspaceController.set_user_role_in_workspace(request, repo, authenticator, authorizer, user_id, workspace_id, target_user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/people/<int:target_user_id>/role', methods=['GET'])
+def workspace_get_user_role(workspace_id: int, target_user_id: int):
+    """Получение роли пользователя в рабочем пространстве."""
+    response = handlers.WorkspaceController.get_user_role_in_workspace(request, repo, workspace_id, target_user_id)
+    return response
+
+
+@exceptions_handler
+@app.route('/projects', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def projects():
+    """Ресурс проектов."""
+    response = None
+
+    if request.method == 'GET':
+        response = handlers.ProjectController.get(request, repo)
+    elif request.method == 'POST':
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.ProjectController.create(request, repo, authenticator, authorizer, user_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+    elif request.method == 'PUT':
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.ProjectController.update(request, repo, authenticator, authorizer, user_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+    elif request.method == 'DELETE':
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.ProjectController.delete(request, repo, authenticator, authorizer, user_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/projects/<int:project_id>/people', methods=['GET'])
+def project_people(project_id: int):
+    """Получение пользователей проекта."""
+    response = handlers.ProjectController.get_project_users(request, repo, project_id)
+    return response
+
+
+@exceptions_handler
+@app.route('/projects/<int:project_id>/students', methods=['POST', 'DELETE'])
+def project_students(project_id: int):
+    """Управление студентами проекта."""
+    response = None
+
+    if request.method == 'POST':
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.ProjectController.add_student_to_project(request, repo, authenticator, authorizer, user_id, project_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+    elif request.method == 'DELETE':
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.ProjectController.add_student_to_project(request, repo, authenticator, authorizer, user_id, project_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/projects/<int:project_id>/students/<int:target_user_id>', methods=['DELETE'])
+def project_remove_student(project_id: int, target_user_id: int):
+    """Удаление студента из проекта."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.remove_student_from_project(request, repo, authenticator, authorizer, user_id, project_id, target_user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/projects/<int:project_id>/mentors', methods=['POST', 'DELETE'])
+def project_mentors(project_id: int):
+    """Управление наставниками проекта."""
+    response = None
+
+    if request.method == 'POST':
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.ProjectController.add_mentor_to_project(request, repo, authenticator, authorizer, user_id, project_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+    elif request.method == 'DELETE':
+        try:
+            access_token = request.headers.get('Authorization')
+            user_id = authenticator.get_user_id(access_token)
+            response = handlers.ProjectController.add_mentor_to_project(request, repo, authenticator, authorizer, user_id, project_id)
+        except ValueError:
+            return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/projects/<int:project_id>/mentors/<int:target_user_id>', methods=['DELETE'])
+def project_remove_mentor(project_id: int, target_user_id: int):
+    """Удаление наставника из проекта."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.remove_mentor_from_project(request, repo, authenticator, authorizer, user_id, project_id, target_user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
     return response
 

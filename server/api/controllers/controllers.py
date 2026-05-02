@@ -6,7 +6,7 @@ from flask import Request, Response
 
 import typing as tp
 
-from common.base import CommonStruct, ErrorCodes, TasksStatuses, DBFields
+from common.base import CommonStruct, ErrorCodes, TasksStatuses, DBFields, get_datetime_now
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from server.database.repository import DataRepository
@@ -18,6 +18,7 @@ from server.api.controllers.exceptions import (IncorrectParamException, VALUE, M
                                                map_service_to_controller_exc)
 from server.services.exceptions import BaseServiceException
 from server.api.controllers.data_handlers import Bool, Int, Date, DateTime, IntList, String
+from server.data_const import Roles
 
 logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
 
@@ -443,7 +444,7 @@ class PersonalManyDaysEventController(BaseController):
 class WorkspaceController(BaseController):
 
     @staticmethod
-    def add(request: flask.Request, repo: DataRepository):
+    def add(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int):
         """Добавляет пользователей в ПП. Структура запроса: api/endpoint&workspace_id,user_ids."""
         ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids),
                       ErrorCodes.incorrect_user_ids.value)
@@ -459,7 +460,7 @@ class WorkspaceController(BaseController):
 
     @staticmethod
     def kick(request: flask.Request, repo: DataRepository):
-        """Удаляет пользователей из ПП. Структура запроса: api/endpoint&workspace_id,user_ids."""
+        """Удаляет пользователей из РП. Структура запроса: api/endpoint&workspace_id,user_ids."""
         ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_user_ids.value)
         workspace_id = Int(CommonStruct.workspace_id, request.args.get(CommonStruct.workspace_id),
                            ErrorCodes.incorrect_workspace_id.value)
@@ -481,6 +482,214 @@ class WorkspaceController(BaseController):
                               ErrorCodes.incorrect_creator_ids.value)
         try:
             response = repo.get_workspaces(ids.value, creator_ids.value, limit, offset, require_last_num)
+            return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def create(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int):
+        """Создаёт рабочее пространство."""
+        workspace = request.json.get('workspace')
+        if not workspace:
+            raise IncorrectParamException({'workspace': {VALUE: None, MESSAGE: 'No workspace in request'}})
+
+        try:
+            workspace_id = services.WorkspaceService.create(workspace, user_id, repo, authorizer)
+
+            # Создаём роли для нового рабочего пространства
+            roles = [
+                {DBFields.name: Roles.mentor.value, DBFields.workspace_id: workspace_id},
+                {DBFields.name: Roles.student.value, DBFields.workspace_id: workspace_id},
+                {DBFields.name: Roles.admin.value, DBFields.workspace_id: workspace_id},
+                {DBFields.name: Roles.team_lead.value, DBFields.workspace_id: workspace_id}
+            ]
+            repo.add_ws_roles(roles)
+
+            return utl.form_success_response({'workspace_id': workspace_id})
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def update(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int):
+        """Обновляет рабочее пространство."""
+        workspace = request.json.get('workspace')
+        if not workspace:
+            raise IncorrectParamException({'workspace': {VALUE: None, MESSAGE: 'No workspace in request'}})
+
+        try:
+            workspace[DBFields.updated_at] = get_datetime_now()
+            repo.update_workspaces([workspace])
+            return utl.form_success_response()
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def delete(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int):
+        """Удаляет рабочее пространство."""
+        ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_workspaces_ids.value)
+        try:
+            repo.delete_workspaces(ids.value)
+            return utl.form_success_response()
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def add_user_to_workspace(request: flask.Request, repo: DataRepository, authorizer: Authorizer, user_id: int, workspace_id: int):
+        """Добавляет пользователей в рабочее пространство."""
+        user_ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_user_ids.value)
+        try:
+            for uid in user_ids.value:
+                services.WorkspaceService.add_user_to_workspace(uid, workspace_id, repo, authorizer, user_id)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def remove_user_from_workspace(request: flask.Request, repo: DataRepository, authorizer: Authorizer, user_id: int, workspace_id: int, target_user_id: int):
+        """Удаляет пользователя из рабочего пространства."""
+        try:
+            services.WorkspaceService.delete_user_from_workspace(target_user_id, workspace_id, repo, authorizer, user_id)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def get_workspace_users(request: flask.Request, repo: DataRepository, workspace_id: int, limit: int = None, offset: int = None, require_last_num: bool = False):
+        """Получает пользователей рабочего пространства."""
+        try:
+            response = repo.get_workspace_users(workspace_id, limit, offset, require_last_num)
+            return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def get_user_role_in_workspace(request: flask.Request, repo: DataRepository, workspace_id: int, target_user_id: int):
+        """Получает роль пользователя в рабочем пространстве."""
+        try:
+            role = services.WorkspaceService.get_user_role(target_user_id, workspace_id, repo)
+            if role:
+                return utl.form_success_response(role)
+            else:
+                return utl.form_response(404, 'User not found in workspace', error_id=ErrorCodes.incorrect_user_id.value)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def set_user_role_in_workspace(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int, workspace_id: int, target_user_id: int):
+        """Устанавливает роль пользователю в рабочем пространстве."""
+        role_id = Int('role_id', request.args.get('role_id'), ErrorCodes.incorrect_id.value)
+        try:
+            services.WorkspaceService.set_user_role(target_user_id, workspace_id, role_id.value, repo, authorizer, user_id)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+
+class ProjectController(BaseController):
+    """Контроллер проектов."""
+
+    @staticmethod
+    def create(request: flask.Request, repo: DataRepository, authorizer: Authorizer, user_id: int):
+        """Создаёт проект."""
+        project = request.json.get('project')
+        workspace_id = Int('workspace_id', request.json.get('workspace_id'), ErrorCodes.incorrect_workspace_id.value)
+
+        if not project:
+            raise IncorrectParamException({'project': {VALUE: None, MESSAGE: 'No project in request'}})
+        if not workspace_id.value:
+            raise IncorrectParamException({'workspace_id': {VALUE: None, MESSAGE: 'workspace_id is required'}})
+
+        try:
+            project_id = services.ProjectService.create(project, workspace_id.value, user_id, repo, authorizer)
+            return utl.form_success_response({'project_id': project_id})
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    @utl.get_request
+    def get(request: flask.Request, repo: DataRepository, limit: int = None, offset: int = None, require_last_num: bool = False):
+        """Получает проекты."""
+        ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_id.value)
+        workspace_ids = IntList('workspace_ids', request.args.getlist('workspace_ids'), ErrorCodes.incorrect_workspace_id.value)
+        creator_ids = IntList(CommonStruct.creator_ids, request.args.getlist(CommonStruct.creator_ids), ErrorCodes.incorrect_creator_ids.value)
+
+        try:
+            response = repo.get_projects(ids.value if ids.value else None,
+                                         workspace_ids.value if workspace_ids.value else None,
+                                         creator_ids.value if creator_ids.value else None,
+                                         limit, offset, require_last_num)
+            return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def update(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int):
+        """Обновляет проект."""
+        project = request.json.get('project')
+        if not project:
+            raise IncorrectParamException({'project': {VALUE: None, MESSAGE: 'No project in request'}})
+
+        try:
+            services.ProjectService.update(project, user_id, repo, authorizer)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def delete(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int):
+        """Удаляет проекты."""
+        ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_id.value)
+        try:
+            services.ProjectService.delete(tuple(ids.value), user_id, repo, authorizer)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def add_student_to_project(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int, project_id: int):
+        """Добавляет студента в проект."""
+        user_ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_user_ids.value)
+        try:
+            for uid in user_ids.value:
+                services.ProjectService.add_student_to_project(uid, project_id, repo, authorizer, user_id)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def remove_student_from_project(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int, project_id: int, target_user_id: int):
+        """Удаляет студента из проекта."""
+        try:
+            services.ProjectService.delete_student_from_project(target_user_id, project_id, repo, authorizer, user_id)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def add_mentor_to_project(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int, project_id: int):
+        """Добавляет наставника в проект."""
+        user_ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_user_ids.value)
+        try:
+            for uid in user_ids.value:
+                services.ProjectService.add_mentor_to_project(uid, project_id, repo, authorizer, user_id)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def remove_mentor_from_project(request: flask.Request, repo: DataRepository, authenticator: Authenticator, authorizer: Authorizer, user_id: int, project_id: int, target_user_id: int):
+        """Удаляет наставника из проекта."""
+        try:
+            services.ProjectService.delete_mentor_from_project(target_user_id, project_id, repo, authorizer, user_id)
+            return utl.form_success_response()
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def get_project_users(request: flask.Request, repo: DataRepository, project_id: int, limit: int = None, offset: int = None, require_last_num: bool = False):
+        """Получает пользователей проекта."""
+        try:
+            response = repo.get_project_users(project_id, limit, offset, require_last_num)
             return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
         except BaseRepoException as e:
             raise map_repo_to_controller_exc(e, {})

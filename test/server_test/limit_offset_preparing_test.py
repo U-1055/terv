@@ -62,7 +62,6 @@ def test_over_limit(config_limit_offset_test_db, set_config, requester: TestRequ
     assert length == base_params.get(cf.TASKS_NUM), f'Num of returned records ({length}) not equal the limit ({request}).'
 
 
-# ToDo: падает тест с -1, проверить после переделки контроллеров
 @pytest.mark.f_data(base_params)
 @pytest.mark.parametrize(
     ('limit',),

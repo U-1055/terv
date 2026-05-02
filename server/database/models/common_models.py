@@ -38,6 +38,7 @@ class User(Base):
 
     created_personal_tasks: Mapped[list['PersonalTask']] = relationship('PersonalTask',
                                                                         back_populates='owner')  # Личные задачи
+    mentoring_projects: Mapped[list['Project']] = relationship(secondary='project_mentor', back_populates='mentors')  # Проекты под наставничеством
     # Роли
     roles: Mapped[list['WSRole']] = relationship(secondary='user_ws_role', back_populates='users')
 
@@ -100,10 +101,18 @@ class Project(Base):
     users: Mapped[list[User]] = relationship(secondary='project_user', back_populates='linked_projects')
     creator: Mapped[User] = relationship(User, back_populates='created_projects')
     tasks: Mapped[list['WSTask']] = relationship('WSTask', back_populates='project')
+    mentors: Mapped[list['User']] = relationship(secondary='project_mentor', back_populates='mentoring_projects')
 
 
 project_user = Table(
     'project_user',
+    Base.metadata,
+    Column('user_id', ForeignKey('user.id'), primary_key=True),
+    Column('project_id', ForeignKey('project.id'), primary_key=True)
+)
+
+project_mentor = Table(
+    'project_mentor',
     Base.metadata,
     Column('user_id', ForeignKey('user.id'), primary_key=True),
     Column('project_id', ForeignKey('project.id'), primary_key=True)

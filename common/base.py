@@ -132,7 +132,7 @@ class DBFields:
     plan_start_work_date = 'plan_start_work_date'
     fact_start_work_date = 'fact_start_work_date'
     responsible = 'responsible'
-    executors = 'executors'
+    executor = 'executor'
     entrusted = 'entrusted'
     work_direction = 'work_direction'
     parent_task = 'parent_task'

@@ -187,7 +187,7 @@ class DataRepository:
         if ids:
             query = query.where(cm.WSTask.id.in_(ids))
         if executor_id:
-            query = query.where(cm.WSTask.executors.any(cm.User.id == executor_id))
+            query = query.where(cm.WSTask.executor.any(cm.User.id == executor_id))
         if workspace_id:
             query = query.where(cm.WSTask.workspace_id == workspace_id)
         if working_date:
@@ -455,6 +455,83 @@ class DataRepository:
     @exc_mapped
     def add_ws_roles(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
         return self._execute_insert(models, cm.WSRole)
+
+    @exc_mapped
+    def add_project_user(self, user_id: int, project_id: int):
+        """Добавляет пользователя в проект через таблицу project_user."""
+        with self._session_maker() as session, session.begin():
+            self._prepare_session(session)
+            session.execute(cm.project_user.insert().values(user_id=user_id, project_id=project_id))
+
+    @exc_mapped
+    def delete_project_user(self, user_id: int, project_id: int):
+        """Удаляет пользователя из проекта через таблицу project_user."""
+        with self._session_maker() as session, session.begin():
+            self._prepare_session(session)
+            session.execute(cm.project_user.delete().where(
+                (cm.project_user.c.user_id == user_id) & (cm.project_user.c.project_id == project_id)
+            ))
+
+    @exc_mapped
+    def add_workspace_user(self, user_id: int, workspace_id: int):
+        """Добавляет пользователя в рабочее пространство через таблицу workspace_user."""
+        with self._session_maker() as session, session.begin():
+            self._prepare_session(session)
+            session.execute(cm.workspace_user.insert().values(user_id=user_id, workspace_id=workspace_id))
+
+    @exc_mapped
+    def delete_workspace_user(self, user_id: int, workspace_id: int):
+        """Удаляет пользователя из рабочего пространства через таблицу workspace_user."""
+        with self._session_maker() as session, session.begin():
+            self._prepare_session(session)
+            session.execute(cm.workspace_user.delete().where(
+                (cm.workspace_user.c.user_id == user_id) & (cm.workspace_user.c.workspace_id == workspace_id)
+            ))
+
+    @exc_mapped
+    def get_project_users(self, project_id: int, limit: int = None, offset: int = None,
+                          require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        """Получает пользователей проекта."""
+        query = select(cm.User).join(cm.project_user, cm.User.id == cm.project_user.c.user_id
+                                     ).where(cm.project_user.c.project_id == project_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_workspace_users(self, workspace_id: int, limit: int = None, offset: int = None,
+                            require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        """Получает пользователей рабочего пространства."""
+        query = select(cm.User).join(cm.workspace_user, cm.User.id == cm.workspace_user.c.user_id
+                                     ).where(cm.workspace_user.c.workspace_id == workspace_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def get_projects(self, project_ids: tp.Sequence[int] | None = None, workspace_ids: tp.Sequence[int] | None = None,
+                     creator_ids: tp.Sequence[int] | None = None, limit: int = None, offset: int = None,
+                     require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        """Получает проекты по фильтрам."""
+        query = select(cm.Project)
+        if project_ids:
+            query = query.where(cm.Project.id.in_(project_ids))
+        if workspace_ids:
+            query = query.where(cm.Project.workspace_id.in_(workspace_ids))
+        if creator_ids:
+            query = query.where(cm.Project.creator_id.in_(creator_ids))
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
+    def add_projects(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        """Добавляет проекты в БД."""
+        return self._execute_insert(models, cm.Project)
+
+    @exc_mapped
+    def delete_projects(self, project_ids: tp.Iterable[int]):
+        """Удаляет проекты по ID."""
+        self._execute_delete(project_ids, cm.Project)
+
+    @exc_mapped
+    def update_projects(self, models: tp.Iterable[dict]):
+        """Обновляет проекты."""
+        self._execute_update(models, cm.Project)
 
     @exc_mapped
     def add_ws_task_statuses(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':

@@ -3,7 +3,7 @@ from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql.expression import insert
 
 import server.database.models.common_models as cm
-from server.data_const import Permissions
+from server.data_const import Permissions, Roles
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
@@ -29,3 +29,4 @@ def add_permissions(engine: Engine):
     session = sessionmaker(bind=engine)
     with session() as s, s.begin():
         s.execute(insert(cm.Permission), [{'type': type_} for type_ in Permissions.__dict__])
+

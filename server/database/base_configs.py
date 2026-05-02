@@ -86,13 +86,13 @@ def set_db_config_1(engine: Engine,
 
         if workspace_tasks_params:
             workspace_tasks = [cm.WSTask(name=params[0], description=params[1], workspace=workspace, creator=ws_creator,
-                                         entrusted=ws_creator, executors=[user_1, user_2], plan_deadline=datetime.date.today(),
+                                         entrusted=ws_creator, executor=user_1, plan_deadline=datetime.date.today(),
                                          status=default_ws_task_status)
                                for params in workspace_tasks_params]
         else:
             workspace_tasks = [
                 cm.WSTask(name=f'ws_task.{i}', description='Description', creator=ws_creator, entrusted=ws_creator,
-                          executors=[user_1, user_2], workspace=workspace, plan_deadline=datetime.date.today(),
+                          executor=user_1, workspace=workspace, plan_deadline=datetime.date.today(),
                           status=default_ws_task_status)
                 for i in range(10)]
         session.add_all(workspace_tasks)
