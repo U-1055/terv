@@ -322,6 +322,30 @@ class ProjectService(BaseService):
         if not authorizer.check_permissions(requesting_user_id, Permissions.invite.value):
             raise err.AccessDenied(f'Your role can\'t invite')
 
+        # Проверяем, что пользователь не является студентом в другом проекте этого рабочего пространства
+        project_data = repo.get_projects([project_id])
+        if not project_data.content:
+            raise err.IncorrectParamError('project', f'Project with id {project_id} not found')
+
+        project = project_data.content[0]
+        workspace_id = project.get('workspace_id')
+
+        if not workspace_id:
+            raise err.IncorrectParamError('project', f'Project {project_id} has no workspace_id')
+
+        # Получаем все проекты этого рабочего пространства
+        workspace_projects = repo.get_projects_by_workspace_id(workspace_id)
+
+        # Проверяем, является ли пользователь студентом в другом проекте
+        for wp in workspace_projects.content:
+            wp_id = wp.get('id')
+            if wp_id != project_id:
+                # Проверяем, является ли пользователь студентом в этом проекте
+                project_users = repo.get_project_users(wp_id)
+                for pu in project_users.content:
+                    if pu.get('id') == user_id:
+                        raise err.AccessDenied(f'User is already a student in another project of this workspace')
+
         repo.add_project_user(user_id, project_id)
 
     @staticmethod

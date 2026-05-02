@@ -11,6 +11,8 @@ else:
 from client.utils.timeout_list import TimeoutList
 from client.src.src.handlers.window_handlers.userspace_handler import UserSpaceWindowHandler
 from client.src.src.handlers.window_handlers.settings_window_handler import SettingsWindowHandler
+from client.src.src.handlers.window_handlers.workspaces_window_handler import WorkspacesListWindowHandler
+from client.src.src.handlers.window_handlers.workspace_window_handler import WorkspaceWindowHandler
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst, GuiLabels, styles_paths
@@ -65,6 +67,7 @@ class Logic:
         self._view.set_style(style)
 
         self._view.btn_open_userspace_pressed.connect(self._open_userspace)
+        self._view.btn_open_workspaces_pressed.connect(self._open_workspaces)
         self._view.btn_update_pressed.connect(self._update_state)
         self._view.btn_open_settings_pressed.connect(self._open_settings)
 
@@ -133,6 +136,9 @@ class Logic:
         self._auth_window_handler.network_error_occurred.connect(self._on_network_error_occurred)
         main_auth_window.btn_exit_pressed.connect(self._close)
 
+    def _on_tried_to_open_workspace(self, id_: int, name: str):
+        self.open_workspace_window(id_, name)
+
     def _update_current_window(self):
         if self._opened_now:
             logger.debug(f'Updating current hanlder. Handler: {self._opened_now}')
@@ -196,6 +202,30 @@ class Logic:
         if self._user:
             self._opened_now.set_user_data(self._user)
             self._opened_now.set_mode_log_out()
+
+    def _open_workspaces(self):
+        """Открывает окно списка рабочих пространств."""
+        self._open_base_window(WorkspacesListWindowHandler, self._open_workspaces, self._view.open_workspaces_list_window)
+        self._opened_now: WorkspacesListWindowHandler
+        self._opened_now.tried_to_open_workspace.connect(self.open_workspace_window)
+        self._opened_now.update_state()
+
+    def open_workspace_window(self, workspace_id: int, workspace_name: str):
+        """
+        Открывает окно конкретного рабочего пространства.
+
+        :param workspace_id: ID рабочего пространства.
+        :param workspace_name: Название рабочего пространства.
+        """
+        window = self._view.open_workspace_window(workspace_id, workspace_name,
+                                                   DataStructConst.userspace_loading_time)
+        win_handler = WorkspaceWindowHandler(window, self._view, self._requester, self._model,
+                                              workspace_id, workspace_name)
+        self._win_handlers.append(win_handler)
+        self._opened_now = win_handler
+        win_handler.incorrect_tokens_update.connect(self._authorize)
+        win_handler.network_error_occurred.connect(self._on_network_error_occurred)
+        win_handler.update_state()
 
 
 if __name__ == '__main__':

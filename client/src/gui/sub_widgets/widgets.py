@@ -8,6 +8,150 @@ from client.src.ui.ui_event_widget import Ui_Form as EventView
 from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.src.gui.sub_widgets.util_widgets import QMouseActivatingLineEdit, QClickableLabel
 from client.src.ui.ui_user_widget import Ui_Form as UserView
+from client.src.ui.ui_workspace_widget import Ui_WorkspaceWidget
+
+
+class ProjectWidget(QWidget):
+    """
+    Виджет проекта рабочего пространства.
+
+    :param name: Название проекта.
+    :param mentor: Имя наставника.
+    :param students: Список имен студентов.
+    :param stage: Этап проекта.
+    :param project_id: ID проекта.
+    """
+
+    clicked = Signal(int)  # Сигнал при клике на виджет. Возвращает ID проекта.
+
+    def __init__(self, name: str, mentor: str, students: list[str],
+                 stage: str = "Этап: ...", project_id: int = 0):
+        super().__init__()
+        self._project_id = project_id
+        self._name = name
+        self._mentor = mentor
+        self._students = students
+        self._stage = stage
+
+        self._view = Ui_ProjectWidget()
+        self._view.setupUi(self)
+
+        # Установка текста
+        self._view.lbl_name.setText(name)
+        self._view.lbl_stage.setText(stage)
+        self._view.lbl_mentor.setText(mentor if mentor else "Не указан")
+        self._view.lbl_students.setText(", ".join(students) if students else "Нет студентов")
+
+        # Подключение сигнала клика
+        self._view.frame.clicked.connect(self._on_frame_clicked)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def _on_frame_clicked(self):
+        """Обработка клика на фрейм виджета."""
+        self.clicked.emit(self._project_id)
+
+    def name(self) -> str:
+        """Возвращает название проекта."""
+        return self._view.lbl_name.text()
+
+    def set_name(self, name: str):
+        """Устанавливает название проекта."""
+        self._name = name
+        self._view.lbl_name.setText(name)
+
+    def mentor(self) -> str:
+        """Возвращает имя наставника."""
+        return self._view.lbl_mentor.text()
+
+    def set_mentor(self, mentor: str):
+        """Устанавливает имя наставника."""
+        self._mentor = mentor
+        self._view.lbl_mentor.setText(mentor if mentor else "Не указан")
+
+    def students(self) -> list[str]:
+        """Возвращает список студентов."""
+        return self._students
+
+    def set_students(self, students: list[str]):
+        """Устанавливает список студентов."""
+        self._students = students
+        self._view.lbl_students.setText(", ".join(students) if students else "Нет студентов")
+
+    def stage(self) -> str:
+        """Возвращает этап проекта."""
+        return self._stage
+
+    def set_stage(self, stage: str):
+        """Устанавливает этап проекта."""
+        self._stage = stage
+        self._view.lbl_stage.setText(stage)
+
+    def project_id(self) -> int:
+        """Возвращает ID проекта."""
+        return self._project_id
+
+    def set_project_id(self, project_id: int):
+        """Устанавливает ID проекта."""
+        self._project_id = project_id
+
+
+class WorkspaceWidget(QWidget):
+    """
+    Виджет рабочего пространства.
+
+    :param name: Название рабочего пространства.
+    :param description: Описание рабочего пространства.
+    :param workspace_id: ID рабочего пространства.
+    """
+
+    clicked = Signal(int)  # Испускается при клике на виджет. Возвращает ID рабочего пространства.
+
+    def __init__(self, name: str, description: str, workspace_id: int):
+        super().__init__()
+        self._workspace_id = workspace_id
+        self._name = name
+        self._description = description
+
+        self._view = Ui_WorkspaceWidget()
+        self._view.setupUi(self)
+
+        # Установка текста
+        self._view.lbl_name.setText(name)
+        self._view.lbl_description.setText(description if description else 'Описание отсутствует')
+
+        # Подключение сигнала клика
+        self._view.frame.clicked.connect(self._on_frame_clicked)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def _on_frame_clicked(self):
+        """Обработка клика на фрейм виджета."""
+        self.clicked.emit(self._workspace_id)
+
+    def name(self) -> str:
+        """Возвращает название рабочего пространства."""
+        return self._view.lbl_name.text()
+
+    def set_name(self, name: str):
+        """Устанавливает название рабочего пространства."""
+        self._name = name
+        self._view.lbl_name.setText(name)
+
+    def description(self) -> str:
+        """Возвращает описание рабочего пространства."""
+        return self._view.lbl_description.text()
+
+    def set_description(self, description: str):
+        """Устанавливает описание рабочего пространства."""
+        self._description = description
+        self._view.lbl_description.setText(description if description else 'Описание отсутствует')
+
+    def workspace_id(self) -> int:
+        """Возвращает ID рабочего пространства."""
+        return self._workspace_id
+
+    def set_workspace_id(self, workspace_id: int):
+        """Устанавливает ID рабочего пространства."""
+        self._workspace_id = workspace_id
 
 
 class UserSpaceTask(QWidget):

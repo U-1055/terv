@@ -64,6 +64,33 @@ class IRequests(ABC):
     def get_ws_tasks(self, tasks_ids: list[int], access_token: str, limit: int = None, offset: int = 0) -> Response:
         pass
 
+    def get_workspaces(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = 0):
+        pass
+
+    def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
+        pass
+
+    def get_workspace_users(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
+        pass
+
+    def get_user_role_in_workspace(self, workspace_id: int, user_id: int, access_token: str):
+        pass
+
+    def set_user_role_in_workspace(self, workspace_id: int, user_id: int, role_id: int, access_token: str):
+        pass
+
+    def update_workspace(self, workspace_id: int, name: str, description: str, access_token: str):
+        pass
+
+    def get_workspace_analytics(self, workspace_id: int, access_token: str):
+        pass
+
+    def get_project_analytics(self, workspace_id: int, project_id: int, access_token: str):
+        pass
+
+    def get_projects(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = 0):
+        pass
+
     def set_ws_task_status(self, ws_task_id: int, status: str, access_token: str):
         """Изменяет статус задачи РП."""
         pass

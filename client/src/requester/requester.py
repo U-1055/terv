@@ -324,6 +324,66 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
+    async def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает проекты рабочего пространства."""
+        path = f'{self._server}/workspaces/{workspace_id}/projects'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
+    async def get_workspace_users(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает пользователей рабочего пространства."""
+        path = f'{self._server}/workspaces/{workspace_id}/people'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
+    async def get_user_role_in_workspace(self, workspace_id: int, user_id: int, access_token: str):
+        """Получает роль пользователя в рабочем пространстве."""
+        path = f'{self._server}/workspaces/{workspace_id}/people/{user_id}/role'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def set_user_role_in_workspace(self, workspace_id: int, user_id: int, role_id: int, access_token: str):
+        """Устанавливает роль пользователю в рабочем пространстве."""
+        path = f'{self._server}/workspaces/{workspace_id}/people/{user_id}/role'
+        request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
+                                  query_params={'role_id': role_id})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def update_workspace(self, workspace_id: int, name: str, description: str, access_token: str):
+        """Обновляет рабочее пространство."""
+        path = f'{self._server}/workspaces'
+        request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
+                                  json_={'workspace': {'id': workspace_id, 'name': name, 'description': description}})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def get_workspace_analytics(self, workspace_id: int, access_token: str):
+        """Получает аналитику рабочего пространства."""
+        path = f'{self._server}/workspaces/{workspace_id}/analytics'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def get_project_analytics(self, workspace_id: int, project_id: int, access_token: str):
+        """Получает аналитику проекта."""
+        path = f'{self._server}/workspaces/{workspace_id}/projects/{project_id}/analytics'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
     async def get_ws_daily_events_by_user(self, user_id: int, ws_daily_events_ids: list[int], access_token: str,
                                           date: datetime.date = None, limit: int = None, offset: int = 0):
 

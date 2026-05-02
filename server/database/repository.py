@@ -519,6 +519,13 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
+    def get_projects_by_workspace_id(self, workspace_id: int, limit: int = None, offset: int = None,
+                                     require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        """Получает проекты по ID рабочего пространства."""
+        query = select(cm.Project).where(cm.Project.workspace_id == workspace_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
     def add_projects(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
         """Добавляет проекты в БД."""
         return self._execute_insert(models, cm.Project)

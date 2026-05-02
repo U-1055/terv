@@ -24,7 +24,7 @@ logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZ
 app = Flask(__name__)
 config = Config(Path(project_root() / "server" / "config.json"))
 database_path = config.database_path
-engine = init_db(database_path)
+engine = launch_db(database_path)
 
 logger.info(f'Module is running. Environment: {config.env}. DB path: {database_path}.'
             f'Access lifetime: {config.access_token_lifetime}. Refresh lifetime: {config.refresh_token_lifetime}')
@@ -484,6 +484,48 @@ def workspace_set_user_role(workspace_id: int, target_user_id: int):
 def workspace_get_user_role(workspace_id: int, target_user_id: int):
     """Получение роли пользователя в рабочем пространстве."""
     response = handlers.WorkspaceController.get_user_role_in_workspace(request, repo, workspace_id, target_user_id)
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/projects', methods=['GET'])
+def workspace_projects(workspace_id: int):
+    """Получение проектов рабочего пространства."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.get_workspace_projects(request, repo, workspace_id, user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/analytics', methods=['GET'])
+def workspace_analytics(workspace_id: int):
+    """Получение аналитики рабочего пространства."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.AnalyticsController.get_workspace_analytics(request, repo, workspace_id, user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/projects/<int:project_id>/analytics', methods=['GET'])
+def project_analytics(workspace_id: int, project_id: int):
+    """Получение аналитики проекта."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.AnalyticsController.get_project_analytics(request, repo, workspace_id, project_id, user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
     return response
 
 

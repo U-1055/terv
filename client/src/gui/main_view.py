@@ -6,6 +6,8 @@ from client.src.gui.sub_widgets.common_widgets import QProgressWidget
 from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
 from client.src.gui.windows.userspace_window import UserSpaceWindow
+from client.src.gui.windows.workspaces_window import WorkspacesListWindow
+from client.src.gui.windows.workspace_window import WorkspaceWindow
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.windows.settings_window import SettingsWindow
 from client.src.gui.windows.auth_window import PopUpAuthWindow
@@ -26,6 +28,7 @@ class MainWindow(QMainWindow):
 
     btn_open_personal_tasks_window_pressed = Signal()
     btn_open_userspace_pressed = Signal()
+    btn_open_workspaces_pressed = Signal()
     btn_open_settings_pressed = Signal()
     btn_update_pressed = Signal()
 
@@ -53,10 +56,11 @@ class MainWindow(QMainWindow):
 
         self._view.btn_settings.clicked.connect(self.press_btn_open_settings)
         self._view.btn_userspace.clicked.connect(self.press_btn_open_userspace)
+        self._view.btn_worspaces.clicked.connect(self.press_btn_open_workspaces)
 
         self._opened_dialog_windows: list[QDialog] = []
         self._opened_message_windows: list[QMessageBox] = []
-        self._switching_buttons = [self._view.btn_userspace, self._view.btn_settings]
+        self._switching_buttons = [self._view.btn_userspace, self._view.btn_settings, self._view.btn_worspaces]
 
     def _off_windows_buttons(self):
         """Делает неактивными кнопки перехода между окнами."""
@@ -132,6 +136,9 @@ class MainWindow(QMainWindow):
 
     def press_btn_open_userspace(self):
         self.btn_open_userspace_pressed.emit()
+
+    def press_btn_open_workspaces(self):
+        self.btn_open_workspaces_pressed.emit()
 
     def press_btn_open_settings(self):
         self.btn_open_settings_pressed.emit()
@@ -235,6 +242,23 @@ class MainWindow(QMainWindow):
 
     def open_settings(self, loading_time: int | None = None) -> SettingsWindow:
         window = self._open_window(SettingsWindow)
+        self._show_progress_window(loading_time)
+        return window
+
+    def open_workspaces_list_window(self, loading_time: int | None = None) -> WorkspacesListWindow:
+        """Открывает окно списка рабочих пространств."""
+        window = self._open_window(WorkspacesListWindow)
+        self._show_progress_window(loading_time)
+        return window
+
+    def open_workspace_window(self, workspace_id: int, workspace_name: str,
+                               loading_time: int | None = None) -> WorkspaceWindow:
+        """Открывает окно рабочего пространства."""
+        window = WorkspaceWindow(workspace_id, workspace_name)
+        self._view.wdg_window.insertWidget(-1, window)
+        current_idx = self._view.wdg_window.count()
+        window.destroyed.connect(lambda: self._destroy_window(current_idx))
+        self._view.wdg_window.setCurrentWidget(window)
         self._show_progress_window(loading_time)
         return window
 
