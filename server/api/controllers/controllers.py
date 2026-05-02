@@ -471,6 +471,14 @@ class WorkspaceController(BaseController):
         return utl.form_success_response()
 
     @staticmethod
+    def get_workspaces_by_user(repo: DataRepository, user_id: int):
+        """Получает рабочие пространства, в которых состоит пользователь."""
+        try:
+            return utl.form_success_response(content=repo.get_workspaces(participant_id=user_id))
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
     @utl.get_request
     def get(request: flask.Request, repo: DataRepository, limit: int = None, offset: int = None,
             require_last_num: bool = False):

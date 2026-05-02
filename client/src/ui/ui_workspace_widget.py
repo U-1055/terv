@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QSizePolicy, QVBoxLayout, QWidget)
+    QSizePolicy, QVBoxLayout, QWidget, QPushButton)
 
 class Ui_WorkspaceWidget(object):
     def setupUi(self, WorkspaceWidget):
@@ -45,9 +45,15 @@ class Ui_WorkspaceWidget(object):
         font = QFont("Calibri", 14, 75, False)
         self.lbl_name.setFont(font)
         self.top_layout.addWidget(self.lbl_name)
-        
+
         self.top_layout.addStretch(1)
-        
+
+        self.btn_open = QPushButton(self.frame)
+        self.btn_open.setObjectName(u"btn_open")
+        self.btn_open.setMinimumSize(QSize(80, 30))
+        self.btn_open.setMaximumSize(QSize(80, 30))
+        self.top_layout.addWidget(self.btn_open)
+
         self.main_layout.addLayout(self.top_layout)
         
         # Нижняя строка с описанием
@@ -68,3 +74,4 @@ class Ui_WorkspaceWidget(object):
 
     def retranslateUi(self, WorkspaceWidget):
         WorkspaceWidget.setWindowTitle(QCoreApplication.translate("WorkspaceWidget", u"WorkspaceWidget", None))
+        self.btn_open.setText(QCoreApplication.translate("WorkspaceWidget", u"Открыть", None))

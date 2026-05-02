@@ -50,7 +50,7 @@ class Workspace(Base):
     __tablename__ = 'workspace'
 
     id: int
-    creator_id: int | None
+    creator_id: int | None = None
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
@@ -83,6 +83,7 @@ class WSTask(Base):
     entrusted_id: int | None = None  # Поручивший
     work_direction_id: int | None = None  # Направление работы
     parent_task_id: int | None = None  # Родительская задача
+    executor_id: int | None = None
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
@@ -98,9 +99,9 @@ class WSTask(Base):
     workspace: int
     work_direction: int | None = None
     parent_task: int | None = None
+    executor: int
 
     responsible: list[int]
-    executors: list[int]
     child_tasks: list[int]
 
 

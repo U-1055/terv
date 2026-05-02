@@ -355,6 +355,13 @@ def user_ws_daily_events(user_id: int):
 
 
 @exceptions_handler
+@app.route('/users/<int:user_id>/workspaces', methods=['GET'])
+def user_workspaces(user_id: int):
+    """Ресурс рабочих пространств пользователя."""
+    return handlers.WorkspaceController.get_workspaces_by_user(repo, user_id)
+
+
+@exceptions_handler
 @app.route('/personal_daily_events', methods=['PUT', 'GET', 'DELETE', 'POST'])
 def personal_daily_events():
     """Ресурс личных однодневных событий."""

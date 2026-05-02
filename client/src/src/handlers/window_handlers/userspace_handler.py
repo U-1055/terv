@@ -163,8 +163,8 @@ class UserSpaceWindowHandler(BaseWindowHandler):
                     description.update({GuiLabels.responsible: iterable_to_str(task.responsible, ',', '#')})
                 if task.entrusted_id:
                     description.update({GuiLabels.entrusted: f'#{task.entrusted}'})
-                if task.executors:
-                    description.update({GuiLabels.executors: iterable_to_str(task.executors, ',', '#')})
+                if task.executor:
+                    description.update({GuiLabels.executors: f'#{task.executor}'})
 
             elif task.__tablename__ == ObjectTypes.personal_task:
                 task: cm.PersonalTask

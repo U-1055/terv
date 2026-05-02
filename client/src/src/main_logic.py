@@ -208,6 +208,7 @@ class Logic:
         self._open_base_window(WorkspacesListWindowHandler, self._open_workspaces, self._view.open_workspaces_list_window)
         self._opened_now: WorkspacesListWindowHandler
         self._opened_now.tried_to_open_workspace.connect(self.open_workspace_window)
+        self._opened_now.set_user_id(self._user.id)
         self._opened_now.update_state()
 
     def open_workspace_window(self, workspace_id: int, workspace_name: str):
@@ -217,6 +218,7 @@ class Logic:
         :param workspace_id: ID рабочего пространства.
         :param workspace_name: Название рабочего пространства.
         """
+        logger.debug(f'Opening workspace window with id: {workspace_id}')
         window = self._view.open_workspace_window(workspace_id, workspace_name,
                                                    DataStructConst.userspace_loading_time)
         win_handler = WorkspaceWindowHandler(window, self._view, self._requester, self._model,

@@ -149,13 +149,15 @@ class DataRepository:
 
     @exc_mapped
     def get_workspaces(self, workspace_ids: tp.Sequence[int] | None = None, creator_ids: tp.Sequence[int] | None = None,
-                       limit: int = None, offset: int = 0, require_last_rec_num: bool = False,
+                       participant_id: int | None = None, limit: int = None, offset: int = 0, require_last_rec_num: bool = False,
                        serialize: bool = True) -> 'RepoSelectResponse':
         query = select(cm.Workspace)
         if workspace_ids:
             query = query.where(cm.Workspace.id.in_(workspace_ids))
         if creator_ids:
             query = query.where(cm.Workspace.creator.id.in_(creator_ids))
+        if participant_id:
+            query = query.join(cm.Workspace.users).where(cm.User.id == participant_id)
 
         return self._execute_select(query, limit, offset, require_last_rec_num, serialize)
 
@@ -187,7 +189,7 @@ class DataRepository:
         if ids:
             query = query.where(cm.WSTask.id.in_(ids))
         if executor_id:
-            query = query.where(cm.WSTask.executor.any(cm.User.id == executor_id))
+            query = query.where(cm.WSTask.executor.has(cm.User.id == executor_id))
         if workspace_id:
             query = query.where(cm.WSTask.workspace_id == workspace_id)
         if working_date:

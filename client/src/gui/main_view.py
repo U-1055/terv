@@ -7,7 +7,7 @@ from client.src.gui.sub_widgets.base import BaseWidget
 from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
 from client.src.gui.windows.userspace_window import UserSpaceWindow
 from client.src.gui.windows.workspaces_window import WorkspacesListWindow
-from client.src.gui.windows.workspace_window import WorkspaceWindow
+from client.src.gui.windows.workspace_window import WorkspaceWindow, WorkspaceSettingsWindow
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.windows.settings_window import SettingsWindow
 from client.src.gui.windows.auth_window import PopUpAuthWindow
@@ -61,6 +61,9 @@ class MainWindow(QMainWindow):
         self._opened_dialog_windows: list[QDialog] = []
         self._opened_message_windows: list[QMessageBox] = []
         self._switching_buttons = [self._view.btn_userspace, self._view.btn_settings, self._view.btn_worspaces]
+
+        # Стек окон для навигации назад
+        self._window_stack: list[BaseWindow] = []
 
     def _off_windows_buttons(self):
         """Делает неактивными кнопки перехода между окнами."""
@@ -259,8 +262,61 @@ class MainWindow(QMainWindow):
         current_idx = self._view.wdg_window.count()
         window.destroyed.connect(lambda: self._destroy_window(current_idx))
         self._view.wdg_window.setCurrentWidget(window)
+        self._push_to_stack_if_needed(window)
         self._show_progress_window(loading_time)
         return window
+
+    def open_workspace_settings_window(self, workspace_id: int, name: str, description: str,
+                                        loading_time: int | None = None) -> WorkspaceSettingsWindow:
+        """Открывает окно настроек рабочего пространства"""
+        window = WorkspaceSettingsWindow(workspace_id, name, description)
+        self._view.wdg_window.insertWidget(-1, window)
+        current_idx = self._view.wdg_window.count()
+        window.destroyed.connect(lambda: self._destroy_window(current_idx))
+        self._view.wdg_window.setCurrentWidget(window)
+        self._push_to_stack_if_needed(window)
+        self._show_progress_window(loading_time)
+        return window
+
+    def _push_to_stack_if_needed(self, window: BaseWindow):
+        """
+        Добавляет окно в стек, если это не первое окно.
+
+        :param window: Окно для добавления в стек.
+        """
+        # Добавляем в стек только если есть предыдущее окно
+        if self._window_stack or self._view.wdg_window.count() > 1:
+            self._window_stack.append(window)
+
+    def push_to_stack(self, window: BaseWindow):
+        """
+        Добавляет окно в стек и переключается на него.
+
+        :param window: Окно, которое нужно добавить в стек.
+        """
+        self._window_stack.append(window)
+        self._view.wdg_window.setCurrentWidget(window)
+        logger.debug(f'Window pushed to stack: {window}')
+
+    def go_back(self):
+        """
+        Возвращается на предыдущее окно в стеке.
+
+        :return: Предыдущее окно или None, если стек пуст.
+        """
+        if len(self._window_stack) > 0:
+            previous_window = self._window_stack.pop()
+            self._view.wdg_window.setCurrentWidget(previous_window)
+            logger.debug(f'Going back to window: {previous_window}')
+            return previous_window
+        else:
+            logger.warning('Window stack is empty, cannot go back')
+            return None
+
+    def clear_stack(self):
+        """Очищает стек окон."""
+        self._window_stack.clear()
+        logger.debug('Window stack cleared')
 
     def open_window(self, window: BaseWindow):
         """Переключает окно в стековом виджете на указанное."""

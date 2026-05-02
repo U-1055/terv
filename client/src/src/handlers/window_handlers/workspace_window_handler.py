@@ -71,30 +71,43 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     def _on_back_pressed(self):
         """Обработка нажатия кнопки возврата."""
         logger.info('Back pressed in workspace window')
-        self.close()
-    
+        # Возвращаемся на предыдущее окно через MainView
+        self._main_view.go_back()
+
     def _on_settings_pressed(self):
         """Обработка нажатия кнопки настроек."""
         if not self._settings_handler:
             self._open_settings_window()
     
     def _open_settings_window(self):
-        """Открывает окно настроек рабочего пространства."""
+        """Открывает окно настроек рабочего пространства как полноценное окно."""
         name = self._workspace_data.get('name', '')
         description = self._workspace_data.get('description', '')
         
-        settings_window = WorkspaceSettingsWindow(self._workspace_id, name, description)
-        settings_window.back_pressed.connect(self._on_settings_back_pressed)
-        settings_window.save_pressed.connect(self._on_settings_save)
-        
-        self._main_view.show_dialog_window(settings_window, frameless=True)
-        self._settings_handler = WorkspaceSettingsHandler(settings_window, self._main_view, 
-                                                           self._requester, self._model, self)
-    
-    def _on_settings_back_pressed(self):
-        """Обработка возврата из настроек."""
+        # Открываем окно настроек через MainView как полноценное окно
+        settings_window = self._main_view.open_workspace_settings_window(
+            self._workspace_id, name, description,
+            loading_time=10  # Время загрузки в миллисекундах
+        )
+
+        # Создаём обработчик окна настроек
+        self._settings_handler = WorkspaceSettingsHandler(
+            settings_window, self._main_view,
+            self._requester, self._model, self
+        )
+
+        # Подключаем сигналы обработчика
+        self._settings_handler.closed.connect(self._on_settings_closed)
+
+    def _on_settings_closed(self):
+        """Обработка закрытия окна настроек."""
         self._settings_handler = None
     
+    def _on_settings_back_pressed(self):
+        """Обработка возврата из настроек (через обработчик)."""
+        if self._settings_handler:
+            self._settings_handler.close()
+
     def _on_settings_save(self, name: str, description: str):
         """
         Обработка сохранения настроек.
@@ -310,15 +323,17 @@ class WorkspaceSettingsHandler(BaseWindowHandler):
         self._window: WorkspaceSettingsWindow = window
         self._parent_handler = parent_handler
         
-        self._window.back_pressed.connect(self._on_back_pressed)
-        self._window.save_pressed.connect(self._on_save_pressed)
-    
-    def _on_back_pressed(self):
+        # Подключение сигналов окна
+        self._window.back_pressed.connect(self._on_btn_back_pressed)
+        self._window.save_pressed.connect(self._on_btn_save_pressed)
+
+    def _on_btn_back_pressed(self):
         """Обработка нажатия кнопки возврата."""
-        self._parent_handler._on_settings_back_pressed()
+        # Возвращаемся на предыдущее окно (рабочее пространство) через MainView
+        self._main_view.go_back()
         self.close()
     
-    def _on_save_pressed(self, name: str, description: str):
+    def _on_btn_save_pressed(self, name: str, description: str):
         """
         Обработка сохранения настроек.
         
@@ -326,3 +341,8 @@ class WorkspaceSettingsHandler(BaseWindowHandler):
         :param description: Новое описание.
         """
         self._parent_handler._on_settings_save(name, description)
+
+    def close(self):
+        """Закрывает окно настроек и уведомляет родительский обработчик."""
+        super().close()
+        self._parent_handler._on_settings_closed()

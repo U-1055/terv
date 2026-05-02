@@ -210,7 +210,10 @@ if __name__ == '__main__':
     with sessionmaker(bind=engine)() as session, session.begin():
         result = session.execute(select(cm.PersonalTask)).scalars().all()
         user_result = session.execute(select(cm.User)).scalars().all()
+        workspaces = session.execute(select(cm.Workspace).where(cm.Workspace.users.any(cm.User.id == 1)))
         print([user.completed_task_status_id for user in user_result])
         print([[model.status_id, model.name] for model in result])
+        print([ws for ws in workspaces])
+
 
 

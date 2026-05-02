@@ -9,6 +9,7 @@ from client.src.gui.sub_widgets.common_widgets import QStructuredText
 from client.src.gui.sub_widgets.util_widgets import QMouseActivatingLineEdit, QClickableLabel
 from client.src.ui.ui_user_widget import Ui_Form as UserView
 from client.src.ui.ui_workspace_widget import Ui_WorkspaceWidget
+from client.src.ui.ui_project_widget import Ui_ProjectWidget
 
 
 class ProjectWidget(QWidget):
@@ -105,6 +106,7 @@ class WorkspaceWidget(QWidget):
     """
 
     clicked = Signal(int)  # Испускается при клике на виджет. Возвращает ID рабочего пространства.
+    open_pressed = Signal(int)  # Испускается при нажатии кнопки "Открыть". Возвращает ID рабочего пространства.
 
     def __init__(self, name: str, description: str, workspace_id: int):
         super().__init__()
@@ -119,9 +121,13 @@ class WorkspaceWidget(QWidget):
         self._view.lbl_name.setText(name)
         self._view.lbl_description.setText(description if description else 'Описание отсутствует')
 
-        # Подключение сигнала клика
-        self._view.frame.clicked.connect(self._on_frame_clicked)
+        # Подключение сигнала кнопки открытия
+        self._view.btn_open.clicked.connect(self._on_btn_open_pressed)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def _on_btn_open_pressed(self):
+        """Обработка нажатия кнопки 'Открыть'."""
+        self.open_pressed.emit(self._workspace_id)
 
     def _on_frame_clicked(self):
         """Обработка клика на фрейм виджета."""

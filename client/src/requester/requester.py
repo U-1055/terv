@@ -342,6 +342,15 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
+    async def get_workspaces_by_user(self, user_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Возвращает список рабочих пространств, в которых состоит пользователь."""
+        path = f'{self._server}/users/{user_id}/workspaces'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
     async def get_user_role_in_workspace(self, workspace_id: int, user_id: int, access_token: str):
         """Получает роль пользователя в рабочем пространстве."""
         path = f'{self._server}/workspaces/{workspace_id}/people/{user_id}/role'
