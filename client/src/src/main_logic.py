@@ -13,6 +13,7 @@ from client.src.src.handlers.window_handlers.userspace_handler import UserSpaceW
 from client.src.src.handlers.window_handlers.settings_window_handler import SettingsWindowHandler
 from client.src.src.handlers.window_handlers.workspaces_window_handler import WorkspacesListWindowHandler
 from client.src.src.handlers.window_handlers.workspace_window_handler import WorkspaceWindowHandler
+from client.src.src.handlers.window_handlers.project_window_handler import ProjectWindowHandler
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler
 from client.src.client_model.model import Model
 from client.src.base import DataStructConst, GuiLabels, styles_paths
@@ -227,7 +228,39 @@ class Logic:
         self._opened_now = win_handler
         win_handler.incorrect_tokens_update.connect(self._authorize)
         win_handler.network_error_occurred.connect(self._on_network_error_occurred)
+        win_handler.tried_to_open_project.connect(self.open_project_window)
         win_handler.update_state()
+
+    def _on_project_returned(self):
+        """Обработка возврата из окна проекта."""
+        logger.info('Returned from project window')
+        # Возвращаемся на предыдущее окно через MainView
+        self._view.go_back()
+
+    def open_project_window(self, project_id: int, project_name: str, workspace_id: int):
+        """
+        Открывает окно проекта.
+
+        :param project_id: ID проекта.
+        :param project_name: Название проекта.
+        :param workspace_id: ID рабочего пространства.
+        """
+        logger.debug(f'Opening project window: {project_name} (id={project_id})')
+        window = self._view.open_project_window(project_id, project_name, workspace_id,
+                                                 DataStructConst.userspace_loading_time)
+        win_handler = ProjectWindowHandler(window, self._view, self._requester, self._model,
+                                           project_id, project_name, workspace_id)
+        self._win_handlers.append(win_handler)
+        self._opened_now = win_handler
+        win_handler.incorrect_tokens_update.connect(self._authorize)
+        win_handler.network_error_occurred.connect(self._on_network_error_occurred)
+        win_handler.tried_to_return.connect(self._on_project_return)
+        win_handler.update_state()
+
+    def _on_project_return(self):
+        """Обработка возврата из окна проекта."""
+        logger.info('Returning from project window')
+        self._view.go_back()
 
 
 if __name__ == '__main__':

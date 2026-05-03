@@ -91,6 +91,8 @@ class DataRepository:
             session.execute(delete(base_model).where(base_model.id.in_(ids)))
 
     def _execute_insert(self, models: tp.Iterable[dict], base_model: tp.Type[cm.Base]) -> 'RepoInsertResponse':
+        if base_model is cm.WSTask:
+            print(f'ЗАДАЧИ: {models}')
         with self._session_maker() as session, session.begin():
             self._prepare_session(session)
             schema: SQLAlchemyAutoSchema = schemes_models.get(base_model)
@@ -181,7 +183,7 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num)
 
     @exc_mapped
-    def get_ws_tasks(self, ids: tp.Sequence[int], workspace_id: int = None, executor_id: int = None,
+    def get_ws_tasks(self, ids: tp.Sequence[int], workspace_id: int = None, executor_id: int = None, project_id: int = None,
                      working_date: datetime.date = None, plan_deadline: datetime.datetime = None, status_ids: tp.Sequence[int] = None,
                      not_completed: bool = False, limit: int = None, offset: int = None,
                      require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
@@ -200,6 +202,8 @@ class DataRepository:
             query = query.where(cm.WSTask.workspace.has(cm.WSTask.status_id != cm.Workspace.completed_task_status_id))
         if plan_deadline:
             query = query.where(cm.WSTask.plan_deadline == plan_deadline)
+        if project_id:
+            query = query.where(cm.WSTask.project_id == project_id)
 
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
@@ -499,6 +503,14 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
+    def get_project_mentors(self, project_id: int, limit: int = None, offset: int = None, require_last_num: bool = False,
+                            serialize: bool = True) -> 'RepoSelectResponse':
+        """Получает наставников проекта."""
+        query = select(cm.User).join(cm.project_mentor, cm.User.id == cm.project_mentor.c.user_id
+                                     ).where(cm.project_mentor.c.project_id == project_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
+
+    @exc_mapped
     def get_workspace_users(self, workspace_id: int, limit: int = None, offset: int = None,
                             require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
         """Получает пользователей рабочего пространства."""
@@ -541,6 +553,13 @@ class DataRepository:
     def update_projects(self, models: tp.Iterable[dict]):
         """Обновляет проекты."""
         self._execute_update(models, cm.Project)
+
+    @exc_mapped
+    def get_work_stages_by_project_id(self, project_id: int, limit: int = None, offset: int = None,
+                                      require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
+        """Получает этапы проекта по его ID."""
+        query = select(cm.WorkStage).where(cm.WorkStage.project_id == project_id)
+        return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
     def add_ws_task_statuses(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':

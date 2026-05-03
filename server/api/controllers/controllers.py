@@ -6,7 +6,7 @@ from flask import Request, Response
 
 import typing as tp
 
-from common.base import CommonStruct, ErrorCodes, TasksStatuses, DBFields, get_datetime_now
+from common.base import CommonStruct, ErrorCodes, TasksStatuses, DBFields, get_datetime_now, WorkStages
 from common.logger import config_logger, SERVER
 from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from server.database.repository import DataRepository
@@ -70,8 +70,11 @@ class WSTaskController(BaseController):
                                  ErrorCodes.incorrect_plan_deadline.value)
         workspace_id = Int(CommonStruct.workspace_id, request.args.get(CommonStruct.workspace_id),
                            ErrorCodes.incorrect_workspace_id.value)
+        project_id = Int('project_id', request.args.get('project_id'), ErrorCodes.incorrect_workspace_id.value)
 
-        tasks = repo.get_ws_tasks(ids.value, workspace_id.value, executor_id.value, date.value, plan_deadline.value,
+        print(request.query_string)
+
+        tasks = repo.get_ws_tasks(ids.value, workspace_id.value, executor_id.value, project_id.value, date.value, plan_deadline.value,
                                   status_ids.value, not_completed.value, limit, offset)
 
         return utl.form_response(200, 'OK', content=tasks.content,
@@ -89,7 +92,8 @@ class WSTaskController(BaseController):
              "description" <описание задачи>
              "project_id" <Проект>
              "plan_deadline" <Планируемый дедлайн в формате datetime.datetime>
-             "executor_id" <ID исполнителя>
+             "executor_email" <Email исполнителя>
+             "plan_start" <Планируемая дата взятия в работу>
             }
         ]
         Добавляет все задачи в базу.
@@ -143,24 +147,42 @@ class WSTaskController(BaseController):
         status = String(CommonStruct.task_status,
                         request.args.get(CommonStruct.task_status),
                         ErrorCodes.incorrect_status.value, allowed=TasksStatuses)
-        status_id = String(CommonStruct.status_id,
-                           request.args.get(CommonStruct.status_ids),
-                           ErrorCodes.incorrect_status_id.value)
+        status_id = Int(CommonStruct.status_id,
+                        request.args.get(CommonStruct.status_id),
+                        ErrorCodes.incorrect_status_id.value)
 
         task = repo.get_ws_tasks([task_id])
-        if status.value in TasksStatuses:  # Если передан стандартный статус
-            if not task.content:
-                raise IncorrectParamException({"task_id": {VALUE: task, MESSAGE: "Incorrect task's ID"}})
-            task = task.content[0]
+        if not task.content:
+            raise IncorrectParamException({"task_id": {VALUE: None, MESSAGE: "Incorrect task's ID"}})
+
+        task = task.content[0]
+
+        # Если передан статус из TasksStatuses (строковый)
+        if status.value in [s.value for s in TasksStatuses]:
             workspace = repo.get_workspaces([task.get(DBFields.workspace)]).content[0]
 
             if status.value == TasksStatuses.completed.value:
                 completed_status_id = workspace.get(CommonStruct.completed_task_status_id)
                 repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: completed_status_id}])
                 return utl.form_success_response()
-        else:
+            elif status.value == TasksStatuses.planned.value:
+                repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: 1}])
+                return utl.form_success_response()
+            elif status.value == TasksStatuses.in_work.value:
+                repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: 2}])
+                return utl.form_success_response()
+            elif status.value == TasksStatuses.on_check.value:
+                repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: 3}])
+                return utl.form_success_response()
+            elif status.value == TasksStatuses.to_rework.value:
+                repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: 5}])
+                return utl.form_success_response()
+        # Если передан numeric status_id
+        elif status_id.value:
             repo.update_ws_tasks([{DBFields.id: task_id, DBFields.status_id: status_id.value}])
             return utl.form_success_response()
+        else:
+            raise IncorrectParamException({"status": {VALUE: None, MESSAGE: "Either status or status_id must be provided"}})
 
 
 class UserController(BaseController):
@@ -637,6 +659,13 @@ class ProjectController(BaseController):
         if not project:
             raise IncorrectParamException({'project': {VALUE: None, MESSAGE: 'No project in request'}})
 
+        # Извлекаем дополнительные поля из запроса и добавляем в словарь проекта
+        optional_fields = ['goal', 'relevance', 'tasks_description', 'problem', 'thesis']
+        for field in optional_fields:
+            value = request.json.get(field)
+            if value is not None:
+                project[field] = value
+
         try:
             services.ProjectService.update(project, user_id, repo, authorizer)
             return utl.form_success_response()
@@ -703,6 +732,14 @@ class ProjectController(BaseController):
             raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
+    def get_project_mentors(repo: DataRepository, project_id: int, limit: int = None, offset: int = None, require_last_num: bool = False):
+        try:
+            response = repo.get_project_mentors(project_id, limit, offset, require_last_num)
+            return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
     def get_workspace_projects(request: flask.Request, repo: DataRepository, workspace_id: int, user_id: int, limit: int = None, offset: int = None, require_last_num: bool = False):
         """Получает проекты рабочего пространства."""
         try:
@@ -711,6 +748,29 @@ class ProjectController(BaseController):
             return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
         except BaseRepoException as e:
             raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def get_stage(request: flask.Request, repo: DataRepository, user_id: int, project_id: int):
+        """Получает текущий этап проекта."""
+        try:
+            stage = services.ProjectService.get_stage(project_id, repo, request.headers.get('Authorization'), user_id)
+            if stage:
+                return utl.form_success_response(stage)
+            else:
+                return utl.form_response(404, 'No stage found', error_id=ErrorCodes.incorrect_id.value)
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def change_stage(request: flask.Request, repo: DataRepository, user_id: int, project_id: int):
+        """Меняет текущий этап проекта."""
+        stage_type = String('stage_type', request.args.get('stage_type'), ErrorCodes.incorrect_status.value, allowed=WorkStages)
+
+        try:
+            stage_id = services.ProjectService.change_stage(project_id, stage_type.value, repo, request.headers.get('Authorization'), user_id)
+            return utl.form_success_response({'stage_id': stage_id})
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
 
 
 class AnalyticsController(BaseController):

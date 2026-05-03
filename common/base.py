@@ -65,9 +65,37 @@ class CommonStruct:
 
 class TasksStatuses(enum.Enum):
     """Статусы задач."""
-    completed = 'completed'
+    completed = 'completed'  # Выполнено
+    planned = 'planned'  # Запланировано
+    on_check = 'on_check'  # Проверяется
+    to_rework = 'to_rework'  # Доработать
+    in_work = 'in_work'  # В работе
+
+    completed_name = 'Выполнено'
+    planned_name = 'Запланировано'
+    on_check_name = 'Проверяется'
+    to_rework_name = 'Доработать'
+    in_work_name = 'В работе'
+
     default_task_status_name = 'Запланировано'
     default_completed_task_status_name = 'Выполнено'
+
+
+class WorkStages(enum.Enum):
+    """Этапы работы"""
+    idea_generating = 'idea_generating'  # Выработка идеи
+    thesis_proofing = 'thesis_proofing'  # Обоснование тезисов
+    solution_projecting = 'solution_projecting'  # Проектирование решения
+    development = 'development'  # Разработка
+    testing = 'testing'  # Апробация
+    results_preparation = 'results_preparation'  # Оформление результатов
+
+    idea_generating_name = 'Выработка идеи'
+    thesis_proofing_name = 'Обоснование тезисов'
+    solution_projecting_name = 'Проектирование решения'
+    development_name = 'Разработка'
+    testing_name = 'Апробация'
+    results_preparation_name = 'Оформление результатов'
 
 
 class DBFields:
@@ -119,8 +147,15 @@ class DBFields:
     # Project's fields
     workspace_id = 'workspace_id'
     workspace = 'workspace'
+    goal = 'goal'
+    relevance = 'relevance'
+    tasks_description = 'tasks_description'
+    problem = 'problem'
+    thesis = 'thesis'
     # WSTask's fields
     project_id = 'project_id'
+    executor_id = 'executor_id'
+    executor_email = 'executor_email'
     entrusted_id = 'entrusted_id'
     work_direction_id = 'work_direction_id'
     parent_task_id = 'parent_task_id'

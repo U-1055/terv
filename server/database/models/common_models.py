@@ -94,14 +94,40 @@ class Project(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     workspace_id: Mapped[int] = mapped_column(ForeignKey(Workspace.id))
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
+    current_stage_id: Mapped[int] = mapped_column(ForeignKey('work_stage.id'), nullable=True)
+
     name: Mapped[str] = mapped_column(String[60])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
+
+    goal: Mapped[str] = mapped_column(String[2000], default=DBStruct.default_goal)
+    tasks_description: Mapped[str] = mapped_column(String[3000], default=DBStruct.default_tasks_description)
+    problem: Mapped[str] = mapped_column(String[2000], default=DBStruct.default_problem)
+    relevance: Mapped[str] = mapped_column(String[2000], default=DBStruct.default_relevance)
+    thesis: Mapped[str] = mapped_column(String[4000], default=DBStruct.default_thesis)
 
     workspace: Mapped[Workspace] = relationship(Workspace, back_populates='projects')
     users: Mapped[list[User]] = relationship(secondary='project_user', back_populates='linked_projects')
     creator: Mapped[User] = relationship(User, back_populates='created_projects')
     tasks: Mapped[list['WSTask']] = relationship('WSTask', back_populates='project')
     mentors: Mapped[list['User']] = relationship(secondary='project_mentor', back_populates='mentoring_projects')
+    stages: Mapped[list['WorkStage']] = relationship('WorkStage', back_populates='project')
+
+
+class WorkStage(Base):
+    """"Этап работы."""
+    __tablename__ = 'work_stage'
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey(Workspace.id))
+
+    name: Mapped[str] = mapped_column(String[200])
+    result: Mapped[str] = mapped_column(String[500])
+    date_start: Mapped[datetime.date] = mapped_column()
+    date_end: Mapped[datetime.date] = mapped_column()
+    is_finished: Mapped[bool] = mapped_column()  # Уже завершен?
+    is_future: Mapped[bool] = mapped_column()  # Будет одним из следующих?
+    is_current: Mapped[bool] = mapped_column()  # Текущая
+
+    project: Mapped[Project] = relationship(Project, back_populates='stages')
 
 
 project_user = Table(
@@ -182,7 +208,7 @@ class WSTask(Base):
     __tablename__ = 'ws_task'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     workspace_id: Mapped[int] = mapped_column(ForeignKey(Workspace.id))  # РП
-    project_id: Mapped[int] = mapped_column(ForeignKey(Project.id), nullable=True)  # Проект
+    project_id: Mapped[int] = mapped_column(ForeignKey(Project.id))  # Проект
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))  # Создатель
     entrusted_id: Mapped[int] = mapped_column(ForeignKey(User.id))  # Поручивший
     work_direction_id: Mapped[int] = mapped_column(ForeignKey('ws_work_direction.id'), nullable=True)  # Направление работы

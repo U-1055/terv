@@ -9,13 +9,14 @@ from client.src.client_model.model import Model
 import client.models.common_models as cm
 from common.logger import config_logger, CLIENT
 from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
+from client.src.gui.sub_widgets.widgets import ProjectWidget
 
 logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL)
 
 
 class WorkspaceWindowHandler(BaseWindowHandler):
     """
-    Об обработчик окна рабочего пространства.
+    Обработчик окна рабочего пространства. Управляет логикой всех разделов пространства.
     
     Управляет отображением информации о рабочем пространстве, проектах, участниках, аналитикой.
     Обрабатывает права доступа на основе роли пользователя.
@@ -23,17 +24,19 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     :var workspace_data_received: Сигнал при получении данных о рабочем пространстве.
     :var projects_data_received: Сигнал при получении данных о проектах.
     :var participants_data_received: Сигнал при получении данных об участниках.
+    :var tried_to_open_project: Сигнал при попытке открыть проект.
     """
     
     workspace_data_received = Signal(dict)
     projects_data_received = Signal(list)
     participants_data_received = Signal(list)
-    
+    tried_to_open_project = Signal(int, str, int)  # project_id, project_name, workspace_id
+
     # Роли и их ID
     ROLE_ADMINISTRATOR = 3
     ROLE_MENTOR = 1
     ROLE_STUDENT = 2
-    ROLE_TELEAD = 4
+    ROLE_TEAM_LEAD = 4
     
     def __init__(self, window: WorkspaceWindow, main_view: MainWindow, requester: Requester, model: Model,
                  workspace_id: int, workspace_name: str):
@@ -53,11 +56,12 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         self._workspace_data: dict = {}
         self._projects: list[cm.Project] = []
         self._participants: list[dict] = []
+        self._project_widgets: dict[int, ProjectWidget] = {}  # Виджеты проектов по ID
         self._roles: dict[int, str] = {
             self.ROLE_MENTOR: "Наставник",
             self.ROLE_STUDENT: "Студент",
             self.ROLE_ADMINISTRATOR: "Администратор",
-            self.ROLE_TELEAD: "Тимлид"
+            self.ROLE_TEAM_LEAD: "Тимлид"
         }
         
         # Обработчик окна настроек
@@ -67,7 +71,8 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         self._window.back_pressed.connect(self._on_back_pressed)
         self._window.settings_pressed.connect(self._on_settings_pressed)
         self._window.role_change_requested.connect(self._on_role_change_requested)
-    
+        self._window.project_open_requested.connect(self._on_project_open_requested)
+
     def _on_back_pressed(self):
         """Обработка нажатия кнопки возврата."""
         logger.info('Back pressed in workspace window')
@@ -122,10 +127,11 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     def _on_workspace_updated(self, data: dict):
         """Обработка обновления рабочего пространства."""
         logger.info(f'Workspace updated: {data}')
+        if not data:
+            return
         self._workspace_data['name'] = data.get('name', self._workspace_data.get('name', ''))
         self._workspace_data['description'] = data.get('description', self._workspace_data.get('description', ''))
-        self._window.set_workspace_info(self._workspace_data['name'], 
-                                         self._workspace_data['description'])
+        self._window.set_workspace_info(self._workspace_data['name'], self._workspace_data['description'])
         self._settings_handler = None
     
     def _on_role_change_requested(self, user_id: int, new_role_id: int):
@@ -140,6 +146,16 @@ class WorkspaceWindowHandler(BaseWindowHandler):
             self._workspace_id, user_id, new_role_id, access_token)
         request.finished.connect(lambda req: self._prepare_request(req, self._on_role_changed))
     
+    def _on_project_open_requested(self, project_id: int, project_name: str):
+        """
+        Обработка запроса открытия проекта.
+
+        :param project_id: ID проекта.
+        :param project_name: Название проекта.
+        """
+        logger.info(f'Opening project: {project_name} (id={project_id})')
+        self.tried_to_open_project.emit(project_id, project_name, self._workspace_id)
+
     def _on_role_changed(self, data: dict):
         """Обработка смены роли."""
         logger.info(f'Role changed: {data}')
@@ -209,30 +225,125 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         """
         Обработка получения проектов.
         
-        :param data: Список проектов.
+        :param data: Данные проектов (содержит 'content' со списком проектов).
         """
+        if not data:
+            return
+
         self._projects.clear()
         self._window.clear_project_widgets()
         
+        # Инициализируем словарь для хранения участников проектов
+        self._project_participants = {}
+
         project_names = []
-        for project_data in data:
+        projects_content = data
+
+        for project_data in projects_content:
             project = cm.Project(**project_data)
             self._projects.append(project)
             project_names.append(project.name)
             
-            # Добавление виджета проекта (заглушки для студентов и наставника)
+            # Инициализируем хранилище участников для проекта
+            self._project_participants[project.id] = {'students': [], 'mentors': []}
+
+            # Запрос студентов проекта
+            access_token = self._model.get_access_token()
+            students_request = self._requester.get_project_students(
+                self._workspace_id, project.id, access_token, limit=100, offset=0)
+            students_request.finished.connect(
+                lambda req, pid=project.id: self._prepare_request(
+                    req, lambda d, p=pid: self._on_project_students_received(p, d)))
+
+            # Запрос наставников проекта
+            mentors_request = self._requester.get_project_mentors(
+                self._workspace_id, project.id, access_token, limit=100, offset=0)
+            mentors_request.finished.connect(
+                lambda req, pid=project.id: self._prepare_request(
+                    req, lambda d, p=pid: self._on_project_mentors_received(p, d)))
+
+            # Добавление виджета проекта (временные данные до получения участников)
             widget = self._window.add_project_widget(
                 name=project.name,
-                mentor="Наставник (заглушка)",
-                students=["Студент 1", "Студент 2"],  # Заглушки
-                stage="Этап: Заглушка",
+                mentor="Загрузка...",
+                students=["Загрузка..."],
+                stage="Этап: Загрузка",
                 project_id=project.id
             )
-        
+            self._project_widgets[project.id] = widget
+
         self._window.set_project_combobox(project_names)
+
         self.projects_data_received.emit(self._projects)
         logger.info(f'Projects loaded: {len(self._projects)} projects')
     
+    def _on_project_students_received(self, project_id: int, data: list):
+        """
+        Обработка получения студентов проекта.
+
+        :param project_id: ID проекта.
+        :param data: Данные студентов
+        """
+        if not data:
+            return
+
+        if project_id in self._project_participants:
+            self._project_participants[project_id]['students'] = data
+            self._update_project_widget(project_id)
+
+    def _on_project_mentors_received(self, project_id: int, data: list):
+        """
+        Обработка получения наставников проекта.
+
+        :param project_id: ID проекта.
+        :param data: Данные наставников
+        """
+        if not data:
+            return
+
+        if project_id in self._project_participants:
+            self._project_participants[project_id]['mentors'] = data
+            self._update_project_widget(project_id)
+
+    def _update_project_widget(self, project_id: int):
+        """
+        Обновляет виджет проекта с реальными данными участников.
+
+        :param project_id: ID проекта.
+        """
+        if not hasattr(self, '_project_participants') or project_id not in self._project_participants:
+            return
+
+        participants = self._project_participants[project_id]
+        students = participants.get('students', [])
+        mentors = participants.get('mentors', [])
+
+        # Формируем списки имен
+        student_names = [s.get('username', s.get('email', 'Unknown')) for s in students]
+        mentor_names = [m.get('username', m.get('email', 'Unknown')) for m in mentors]
+
+        # Находим проект
+        project = None
+        for p in self._projects:
+            if p.id == project_id:
+                project = p
+                break
+
+        if not project:
+            return
+
+        # Обновляем виджет проекта
+        stage = "Этап: Загрузка"  # Заглушка - будет реализована позже
+
+        for id_ in self._project_widgets:
+            if id_ == project_id:
+                self._project_widgets[id_].update_info(
+                    mentor=', '.join(mentor_names) if mentor_names else 'Нет наставников',
+                    students=student_names,
+                    stage=stage
+                )
+                break
+
     def _on_participants_received(self, data: list):
         """
         Обработка получения участников.

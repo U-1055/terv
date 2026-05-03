@@ -23,7 +23,7 @@ class ProjectWidget(QWidget):
     :param project_id: ID проекта.
     """
 
-    clicked = Signal(int)  # Сигнал при клике на виджет. Возвращает ID проекта.
+    open_pressed = Signal(int)  # Сигнал при нажатии кнопки "Открыть". Возвращает ID проекта.
 
     def __init__(self, name: str, mentor: str, students: list[str],
                  stage: str = "Этап: ...", project_id: int = 0):
@@ -43,13 +43,12 @@ class ProjectWidget(QWidget):
         self._view.lbl_mentor.setText(mentor if mentor else "Не указан")
         self._view.lbl_students.setText(", ".join(students) if students else "Нет студентов")
 
-        # Подключение сигнала клика
-        self._view.frame.clicked.connect(self._on_frame_clicked)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Подключение сигнала кнопки открытия
+        self._view.btn_open.clicked.connect(self._on_btn_open_pressed)
 
-    def _on_frame_clicked(self):
-        """Обработка клика на фрейм виджета."""
-        self.clicked.emit(self._project_id)
+    def _on_btn_open_pressed(self):
+        """Обработка нажатия кнопки 'Открыть'."""
+        self.open_pressed.emit(self._project_id)
 
     def name(self) -> str:
         """Возвращает название проекта."""
@@ -94,6 +93,21 @@ class ProjectWidget(QWidget):
     def set_project_id(self, project_id: int):
         """Устанавливает ID проекта."""
         self._project_id = project_id
+
+    def update_info(self, mentor: str = None, students: list[str] = None, stage: str = None):
+        """
+        Обновляет информацию о проекте.
+
+        :param mentor: Имя наставника.
+        :param students: Список студентов.
+        :param stage: Этап проекта.
+        """
+        if mentor is not None:
+            self.set_mentor(mentor)
+        if students is not None:
+            self.set_students(students)
+        if stage is not None:
+            self.set_stage(stage)
 
 
 class WorkspaceWidget(QWidget):

@@ -67,8 +67,8 @@ class Project(Base):
     """Проект."""
     __tablename__ = 'project'
     id: int 
-    workspace_id: int | None
-    creator_id: int | None
+    workspace_id: int | None = None
+    creator_id: int | None = None
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)
 
@@ -84,6 +84,7 @@ class WSTask(Base):
     work_direction_id: int | None = None  # Направление работы
     parent_task_id: int | None = None  # Родительская задача
     executor_id: int | None = None
+    status_id: int | None = None  # ID статуса задачи
 
     name: str = Field(max_length=60)
     description: str = Field(max_length=2000)

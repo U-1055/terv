@@ -5,162 +5,210 @@ from sqlalchemy.sql import select
 import datetime
 
 from server.auth.auth_module import hash_password
+from common.base import WorkStages, TasksStatuses
 import server.database.models.common_models as cm
 
 
 def set_db_config_1(engine: Engine,
-                    personal_tasks_params: tuple[tuple[str, str], ...] = None,
                     workspace_name: str = 'Workspace',
-                    workspace_tasks_params: tuple[tuple[str, str], ...] = None,
-                    personal_daily_events_params: tuple[
-                        tuple[str, str, datetime.time, datetime.time], ...] = None,
-                    personal_many_days_events_params: tuple[tuple[str, str, datetime.date, datetime.date], ...] = None,
-                    ws_daily_events_params: tuple[tuple[str, str, datetime.time, datetime.time], ...] = None,
-                    ws_many_days_events_params: tuple[tuple[str, str, datetime.date, datetime.date], ...] = None
                     ):
     """
-    Устанавливает конфиг БД. По умолчанию - три пользователя, 1 РП, 10 личных задач, 10 задач РП, 10 личных однодневных
-    мероприятий, 10 личных многодневных мероприятий, 10 однодневных мероприятий РП, 10 многодневных мероприятий РП.
-    Логин пользователя, которому принадлежат личные объекты (и который участвует в объектах РП): Terv. Пароль: x41822jnk_.
-    :param engine: Движок для подключения к БД.
-    :param personal_tasks_params: Параметры личных задач вида: ((<name>, <description>), ...).
-    :param workspace_name: Название РП.
-    :param workspace_tasks_params: Параметры задач РП вида: ((<name>, <description>), ...).
-    :param personal_daily_events_params: Параметры личных однодневных мероприятий вида:
-                                         ((<name>, <description>, <время начала>, <время окончания>), ...)
-    :param personal_many_days_events_params: Параметры личных многодневных мероприятий вида:
-                                             ((<name>, <description>, <дата начала>, <дата окончания>)).
-    :param ws_daily_events_params: Параметры однодневных мероприятий РП вида:
-                                   ((<name>, <description>, <время начала>, <время окончания>), ...)
-    :param ws_many_days_events_params: Параметры многодневных мероприятий РП вида:
-                                       ((<name>, <description>, <дата начала>, <дата окончания>)).
+    Устанавливает конфиг БД для тестирования функционала проектов.
+    Создаёт:
+    - 1 Workspace
+    - 10 проектов этого Workspace
+    - 51 пользователя:
+      - 1 Администратор
+      - 10 Наставников
+      - 10 Тимлидов
+      - 30 Участников (Студентов)
+    - Каждый проект получает группу из 5 участников: 1 Наставник, 1 Тимлид, 3 Участника
+    - В каждом проекте создаётся несколько задач с разными статусами (IT-тематика)
+    - В каждом проекте создаётся 6 этапов работы
 
+    :param engine: Движок для подключения к БД.
+    :param workspace_name: Название РП.
     """
 
     session_maker = sessionmaker(bind=engine)
     with session_maker() as session, session.begin():
-        user_1 = cm.User(username='Terv_', hashed_password=hash_password('x41822jnk_'), email='sth@someemail.terv')
-        user_2 = cm.User(username='User1', hashed_password='a_234567890', email='emaiL1@email')
-        ws_creator = cm.User(username='User_', hashed_password='a_234567890', email='email@email')
-        session.add(user_1)
-        session.add(user_2)
-        session.add(ws_creator)
+        # Создание администратора
+        admin_user = cm.User(username='Admin', hashed_password=hash_password('x41822jnk_'), email='admin@terv.com')
+        session.add(admin_user)
 
-        default_personal_task_status = cm.PersonalTaskStatus(name='default_status', owner=user_1)
-        session.add(default_personal_task_status)
-        completed_task_status = cm.PersonalTaskStatus(name='completed_status', owner=user_1)
-        session.add(completed_task_status)
-        statuses = session.execute(select(cm.PersonalTaskStatus)).scalars().all()
+        # Создание 10 наставников
+        mentors = []
+        for i in range(10):
+            mentor = cm.User(username=f'Mentor_{i+1}', hashed_password=hash_password('password123'),
+                           email=f'mentor{i+1}@terv.com')
+            mentors.append(mentor)
+            session.add(mentor)
 
-        user_1.default_task_status_id = statuses[0].id
-        user_1.completed_task_status_id = statuses[1].id
+        # Создание 10 тимлидов
+        teamleads = []
+        for i in range(10):
+            teamlead = cm.User(username=f'TeamLead_{i+1}', hashed_password=hash_password('password123'),
+                              email=f'teamlead{i+1}@terv.com')
+            teamleads.append(teamlead)
+            session.add(teamlead)
 
-        if personal_tasks_params:
-            personal_tasks = [
-                cm.PersonalTask(owner=user_1, name=params[0], description=params[1], plan_deadline=datetime.date.today(),
-                                status=default_personal_task_status, owner_id=user_1.id)
-                for params in personal_tasks_params]
-        else:
-            personal_tasks = [
-                cm.PersonalTask(owner=user_1, name=f'personal_task.{i}', plan_deadline=datetime.date.today(),
-                                description=''.join(['Description ' for i in range(50)]), status=default_personal_task_status) for i in range(10)]
-        session.add_all(personal_tasks)
+        # Создание 30 студентов
+        students = []
+        for i in range(30):
+            student = cm.User(username=f'Student_{i+1}', hashed_password=hash_password('password123'),
+                             email=f'student{i+1}@terv.com')
+            students.append(student)
+            session.add(student)
 
-        personal_tasks_events = [cm.PersonalTaskEvent(task=personal_task, date=datetime.date.today(),
-                                                      time_start=datetime.datetime.now().time(),
-                                                      time_end=datetime.datetime.now().time())
-                                 for personal_task in personal_tasks]
-        session.add_all(personal_tasks_events)
+        session.flush()  # Получаем ID всех пользователей
 
-        workspace = cm.Workspace(creator=ws_creator, users=[ws_creator, user_2, user_1], name=workspace_name)
+        # Создание Workspace с пользователями
+        all_users = [admin_user] + mentors + teamleads + students
+        workspace = cm.Workspace(creator=admin_user, name=workspace_name, users=all_users)
         session.add(workspace)
-        default_ws_task_status = cm.WSTaskStatus(name='default_status', workspace=workspace)
-        session.add(default_ws_task_status)
-        completed_ws_task_status = cm.WSTaskStatus(name='completed_status', workspace=workspace)
-        session.add(completed_ws_task_status)
+        session.flush()  # Получаем ID workspace
 
-        statuses = session.execute(select(cm.WSTaskStatus)).scalars().all()
+        # Создание статусов задач
+        default_task_status = cm.WSTaskStatus(name=TasksStatuses.planned_name.value, workspace=workspace)
+        session.add(default_task_status)
+        in_work_status = cm.WSTaskStatus(name=TasksStatuses.in_work_name.value, workspace=workspace)
+        session.add(in_work_status)
+        review_status = cm.WSTaskStatus(name=TasksStatuses.on_check.value, workspace=workspace)
+        session.add(review_status)
+        completed_status = cm.WSTaskStatus(name=TasksStatuses.completed_name.value, workspace=workspace)
+        session.add(completed_status)
+        to_rework_status = cm.WSTaskStatus(name=TasksStatuses.to_rework.value, workspace=workspace)
+        session.add(to_rework_status)
+        session.flush()
 
-        workspace.default_task_status_id = statuses[0].id
-        workspace.completed_task_status_id = statuses[1].id
+        workspace.default_task_status_id = default_task_status.id
+        workspace.completed_task_status_id = completed_status.id
 
-        if workspace_tasks_params:
-            workspace_tasks = [cm.WSTask(name=params[0], description=params[1], workspace=workspace, creator=ws_creator,
-                                         entrusted=ws_creator, executor=user_1, plan_deadline=datetime.date.today(),
-                                         status=default_ws_task_status)
-                               for params in workspace_tasks_params]
-        else:
-            workspace_tasks = [
-                cm.WSTask(name=f'ws_task.{i}', description='Description', creator=ws_creator, entrusted=ws_creator,
-                          executor=user_1, workspace=workspace, plan_deadline=datetime.date.today(),
-                          status=default_ws_task_status)
-                for i in range(10)]
-        session.add_all(workspace_tasks)
+        task_templates = [
+            ('Реализовать API аутентификации', 'Интеграция JWT токенов для безопасной авторизации пользователей'),
+            ('Спроектировать базу данных', 'Создание ER-диаграммы и миграций для основных сущностей'),
+            ('Написать юнит-тесты', 'Покрытие кода тестами с использованием pytest'),
+            ('Оптимизировать SQL запросы', 'Анализ планов выполнения и создание индексов'),
+            ('Интегрировать фронтенд', 'Подключение React приложения к backend API'),
+            ('Настроить CI/CD пайплайн', 'Автоматизация сборки и деплоя приложения'),
+            ('Реализовать кэширование', 'Интеграция Redis для ускорения работы API'),
+            ('Аудит безопасности', 'Проверка уязвимостей и внедрение мер защиты'),
+            ('Документировать API', 'Создание Swagger документации для всех эндпоинтов'),
+            ('Мониторинг производительности', 'Настройка Prometheus и Grafana для метрик'),
+            ('Реализовать систему уведомлений', 'WebSocket и email уведомления для пользователей'),
+            ('Разработать админ-панель', 'UI для управления пользователями и контентом'),
+            ('Интеграция с платежной системой', 'Подключение Stripe API для платежей'),
+            ('Оптимизация загрузки изображений', 'Сжатие и CDN для медиа-контента'),
+            ('Реализовать поиск', 'Elasticsearch для полнотекстового поиска'),
+        ]
 
-        ws_tasks_events = [cm.WSTaskEvent(task=ws_task, date=datetime.date.today(), time_start=datetime.datetime.now().time(),
-                                          time_end=datetime.datetime.now().time())
-                           for ws_task in workspace_tasks]
-        session.add_all(ws_tasks_events)
+        # Этапы работы (одинаковые для всех проектов)
+        work_stages_data = [
+            (WorkStages.idea_generating_name.value, 'На этом этапе вам следует найти проблему, определить целевую аудиторию,'
+                                                    ' решить в общем виде'
+                                                    'вопросы об анализе проблемной области (какие исследования вам потребуются,'
+                                                    'кого вы будете опрашивать, требуется ли экспертиза и какая), '
+                                                    'выдвинуть ряд гипотез, которые вы будете проверять при анализе'
+                                                    'проблемной области.'),
+            (WorkStages.thesis_proofing_name.value, 'На этом этапе вам нужно проанализировать проблемную область: '
+                                                    'найти литературу, провести глубинные интервью и опросы. На их'
+                                                    'основе нужно сделать вывод по каждой из гипотез, выдвинутых на '
+                                                    'предыдущем этапе - верна она, или нет. Результатом этого этапа'
+                                                    'должна стать точно определённая проблема проекта, его актуальность,'
+                                                    'цель и задачи.'),
+            (WorkStages.solution_projecting_name.value, 'На этом этапе вам нужно спланировать разработку решения:'
+                                                        'определите функциональную архитектуру и концепцию (как именно'
+                                                        'разработка будет решать проблему, как она будет выглядеть),'
+                                                        'спроектировать архитектуру, составить технические требования к'
+                                                        'разрабатываемому решению.'),
+            (WorkStages.development_name.value, 'На этом этапе вам предстоит разработать ваше решение и проверить его'
+                                                'соответствие техническим требованиям.'),
+            (WorkStages.testing_name.value, 'На этом этапе вам нужно представить своё решение целевой аудитории и получить'
+                                            'обратную связь (возможно, путём опросов и глубинных интервью). Если '
+                                            'обратная связь положительная - постарайтесь внедрить ваше решение'
+                                            'для использования целевой аудиторией. Соберите обратную связь по внедрению'
+                                            'и сделайте выводы.'),
+            (WorkStages.results_preparation_name.value, 'На этом этапе нужно оформить результаты: описать, что и как вы делали,'
+                                                        'почему именно так, а не иначе, что в итоге получилось и что '
+                                                        'будете делать дальше.'),
+        ]
 
-        today = datetime.date.today()
-        datetime_now = datetime.datetime.now()
-        time_now = datetime.datetime.now().time()
-        if personal_daily_events_params:
-            personal_daily_events = [cm.PersonalDailyEvent(name=params[0], description=params[1], time_start=params[2],
-                                                           time_end=params[3], date=today, owner=user_1)
-                                     for params in personal_daily_events_params]
-        else:
-            personal_daily_events = [cm.PersonalDailyEvent(name=f'personal_daily_event.{i}', description='Description',
-                                                           time_start=datetime.time(hour=i, minute=time_now.minute),
-                                                           time_end=datetime.time(hour=i + 1, minute=time_now.minute),
-                                                           date=today, owner=user_1)
-                                     for i in range(10)]
-        session.add_all(personal_daily_events)
+        # Создание 10 проектов
+        projects = []
+        for i in range(10):
+            project_name = f'Project_{i+1}'
+            project_description = f'Проект {i+1} - разработка функционала для таск-трекера'
 
-        if ws_daily_events_params:
-            ws_daily_events = [cm.WSDailyEvent(name=params[0], description=params[1], time_start=params[2], workspace=workspace,
-                                               time_end=params[3], date=today, creator=ws_creator, notified=[user_1, user_2],
-                                               )
-                               for params in ws_daily_events_params]
-        else:
-            ws_daily_events = [cm.WSDailyEvent(name=f'ws_daily_event.{i}', description='Description',
-                                               time_start=datetime.time(hour=i + 10, minute=time_now.minute),
-                                               time_end=datetime.time(hour=i + 11, minute=time_now.minute),
-                                               date=today, workspace=workspace, creator=ws_creator, notified=[user_1, user_2])
-                               for i in range(10)]
-        session.add_all(ws_daily_events)
+            # Выбираем участников проекта (1 наставник, 1 тимлид, 3 студента)
+            mentor_idx = i % len(mentors)
+            teamlead_idx = i % len(teamleads)
+            student_start = i * 3
+            student_end = student_start + 3
 
-        last_day = datetime_now - datetime.timedelta(days=1)
-        next_day = datetime_now + datetime.timedelta(days=1)
+            project_mentor = mentors[mentor_idx]
+            project_teamlead = teamleads[teamlead_idx]
+            project_students = students[student_start:student_end]
 
-        if personal_many_days_events_params:
-            personal_many_days_events = [cm.PersonalManyDaysEvent(
-                name=params[0], description=params[1], owner=user_1, owner_id=user_1.id,
-                datetime_start=datetime.datetime(year=params[2].year, month=params[2].month, day=params[2].day),
-                datetime_end=datetime.datetime(year=params[3].year, month=params[3].month, day=params[3].day))
-                                         for params in personal_many_days_events_params]
-        else:
-            personal_many_days_events = [cm.PersonalManyDaysEvent(
-                name=f'personal_many_days_event.{i}', description='Description',
-                datetime_start=last_day, owner=user_1,
-                datetime_end=next_day)
-                                         for i in range(10)]
+            project = cm.Project(
+                name=project_name,
+                description=project_description,
+                workspace=workspace,
+                creator=admin_user,
+                mentors=[project_mentor],
+                users=[project_teamlead] + project_students
+            )
+            projects.append(project)
+            session.add(project)
+            session.flush()  # Получаем ID проекта
 
-        session.add_all(personal_many_days_events)
+            # Создаём этапы для проекта
+            date_start = datetime.date.today() + datetime.timedelta(days=i * 10)
+            stages = []
+            for stage_idx, (stage_name, result_desc) in enumerate(work_stages_data):
+                stage = cm.WorkStage(
+                    name=stage_name,
+                    result=result_desc,
+                    project_id=project.id,
+                    date_start=date_start + datetime.timedelta(days=stage_idx * 7),
+                    date_end=date_start + datetime.timedelta(days=(stage_idx + 1) * 7),
+                    is_finished=stage_idx < i % 3,  # Первые 2 этапа завершены
+                    is_future=stage_idx >= i % 3 + 1,   # Последние 2 этапа будущие
+                    is_current=stage_idx == i % 3
+                )
+                session.add(stage)
+                stages.append(stage)
 
-        if ws_many_days_events_params:
-            ws_many_days_events = [cm.WSManyDaysEvent(
-                name=params[0], description=params[1], workspace=workspace, creator=ws_creator, notified=[user_1, user_2],
-                datetime_start=datetime.datetime(year=params[2].year, month=params[2].month, day=params[2].day),
-                datetime_end=datetime.datetime(year=params[3].year, month=params[3].month, day=params[3].day))
-                                         for params in ws_many_days_events_params]
-        else:
-            ws_many_days_events = [cm.WSManyDaysEvent(
-                name=f'ws_many_days_event.{i}', description='Description', workspace=workspace, creator=ws_creator,
-                notified=[user_1, user_2], datetime_start=last_day, datetime_end=next_day)
-                                         for i in range(10)]
+            # Установка текущего этапа проекта (3-й этап - Проектирование решения)
+            project.current_stage = stages[i % 3]
+            session.add(project)
 
-        session.add_all(ws_many_days_events)
+            # Создание задач для проекта (3-5 задач с разными статусами)
+            num_tasks = 3 + (i % 3)  # 3, 4 или 5 задач
+            status_ids = [default_task_status.id, in_work_status.id, review_status.id, completed_status.id, to_rework_status.id]
+
+            for task_idx in range(num_tasks):
+                template_idx = (i * 3 + task_idx) % len(task_templates)
+                task_name, task_description = task_templates[template_idx]
+
+                # Выбираем статус циклично
+                status_id = status_ids[(task_idx + i) % len(status_ids)]
+
+                # Выбираем исполнителя из студентов проекта
+                executor = project_students[task_idx % len(project_students)]
+
+                task = cm.WSTask(
+                    name=f'{task_name} (Project {i+1})',
+                    description=task_description,
+                    project=project,
+                    workspace=workspace,
+                    creator=admin_user,
+                    entrusted=admin_user,
+                    executor=executor,
+                    plan_deadline=datetime.date.today() + datetime.timedelta(days=7 * (task_idx + 1)),
+                    status_id=status_id
+                )
+                session.add(task)
+
         session.commit()
 
     with session_maker() as session, session.begin():
@@ -169,51 +217,16 @@ def set_db_config_1(engine: Engine,
 
 if __name__ == '__main__':
     from server.database.models.db_utils import init_db
-    from server.database.repository import DataRepository
 
     init_db('sqlite:///database')
     engine = create_engine('sqlite:///database')
-    set_db_config_1(engine=engine, personal_tasks_params=(('Сделать презентацию', 'Титульный слайд - переделать; доработать вывод'),
-                                                          ('Переписать тесты', 'В тесте аутентификации устаревшие фиктивные объекты'),
-                                                          ('Согласовать требования', 'К Т.В. - по проекту.'),
-                                                          ('Изучить модуль "Напряжённость"', "Из курса по электростатике"),
-                                                          ('Изучить модуль "Потенциал"', ''),
-                                                          ('Изучить модуль "Уравнение адиабаты"', 'МКТ'),
-                                                          ('Решить 10 иррациональных неравенств', 'Из сборника Ларина'),
-                                                          ('Решить 10 З-17', ''),
-                                                          ('Рассмотреть З-19', ''),
-                                                          ('Изучить раздел №2 книги по БД', 'Реляционные БД в примерах')
-                                                          ),
-                    workspace_tasks_params=(('Реализовать утилиту для замера памяти', ''),
-                                            ('Реализовать утилиту для запросов', ''),
-                                            ('Настроить стиль GUI', ''),
-                                            ('Отладить настройки', ''),
-                                            ('Составить ПМИ', 'По ГОСТ'),
-                                            ('Описать автотесты', 'В ПМИ - доработать'),
-                                            ('Сделать тестовый конфиг', 'По ПМИ'),
-                                            ('Провести испытания производительности', 'По ПМИ'),
-                                            ('Записать видео функционального теста', ''),
-                                            ('Изучить документацию nginx', '')
-                    ),
-                    personal_daily_events_params=(('Проект', "...", datetime.time(9, 00), datetime.time(12, 00)),
-                                                  ('Физика', 'Разбор хитрых задач с Сириус-курса', datetime.time(12, 30), datetime.time(14, 30)),
-                                                  ('Матеша', 'Неравенства из книжки', datetime.time(14, 45), datetime.time(16, 45))),
-                    ws_daily_events_params=(('Проект', 'Доработка документации', datetime.time(17, 00), datetime.time(20, 15)),),
-                    personal_many_days_events_params=(('Разбор физики', 'Закрыть модули курса по электростатике',
-                                                       datetime.date(2026, 2, 14), datetime.date(2026, 3, 20)), ),
+    set_db_config_1(engine=engine)
 
-                    ws_many_days_events_params=(('Окончательная доработка проекта', 'Оформить результаты', datetime.date(2026, 2, 14), datetime.date(2026, 3, 20)
-                                                     ), ))
-
-    repo = DataRepository(sessionmaker(bind=engine))
-    print(repo.get_personal_tasks_by_id(not_completed=True))
-    with sessionmaker(bind=engine)() as session, session.begin():
-        result = session.execute(select(cm.PersonalTask)).scalars().all()
-        user_result = session.execute(select(cm.User)).scalars().all()
-        workspaces = session.execute(select(cm.Workspace).where(cm.Workspace.users.any(cm.User.id == 1)))
-        print([user.completed_task_status_id for user in user_result])
-        print([[model.status_id, model.name] for model in result])
-        print([ws for ws in workspaces])
+    print('Test configuration applied successfully')
+    print('Users: 51 (1 Admin, 10 Mentors, 10 Team Leads, 30 Students)')
+    print('Projects: 10')
+    print('Tasks per project: 3-5')
+    print('Work stages per project: 6')
 
 
 

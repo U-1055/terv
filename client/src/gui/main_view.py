@@ -8,6 +8,7 @@ from client.src.gui.windows.windows import PersonalTasksWindow, CalendarWindow
 from client.src.gui.windows.userspace_window import UserSpaceWindow
 from client.src.gui.windows.workspaces_window import WorkspacesListWindow
 from client.src.gui.windows.workspace_window import WorkspaceWindow, WorkspaceSettingsWindow
+from client.src.gui.windows.project_window import ProjectWindow
 from client.src.gui.windows.windows import BaseWindow
 from client.src.gui.windows.settings_window import SettingsWindow
 from client.src.gui.windows.auth_window import PopUpAuthWindow
@@ -283,15 +284,22 @@ class MainWindow(QMainWindow):
         self._show_progress_window(loading_time)
         return window
 
-    def _push_to_stack_if_needed(self, window: BaseWindow):
-        """
-        Добавляет окно в стек, если это не первое окно.
+    def open_project_window(self, project_id: int, project_name: str, workspace_id: int,
+                            loading_time: int | None = None) -> ProjectWindow:
+        """Открывает окно проекта."""
+        window = ProjectWindow(project_id, project_name, workspace_id)
+        self._view.wdg_window.insertWidget(-1, window)
+        current_idx = self._view.wdg_window.count()
+        window.destroyed.connect(lambda: self._destroy_window(current_idx))
+        self._view.wdg_window.setCurrentWidget(window)
+        self.push_to_stack(window)
+        self._show_progress_window(loading_time)
+        return window
 
-        :param window: Окно для добавления в стек.
-        """
-        # Добавляем в стек только если есть предыдущее окно
-        if self._window_stack or self._view.wdg_window.count() > 1:
-            self._window_stack.append(window)
+    def _rewrite_stack(self, window: BaseWindow):
+        """Удаляет все окна из стека и вставляет переданное."""
+        self.clear_stack()
+        self._window_stack.append(window)
 
     def push_to_stack(self, window: BaseWindow):
         """

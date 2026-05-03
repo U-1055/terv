@@ -18,6 +18,7 @@ class SettingsWindow(BaseWindow):
         super().__init__()
         self._view = Ui_Form()
         self._view.setupUi(self)
+        self._view.btn_account_ops.setDisabled(True)
         self._view.label.setFont(GUIStyles.title_font)
         self._theme_switcher = QThemeSwitcher()
 

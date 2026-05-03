@@ -1,13 +1,13 @@
 """Сервисы."""
 
-from common.base import CommonStruct, DBFields, get_datetime_now
+from common.base import CommonStruct, DBFields, get_datetime_now, TasksStatuses, WorkStages
 from server.database.repository import DataRepository
 from server.data_const import DataStruct, DBStruct, Permissions
 import server.services.exceptions as err
 from common.logger import config_logger, SERVER
-from server.api.base import LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL
+from server.api.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 
-logger = config_logger(__name__, SERVER, LOG_DIR, MAX_BACKUP_FILES, MAX_FILE_SIZE, LOGGING_LEVEL)
+logger = config_logger(__name__, SERVER, LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL)
 
 # ToDo: обеспечивать формат даты из CommonStruct.datetime_format
 
@@ -86,6 +86,7 @@ class WorkspaceService(BaseService):
         """
         Создаёт РП. Добавляет туда пользователя с id = user_id и присваивает ему роль создателя (creator role).
         Создаёт creator role и default role в РП.
+        Создаёт стандартные статусы задач в РП (Запланировано, Выполнено, В работе, Проверяется, Доработать).
         Возвращает ID созданной модели Workspace в БД.
         """
 
@@ -114,6 +115,21 @@ class WorkspaceService(BaseService):
         workspace[DBFields.default_role_id] = default_role_id
         creator_role = repo.get_roles_by_id([creator_role_id]).content[0]
         creator_role[DBFields.users] = [user_id]
+
+        # Создаём стандартные статусы задач
+        task_statuses = [
+            {DBFields.name: TasksStatuses.planned_name, DBFields.workspace_id: workspace_id},
+            {DBFields.name: TasksStatuses.in_work_name, DBFields.workspace_id: workspace_id},
+            {DBFields.name: TasksStatuses.on_check_name, DBFields.workspace_id: workspace_id},
+            {DBFields.name: TasksStatuses.completed_name, DBFields.workspace_id: workspace_id},
+            {DBFields.name: TasksStatuses.to_rework_name, DBFields.workspace_id: workspace_id},
+        ]
+        result = repo.add_ws_task_statuses(task_statuses)
+
+        # Получаем ID статусов и устанавливаем default и completed
+        status_ids = result.ids
+        workspace[DBFields.default_task_status_id] = status_ids[0]  # Запланировано
+        workspace[DBFields.completed_task_status_id] = status_ids[3]  # Выполнено
 
         repo.update_workspaces([workspace])  # Обновляем РП и роли
         repo.update_ws_roles([creator_role])
@@ -206,12 +222,19 @@ class WSTaskService(BaseService):
     def create(ws_tasks: tuple[dict, ...], project_id: int, user_id: int, repo: DataRepository, authorizer):
         """
         Создаёт задачи проекта.
-        Формирует словарь параметров задачи и передаёт его в метод репозитория add_ws_tasks.
-        Добавляет creator_id, entrusted_id (равны user_id) и status_id = 1.
+        Получает workspace_id проекта по project_id через DataRepository,
+        получает executor_id по executor_email через DataRepository,
+        добавляет эти параметры в словарь каждой задачи вместе с creator_id, entrusted_id (равны user_id) и status_id = 1.
         """
+        # Получаем workspace_id проекта
+        project_data = repo.get_projects([project_id])
+        if not project_data.content:
+            raise err.IncorrectParamError('project', f'Project with id {project_id} not found')
+        workspace_id = project_data.content[0].get(DBFields.workspace)
+
         # Проверяем доступ к созданию задач
         if not authorizer.check_permissions(user_id, Permissions.create_task.value):
-            role_data = repo.get_role_by_user_id(project_id, user_id)
+            role_data = repo.get_role_by_user_id(workspace_id, user_id)
             if role_data.content:
                 role_name = role_data.content[0].get(DBFields.name, 'unknown')
             else:
@@ -219,6 +242,16 @@ class WSTaskService(BaseService):
             raise err.AccessDenied(f'Your role ({role_name}) can\'t create_task')
 
         for task in ws_tasks:
+            # Получаем executor_id по executor_email
+            executor_email = task.pop(DBFields.executor_email, None)
+            if executor_email:
+                user_data = repo.get_users_by_email([executor_email])
+                if not user_data.content:
+                    raise err.IncorrectParamError('executor_email', f'User with email {executor_email} not found')
+                executor_id = user_data.content[0].get(DBFields.id)
+                task[DBFields.executor_id] = executor_id
+
+            task[DBFields.workspace_id] = workspace_id
             task[DBFields.creator_id] = user_id
             task[DBFields.entrusted_id] = user_id
             task[DBFields.status_id] = 1
@@ -371,6 +404,88 @@ class ProjectService(BaseService):
             raise err.AccessDenied(f'Your role can\'t kick')
 
         repo.delete_project_user(user_id, project_id)
+
+    @staticmethod
+    def get_stage(project_id: int, repo: DataRepository, authorizer, user_id: int) -> dict | None:
+        """Получает текущий этап проекта."""
+        if not authorizer.check_permissions(user_id, Permissions.view_project.value):
+            raise err.AccessDenied(f'Your role can\'t view_project')
+
+        project_data = repo.get_projects([project_id])
+        if not project_data.content:
+            raise err.IncorrectParamError('project', f'Project with id {project_id} not found')
+
+        project = project_data.content[0]
+        current_stage_id = project.get(DBFields.current_stage_id)
+
+        if current_stage_id:
+            stages = repo.get_work_stages_by_project_id(project_id)
+            for stage in stages.content:
+                if stage.get(DBFields.id) == current_stage_id:
+                    return stage
+
+        return None
+
+    @staticmethod
+    def change_stage(project_id: int, stage_type: str, repo: DataRepository, authorizer, user_id: int) -> int | None:
+        """
+        Меняет текущий этап проекта.
+        stage_type - строковое значение из WorkStages enum (например, 'idea_generating').
+        Возвращает ID нового этапа.
+        """
+        if not authorizer.check_permissions(user_id, Permissions.set_project.value):
+            raise err.AccessDenied(f'Your role can\'t set_project')
+
+        # Проверяем, что stage_type валидный
+        try:
+            stage_enum = WorkStages(stage_type)
+        except ValueError:
+            raise err.IncorrectParamError('stage_type', f'Invalid stage type: {stage_type}. Valid values: {[s.value for s in WorkStages]}')
+
+        project_data = repo.get_projects([project_id])
+        if not project_data.content:
+            raise err.IncorrectParamError('project', f'Project with id {project_id} not found')
+
+        # Получаем все этапы проекта
+        stages = repo.get_work_stages_by_project_id(project_id)
+        if not stages.content:
+            raise err.IncorrectParamError('stage', f'No stages found for project {project_id}')
+
+        # Ищем этап с нужным типом (по имени)
+        target_stage = None
+        for stage in stages.content:
+            stage_name = stage.get(DBFields.name)
+            # Сопоставляем название этапа с WorkStages
+            if stage_name == stage_enum.value.replace('_name', '') or \
+               stage_name == getattr(WorkStages, f'{stage_type}_name', None):
+                target_stage = stage
+                break
+
+        # Если не нашли по имени, ищем по соответствию с WorkStages названиями
+        if not target_stage:
+            stage_name_mapping = {
+                'idea_generating': WorkStages.idea_generating_name,
+                'thesis_proofing': WorkStages.thesis_proofing_name,
+                'solution_projecting': WorkStages.solution_projecting_name,
+                'development': WorkStages.development_name,
+                'testing': WorkStages.testing_name,
+                'results_preparation': WorkStages.results_preparation_name,
+            }
+            target_name = stage_name_mapping.get(stage_type)
+            if target_name:
+                for stage in stages.content:
+                    if stage.get(DBFields.name) == target_name:
+                        target_stage = stage
+                        break
+
+        if not target_stage:
+            raise err.IncorrectParamError('stage', f'Stage with type {stage_type} not found in project {project_id}')
+
+        # Обновляем проект с новым current_stage_id
+        target_stage_id = target_stage.get(DBFields.id)
+        repo.update_projects([{DBFields.id: project_id, DBFields.current_stage_id: target_stage_id}])
+
+        return target_stage_id
 
 
 if __name__ == '__main__':

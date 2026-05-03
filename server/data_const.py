@@ -56,6 +56,11 @@ class DBStruct:
     default_description = 'Описание отсутствует'
     default_role = 'Пользователь'
     creator_role = 'Владелец'
+    default_goal = 'Цель отсутствует'
+    default_problem = 'Проблема отсутствует'
+    default_relevance = 'Актуальность отсутствует'
+    default_thesis = 'Тезисы отсутствуют'
+    default_tasks_description = 'Задачи отсутствуют'
 
 
 # Конфиг по умолчанию

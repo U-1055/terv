@@ -16,7 +16,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel,
-    QSizePolicy, QVBoxLayout, QWidget)
+    QSizePolicy, QVBoxLayout, QWidget, QPushButton)
 
 class Ui_ProjectWidget(object):
     def setupUi(self, ProjectWidget):
@@ -51,6 +51,12 @@ class Ui_ProjectWidget(object):
         self.top_layout.addWidget(self.lbl_stage)
 
         self.top_layout.addStretch(1)
+
+        self.btn_open = QPushButton(self.frame)
+        self.btn_open.setObjectName(u"btn_open")
+        self.btn_open.setMinimumSize(QSize(80, 30))
+        self.btn_open.setMaximumSize(QSize(80, 30))
+        self.top_layout.addWidget(self.btn_open)
 
         self.main_layout.addLayout(self.top_layout)
 
@@ -92,6 +98,7 @@ class Ui_ProjectWidget(object):
 
     def retranslateUi(self, ProjectWidget):
         ProjectWidget.setWindowTitle(QCoreApplication.translate("ProjectWidget", u"ProjectWidget", None))
+        self.btn_open.setText(QCoreApplication.translate("ProjectWidget", u"Открыть", None))
         self.lbl_stage.setText(u"Этап: ...")
         self.lbl_mentor_label.setText(u"Наставник:")
         self.lbl_mentor.setText(u"")

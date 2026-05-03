@@ -419,7 +419,6 @@ def workspaces():
         try:
             access_token = request.headers.get('Authorization')
             user_id = authenticator.get_user_id(access_token)
-            response = handlers.WorkspaceController.create(request, repo, authenticator, authorizer, user_id)
         except ValueError:
             return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 
@@ -578,10 +577,13 @@ def project_people(project_id: int):
 
 
 @exceptions_handler
-@app.route('/projects/<int:project_id>/students', methods=['POST', 'DELETE'])
+@app.route('/projects/<int:project_id>/students', methods=['POST', 'DELETE', 'GET'])
 def project_students(project_id: int):
     """Управление студентами проекта."""
     response = None
+
+    if request.method == 'GET':
+        response = handlers.ProjectController.get_project_users(request, repo, project_id)
 
     if request.method == 'POST':
         try:
@@ -616,11 +618,13 @@ def project_remove_student(project_id: int, target_user_id: int):
 
 
 @exceptions_handler
-@app.route('/projects/<int:project_id>/mentors', methods=['POST', 'DELETE'])
+@app.route('/projects/<int:project_id>/mentors', methods=['POST', 'DELETE', 'GET'])
 def project_mentors(project_id: int):
     """Управление наставниками проекта."""
     response = None
 
+    if request.method == 'GET':
+        response = handlers.ProjectController.get_project_mentors(repo, project_id)
     if request.method == 'POST':
         try:
             access_token = request.headers.get('Authorization')
@@ -647,6 +651,34 @@ def project_remove_mentor(project_id: int, target_user_id: int):
         access_token = request.headers.get('Authorization')
         user_id = authenticator.get_user_id(access_token)
         response = handlers.ProjectController.remove_mentor_from_project(request, repo, authenticator, authorizer, user_id, project_id, target_user_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/projects/<int:project_id>/stage', methods=['GET'])
+def project_stage(workspace_id: int, project_id: int):
+    """Получение текущего этапа проекта."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.get_stage(request, repo, user_id, project_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/projects/<int:project_id>/stage', methods=['PUT'])
+def project_change_stage(workspace_id: int, project_id: int):
+    """Изменение текущего этапа проекта."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.change_stage(request, repo, user_id, project_id)
     except ValueError:
         return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 

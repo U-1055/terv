@@ -1,6 +1,8 @@
 """Слой API."""
 from __future__ import annotations
 
+import logging
+
 from PySide6.QtCore import QObject, Signal
 import httpx
 
@@ -94,7 +96,9 @@ class Requester(IRequests):
             logger.warning(f'API error. Code: {error_code}. Error: {err.exceptions_error_ids.get(error_code)}. InternalRequest:'
                             f'{request}. Response: {response}.')
             exc = err.exceptions_error_ids.get(error_code)
-            raise exc(message, request=request)
+            if exc:
+                raise exc(message, request=request)
+
 
     def _check_request_is_unique(self, request: InternalRequest) -> bool:
         """Проверяет, выполняется ли уже запрос к эндпоинту переданного запроса."""
@@ -342,6 +346,33 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
+    async def get_project_users(self, project_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает пользователей проекта."""
+        path = f'{self._server}/projects/{project_id}/people'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
+    async def get_project_students(self, workspace_id: int, project_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает студентов проекта."""
+        path = f'{self._server}/projects/{project_id}/students'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
+    async def get_project_mentors(self, workspace_id: int, project_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает наставников проекта."""
+        path = f'{self._server}/projects/{project_id}/mentors'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
     async def get_workspaces_by_user(self, user_id: int, access_token: str, limit: int = None, offset: int = 0):
         """Возвращает список рабочих пространств, в которых состоит пользователь."""
         path = f'{self._server}/users/{user_id}/workspaces'
@@ -505,6 +536,54 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
+    async def create_ws_task(self, project_id: int, name: str, description: str, executor_email: str,
+                              plan_start: str, plan_deadline: str, access_token: str):
+        """Создаёт задачу проекта."""
+        path = f'{self._server}/ws_tasks'
+        print('ЗАДАЧА')
+        print(project_id, name, description, executor_email, plan_start, plan_deadline)
+        request = InternalRequest(path, InternalRequest.POST, headers={'Authorization': access_token},
+                                  json_={'ws_tasks': [{
+                                      'project_id': project_id,
+                                      'name': name,
+                                      'description': description,
+                                      'executor_email': executor_email,
+                                      'plan_start': plan_start,
+                                      'plan_deadline': plan_deadline
+                                  }]})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def get_ws_tasks_by_project(self, project_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает задачи проекта."""
+        path = f'{self._server}/ws_tasks'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={
+                                      CommonStruct.limit: limit,
+                                      CommonStruct.offset: offset,
+                                      'project_id': project_id
+                                  })
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
+    async def update_ws_task(self, task_id: int, name: str, description: str, executor_id: int,
+                              plan_start: str, plan_deadline: str, access_token: str):
+        """Обновляет задачу проекта."""
+        path = f'{self._server}/ws_tasks/{task_id}'
+        request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
+                                  json_={
+                                      'name': name,
+                                      'description': description,
+                                      'executor_id': executor_id,
+                                      'plan_start': plan_start,
+                                      'plan_deadline': plan_deadline
+                                  })
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
     async def set_personal_task_status(self, personal_task_id: int, status: str, access_token: str):
         """Изменяет статус личной задачи."""
         path = f'{self._server}/personal_tasks/{personal_task_id}/status'
@@ -525,20 +604,32 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def retry(self, access_token: str, request: InternalRequest) -> Response:
-        """
-        Повторяет один из предыдущих запросов, предварительно меняя его access_token на переданный.
-
-        :param access_token: access токен.
-        :param request: запрос.
-
-        """
-
-        if request.headers.get('Authorization'):
-            request.headers['Authorization'] = access_token
-
+    async def update_project(self, project_id: int, goal: str, relevance: str, tasks_description: str,
+                             problem: str, thesis: str, access_token: str):
+        """Обновляет поля проекта (goal, relevance, tasks_description, problem, thesis)."""
+        path = f'{self._server}/projects'
+        request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
+                                  json_={
+                                      'project': {
+                                          'id': project_id,
+                                          'goal': goal,
+                                          'relevance': relevance,
+                                          'tasks_description': tasks_description,
+                                          'problem': problem,
+                                          'thesis': thesis
+                                      }
+                                  })
         response = await self._make_request(request)
-        return response.content.get(self._struct.content)
+        return response
+
+    @synchronized_request
+    async def get_project_by_id(self, project_id: int, access_token: str):
+        """Получает проект по ID."""
+        path = f'{self._server}/projects'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.ids: [project_id]})
+        response = await self._make_request(request)
+        return response
 
 
 class ServerResponse:

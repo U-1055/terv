@@ -16,12 +16,14 @@ class WorkspaceWindow(BaseWindow):
     :var back_pressed: Сигнал, испускаемый при нажатии кнопки возврата.
     :var settings_pressed: Сигнал, испускаемый при нажатии кнопки настроек.
     :var project_clicked: Сигнал, испускаемый при клике на проект.
+    :var project_open_requested: Сигнал, испускаемый при запросе открытия проекта.
     :var role_change_requested: Сигнал, испускаемый при запросе смены роли (workspace_id, user_id, role_
     """
     
     back_pressed = Signal()  # Сигнал при нажатии кнопки возврата
     settings_pressed = Signal()  # Сигнал при нажатии кнопки настроек
     project_clicked = Signal(int)  # Сигнал при клике на проект
+    project_open_requested = Signal(int, str)  # Сигнал при запросе открытия проекта (project_id, project_name)
     role_change_requested = Signal(int, int, int)  # Сигнал при запросе смены роли (workspace_id, user_id, role_id)
     
     def __init__(self, workspace_id: int, workspace_name: str):
@@ -36,7 +38,7 @@ class WorkspaceWindow(BaseWindow):
         self._view.btn_back.clicked.connect(self._on_btn_back_pressed)
         self._view.btn_settings_info.clicked.connect(self._on_btn_settings_pressed)
         self._view.combobox_analytics_project.currentIndexChanged.connect(self._on_analytics_project_changed)
-        
+        self._view.btn_settings_info.setDisabled(True)  # Отключаем кнопку настроек для демки
         # Хранение созданных виджетов
         self._project_widgets: list[ProjectWidget] = []
         self._participant_widgets: list[ParticipantWidget] = []
@@ -74,8 +76,8 @@ class WorkspaceWindow(BaseWindow):
         :return: Созданный виджет проекта.
         """
         widget = ProjectWidget(name, mentor, students, stage, project_id)
-        widget.clicked.connect(lambda: self.project_clicked.emit(project_id))
-        
+        widget.open_pressed.connect(lambda pid=project_id, pname=name: self.project_open_requested.emit(pid, pname))
+
         self._view.projects_container_layout.addWidget(widget)
         self._project_widgets.append(widget)
         

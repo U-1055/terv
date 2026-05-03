@@ -22,6 +22,7 @@ schemes_models = {  # Соответствие моделей и схем
     cm.PersonalTaskStatus: cs.PersonalTaskStatusSchema(),
     cm.PersonalTaskTag: cs.PersonalTaskTagSchema(),
     cm.WSRole: cs.WSRoleSchema(),
+    cm.WorkStage: cs.WorkStageSchema()
 }
 
 

@@ -50,6 +50,19 @@ class ProjectSchema(BaseSchema):
     creator_id = fields.Int(load_only=True)
     creator = auto_field(dump_only=True)
     description = fields.Str(load_default=DBStruct.default_description)
+    goal = fields.Str(load_default=DBStruct.default_goal)
+    relevance = fields.Str(load_default=DBStruct.default_relevance)
+    tasks_description = fields.Str(load_default=DBStruct.default_tasks_description)
+    problem = fields.Str(load_default=DBStruct.default_problem)
+    thesis = fields.Str(load_default=DBStruct.default_thesis)
+
+
+class WorkStageSchema(BaseSchema):
+
+    class Meta(BaseMeta):
+        model = cm.WorkStage
+    project_id = fields.Int(load_only=True)
+    project = auto_field(dump_only=True)
 
 
 class WSTaskSchema(BaseSchema):
@@ -70,7 +83,18 @@ class WSTaskSchema(BaseSchema):
     parent_task = auto_field(dump_only=True)
     status_id = fields.Int(load_only=True)
     status = auto_field(dump_only=True)
+    executor_id = fields.Int(load_only=True)
+    executor = auto_field(dump_only=True)
     description = fields.Str(load_default=DBStruct.default_description)
+
+    # Кастомное поле для email исполнителя
+    executor_email = fields.Method('get_executor_email')
+
+    def get_executor_email(self, obj):
+        """Получает email исполнителя задачи."""
+        if hasattr(obj, 'executor') and obj.executor:
+            return obj.executor.email
+        return None
 
 
 class PersonalTaskSchema(BaseSchema):

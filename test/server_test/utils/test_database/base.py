@@ -287,6 +287,8 @@ class DatabaseManager:
         Устанавливает конфиг для теста сервиса Workspace. (1 пользователь - создатель Workspace, 1 Workspace,
         users_num пользователей).
         """
+        from common.base import TasksStatuses
+
         with self.session_maker() as session, session.begin():
             creator = cm.User(username='creator', hashed_password='s', email='ss')
             session.add(creator)
@@ -296,6 +298,21 @@ class DatabaseManager:
             session.add(role)
 
             workspace.default_role_id = 1
+
+            # Создаём стандартные статусы задач
+            task_statuses = [
+                cm.WSTaskStatus(name=TasksStatuses.planned_name, workspace=workspace),
+                cm.WSTaskStatus(name=TasksStatuses.in_work_name, workspace=workspace),
+                cm.WSTaskStatus(name=TasksStatuses.on_check_name, workspace=workspace),
+                cm.WSTaskStatus(name=TasksStatuses.completed_name, workspace=workspace),
+                cm.WSTaskStatus(name=TasksStatuses.to_rework_name, workspace=workspace),
+            ]
+            session.add_all(task_statuses)
+            session.flush()
+
+            workspace.default_task_status_id = 1
+            workspace.completed_task_status_id = 4
+
             creator.linked_workspaces = [workspace]
             assert workspace.default_role_id, workspace.default_role_id
             for i in range(users_num):
