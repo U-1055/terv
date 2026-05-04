@@ -51,7 +51,7 @@ class Workspace(Base):
 
     id: int
     creator_id: int | None = None
-    name: str = Field(max_length=60)
+    name: str = Field(max_length=600)
     description: str = Field(max_length=2000)
 
     creator: int
@@ -69,7 +69,7 @@ class Project(Base):
     id: int 
     workspace_id: int | None = None
     creator_id: int | None = None
-    name: str = Field(max_length=60)
+    name: str = Field(max_length=600)
     description: str = Field(max_length=2000)
 
 

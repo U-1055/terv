@@ -1,5 +1,7 @@
 """Обработчик окна рабочего пространства."""
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
+from PySide6.QtCharts import QChartView, QChart, QBarSeries, QBarSet, QBarCategoryAxis, QValueAxis
+from PySide6.QtGui import QPainter
 
 from client.src.src.handlers.window_handlers.base import BaseWindowHandler
 from client.src.gui.windows.workspace_window import WorkspaceWindow, WorkspaceSettingsWindow
@@ -10,6 +12,7 @@ import client.models.common_models as cm
 from common.logger import config_logger, CLIENT
 from client.src.base import LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL
 from client.src.gui.sub_widgets.widgets import ProjectWidget
+from common.base import WorkStages
 
 logger = config_logger(__name__, CLIENT, LOG_DIR, MAX_FILE_SIZE, MAX_BACKUP_FILES, LOGGING_LEVEL)
 
@@ -39,7 +42,7 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     ROLE_TEAM_LEAD = 4
     
     def __init__(self, window: WorkspaceWindow, main_view: MainWindow, requester: Requester, model: Model,
-                 workspace_id: int, workspace_name: str):
+                 workspace_id: int, workspace_name: str, user_id: int = 0):
         super().__init__(window, main_view, requester, model)
         
         self._window: WorkspaceWindow = window
@@ -50,8 +53,8 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         # Данные о текущем пользователе и его роли
         self._user_role_id: int = 0
         self._user_role_name: str = ""
-        self._user_id: int = 0
-        
+        self._user_id: int = user_id
+
         # Данные о рабочем пространстве
         self._workspace_data: dict = {}
         self._projects: list[cm.Project] = []
@@ -72,6 +75,7 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         self._window.settings_pressed.connect(self._on_settings_pressed)
         self._window.role_change_requested.connect(self._on_role_change_requested)
         self._window.project_open_requested.connect(self._on_project_open_requested)
+        self._window.analytics_project_changed.connect(self._on_analytics_project_changed)
 
     def _on_back_pressed(self):
         """Обработка нажатия кнопки возврата."""
@@ -164,16 +168,51 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     def _on_analytics_project_changed(self, index: int):
         """
         Обработка переключения проекта в аналитике.
-        
-        :param index: Индекс проекта.
         """
+        if index < 0:
+            return
+
         if index == 0:  # "Общее"
             self._load_workspace_analytics()
+            self._load_workspace_stages()
         else:
-            project_id = self._projects[index - 1].id if index - 1 < len(self._projects) else 0
-            if project_id:
+            project_index = index - 1
+            if project_index < len(self._projects):
+                project_id = self._projects[project_index].id
                 self._load_project_analytics(project_id)
-    
+                self._window.clear_stage_distribution()
+
+    def _load_workspace_stages(self):
+        """Загружает распределение проектов по этапам рабочего пространства."""
+        access_token = self._model.get_access_token()
+        self._window.clear_stage_distribution()
+
+        stage_names = [
+            WorkStages.idea_generating_name.value,
+            WorkStages.thesis_proofing_name.value,
+            WorkStages.solution_projecting_name.value,
+            WorkStages.development_name.value,
+            WorkStages.testing_name.value,
+            WorkStages.results_preparation_name.value,
+        ]
+
+        for stage_name in stage_names:
+            request = self._requester.get_workspace_projects(
+                self._workspace_id, access_token, limit=100, offset=0, stage_name=stage_name)
+            request.finished.connect(
+                lambda req, sn=stage_name: self._on_stage_projects_received(req, sn))
+
+    def _on_stage_projects_received(self, request, stage_name: str):
+        """Обработка получения проектов для конкретного этапа."""
+        try:
+            response = request.result()
+            projects = response.content if response.content is not None else []
+            project_names = [p.get('name', 'Без названия') for p in projects]
+            self._window.add_stage_row(stage_name, len(projects), project_names)
+        except Exception as e:
+            logger.error(f"Error loading stage {stage_name}: {e}")
+            self._window.add_stage_row(stage_name, 0, [])
+
     def _load_workspace_analytics(self):
         """Загружает аналитику рабочего пространства."""
         access_token = self._model.get_access_token()
@@ -186,22 +225,68 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         
         :param project_id: ID проекта.
         """
+        print('Analytics loaded')
         access_token = self._model.get_access_token()
         request = self._requester.get_project_analytics(self._workspace_id, project_id, access_token)
         request.finished.connect(lambda req: self._prepare_request(req, self._on_project_analytics_received))
     
     def _on_workspace_analytics_received(self, data: dict):
         """Обработка получения аналитики рабочего пространства."""
+        if not data:
+            return
+
         avg_tasks = data.get('avg_tasks_per_user', 0)
         self._window.set_avg_tasks_value(avg_tasks)
+        self._update_tasks_distribution_chart(data.get('tasks_distribution', {}))
         logger.info(f'Workspace analytics received: avg_tasks={avg_tasks}')
     
     def _on_project_analytics_received(self, data: dict):
         """Обработка получения аналитики проекта."""
+        if not data:
+            return
+
         avg_tasks = data.get('avg_tasks_per_user', 0)
         self._window.set_avg_tasks_value(avg_tasks)
+        self._update_tasks_distribution_chart(data.get('tasks_distribution', {}))
         logger.info(f'Project analytics received: avg_tasks={avg_tasks}')
     
+    def _update_tasks_distribution_chart(self, tasks_distribution: dict):
+        """Обновляет столбчатую диаграмму распределения задач."""
+        if not tasks_distribution:
+            return
+
+        series = QBarSeries()
+        bar_set = QBarSet("Задачи")
+        categories = []
+
+        for email, count in tasks_distribution.items():
+            bar_set.append(count)
+            categories.append(email)
+
+        series.append(bar_set)
+
+        chart = QChart()
+        chart.addSeries(series)
+        chart.setTitle("Распределение задач по исполнителям")
+        chart.setAnimationOptions(QChart.AnimationOption.SeriesAnimations)
+
+        axis_x = QBarCategoryAxis()
+        axis_x.append(categories)
+        chart.addAxis(axis_x, Qt.AlignmentFlag.AlignBottom)
+        series.attachAxis(axis_x)
+
+        axis_y = QValueAxis()
+        chart.addAxis(axis_y, Qt.AlignmentFlag.AlignLeft)
+        series.attachAxis(axis_y)
+
+        chart.legend().setVisible(True)
+        chart.legend().setAlignment(Qt.AlignmentFlag.AlignBottom)
+
+        chart_view = QChartView(chart)
+        chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        self._window.set_tasks_distribution_chart(chart_view)
+
     def _on_user_role_received(self, data: dict):
         """
         Обработка получения роли пользователя.

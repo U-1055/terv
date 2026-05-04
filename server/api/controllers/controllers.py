@@ -154,7 +154,7 @@ class WSTaskController(BaseController):
         task = repo.get_ws_tasks([task_id])
         if not task.content:
             raise IncorrectParamException({"task_id": {VALUE: None, MESSAGE: "Incorrect task's ID"}})
-
+        print(f'Changing status: {status_id}')
         task = task.content[0]
 
         # Если передан статус из TasksStatuses (строковый)
@@ -743,8 +743,8 @@ class ProjectController(BaseController):
     def get_workspace_projects(request: flask.Request, repo: DataRepository, workspace_id: int, user_id: int, limit: int = None, offset: int = None, require_last_num: bool = False):
         """Получает проекты рабочего пространства."""
         try:
-            # Получаем проекты по workspace_id
-            response = repo.get_projects_by_workspace_id(workspace_id, limit, offset, require_last_num)
+            stage_name = request.args.get('stage_name')
+            response = repo.get_projects_by_workspace_id(workspace_id, current_stage_name=stage_name, limit=limit, offset=offset, require_last_num=require_last_num)
             return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
         except BaseRepoException as e:
             raise map_repo_to_controller_exc(e, {})
@@ -779,22 +779,20 @@ class AnalyticsController(BaseController):
     @staticmethod
     def get_workspace_analytics(request: flask.Request, repo: DataRepository, workspace_id: int, user_id: int):
         """Получает аналитику рабочего пространства."""
-        # Заглушка для аналитики
-        return utl.form_success_response({
-            'avg_tasks_per_user': 5.5,  # Заглушка
-            'total_projects': 0,
-            'total_users': 0
-        })
+        try:
+            analytics = services.AnalyticsService.get_workspace_analytics(workspace_id, repo)
+            return utl.form_success_response(analytics)
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
 
     @staticmethod
     def get_project_analytics(request: flask.Request, repo: DataRepository, workspace_id: int, project_id: int, user_id: int):
         """Получает аналитику проекта."""
-        # Заглушка для аналитики проекта
-        return utl.form_success_response({
-            'avg_tasks_per_user': 3.2,  # Заглушка
-            'total_tasks': 0,
-            'total_users': 0
-        })
+        try:
+            analytics = services.AnalyticsService.get_project_analytics(project_id, repo)
+            return utl.form_success_response(analytics)
+        except BaseServiceException as e:
+            raise map_service_to_controller_exc(e, {})
 
 
 class PersonalTaskEventController(BaseController):

@@ -250,12 +250,12 @@ class WSTaskService(BaseService):
                     raise err.IncorrectParamError('executor_email', f'User with email {executor_email} not found')
                 executor_id = user_data.content[0].get(DBFields.id)
                 task[DBFields.executor_id] = executor_id
-
             task[DBFields.workspace_id] = workspace_id
             task[DBFields.creator_id] = user_id
             task[DBFields.entrusted_id] = user_id
             task[DBFields.status_id] = 1
 
+        print(f'Задачи: {ws_tasks}')
         repo.add_ws_tasks(ws_tasks)
 
     @staticmethod
@@ -486,6 +486,83 @@ class ProjectService(BaseService):
         repo.update_projects([{DBFields.id: project_id, DBFields.current_stage_id: target_stage_id}])
 
         return target_stage_id
+
+
+class AnalyticsService(BaseService):
+    """Сервис аналитики."""
+
+    @staticmethod
+    def get_workspace_analytics(workspace_id: int, repo: DataRepository) -> dict:
+        """
+        Возвращает аналитику рабочего пространства.
+        - avg_tasks_per_user: среднее число задач на участника
+        - tasks_distribution: {email: количество задач}
+        """
+        # Получаем задачи workspace (сериализованные словари)
+        tasks_response = repo.get_ws_tasks(ids=[], workspace_id=workspace_id)
+        tasks = tasks_response.content
+
+        # Получаем пользователей workspace
+        users_response = repo.get_workspace_users(workspace_id)
+        users = users_response.content
+
+        # Считаем распределение задач по исполнителям
+        distribution: dict[int, int] = {}
+        for task in tasks:
+            executor_id = task.get(DBFields.executor_id)
+            if executor_id is not None:
+                distribution[executor_id] = distribution.get(executor_id, 0) + 1
+
+        # Формируем ответ с email
+        tasks_distribution: dict[str, int] = {}
+        for user in users:
+            count = distribution.get(user.get(DBFields.id), 0)
+            if count > 0:
+                tasks_distribution[user.get(DBFields.email)] = count
+
+        total_tasks = sum(distribution.values())
+        avg_tasks = round(total_tasks / len(users), 2) if users else 0.0
+
+        return {
+            'avg_tasks_per_user': avg_tasks,
+            'tasks_distribution': tasks_distribution
+        }
+
+    @staticmethod
+    def get_project_analytics(project_id: int, repo: DataRepository) -> dict:
+        """
+        Возвращает аналитику проекта.
+        - avg_tasks_per_user: среднее число задач на участника проекта
+        - tasks_distribution: {email: количество задач}
+        """
+        # Получаем задачи проекта (сериализованные словари)
+        tasks_response = repo.get_ws_tasks(ids=[], project_id=project_id)
+        tasks = tasks_response.content
+
+        # Получаем пользователей проекта
+        users_response = repo.get_project_users(project_id)
+        users = users_response.content
+
+        # Считаем распределение
+        distribution: dict[int, int] = {}
+        for task in tasks:
+            executor_id = task.get(DBFields.executor_id)
+            if executor_id is not None:
+                distribution[executor_id] = distribution.get(executor_id, 0) + 1
+
+        tasks_distribution: dict[str, int] = {}
+        for user in users:
+            count = distribution.get(user.get(DBFields.id), 0)
+            if count > 0:
+                tasks_distribution[user.get(DBFields.email)] = count
+
+        total_tasks = sum(distribution.values())
+        avg_tasks = round(total_tasks / len(users), 2) if users else 0.0
+
+        return {
+            'avg_tasks_per_user': avg_tasks,
+            'tasks_distribution': tasks_distribution
+        }
 
 
 if __name__ == '__main__':

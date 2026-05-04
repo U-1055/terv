@@ -32,9 +32,6 @@ def launch(model_class, model_params: tuple, view_class, view_params: tuple, pre
     setup_gui(root, app)
 
 
-# ToDo: переделать параметры в точке входа, чтобы можно было отметить cash_manager обязательным
-
-
 def run_main_config(check_ram: bool = False):
     if check_ram:
         thread = threading.Thread(target=check_memory, args=[Path('../log/memory_client_1.txt')], daemon=True)

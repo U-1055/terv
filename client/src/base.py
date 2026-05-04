@@ -2,6 +2,8 @@ from PySide6.QtGui import QFont, QColor
 
 from pathlib import Path
 import logging
+import base64
+import json
 
 from common.base import CommonStruct, DBFields
 
@@ -66,6 +68,22 @@ class DataStructConst:
 
     char_plus = '+'
 
+
+def _decode_user_id_from_token(token: str) -> int | None:
+    """Извлекает user_id (sub) из JWT payload"""
+    if not token:
+        return None
+    try:
+        payload_b64 = token.split('.')[1]
+        padding = 4 - len(payload_b64) % 4
+        if padding != 4:
+            payload_b64 += '=' * padding
+        payload_json = base64.urlsafe_b64decode(payload_b64)
+        payload = json.loads(payload_json)
+        sub = payload.get('sub')
+        return int(sub) if sub is not None else None
+    except Exception:
+        return None
 
 class ObjectNames:
     """Имена объектов, использующиеся в QSS-стилях."""
@@ -165,9 +183,9 @@ class GUIStyles:
 
     normal_style = ''
     error_style = ''
-    base_font = QFont('Calibri', 12, 40, False)
-    bold_font = QFont('Calibri', 12, 22, False)
-    title_font = QFont('Segoe UI', 15, 2, False)
+    base_font = QFont('Calibri', 10, 40, False)
+    bold_font = QFont('Calibri', 10, 22, False)
+    title_font = QFont('Segoe UI', 12, 2, False)
     bold_font.setBold(True)
 
     base_font_style = "'{font-family: 'Calibri'; font-size: 12pt;}'"

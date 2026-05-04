@@ -235,7 +235,9 @@ class DataRepository:
 
     @exc_mapped
     def update_ws_tasks(self, models: list[cm.WSTask]):
+        print(models)
         self._execute_update(models, cm.WSTask)
+        print(self.get_ws_tasks(ids=[models[0].get('id')]))
 
     @exc_mapped
     def delete_ws_tasks_by_id(self, ids: list[int]):
@@ -259,6 +261,7 @@ class DataRepository:
 
     @exc_mapped
     def add_ws_tasks(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
+        print(f'ПЕРЕДАНЫ МОДЕЛИ ЗАДАЧ: {models}')
         return self._execute_insert(models, cm.WSTask)
 
     @exc_mapped
@@ -520,7 +523,8 @@ class DataRepository:
 
     @exc_mapped
     def get_projects(self, project_ids: tp.Sequence[int] | None = None, workspace_ids: tp.Sequence[int] | None = None,
-                     creator_ids: tp.Sequence[int] | None = None, limit: int = None, offset: int = None,
+                     creator_ids: tp.Sequence[int] | None = None, current_stage_name: str = None,
+                     limit: int = None, offset: int = None,
                      require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
         """Получает проекты по фильтрам."""
         query = select(cm.Project)
@@ -530,13 +534,20 @@ class DataRepository:
             query = query.where(cm.Project.workspace_id.in_(workspace_ids))
         if creator_ids:
             query = query.where(cm.Project.creator_id.in_(creator_ids))
+        if current_stage_name:
+            query = query.join(cm.WorkStage, cm.Project.current_stage_id == cm.WorkStage.id).where(
+                cm.WorkStage.name == current_stage_name)
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
-    def get_projects_by_workspace_id(self, workspace_id: int, limit: int = None, offset: int = None,
+    def get_projects_by_workspace_id(self, workspace_id: int, current_stage_name: str = None,
+                                     limit: int = None, offset: int = None,
                                      require_last_num: bool = False, serialize: bool = True) -> 'RepoSelectResponse':
         """Получает проекты по ID рабочего пространства."""
         query = select(cm.Project).where(cm.Project.workspace_id == workspace_id)
+        if current_stage_name:
+            query = query.join(cm.WorkStage, cm.Project.current_stage_id == cm.WorkStage.id).where(
+                cm.WorkStage.name == current_stage_name)
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped

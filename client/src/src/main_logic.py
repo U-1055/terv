@@ -223,7 +223,7 @@ class Logic:
         window = self._view.open_workspace_window(workspace_id, workspace_name,
                                                    DataStructConst.userspace_loading_time)
         win_handler = WorkspaceWindowHandler(window, self._view, self._requester, self._model,
-                                              workspace_id, workspace_name)
+                                              workspace_id, workspace_name, self._user.id)
         self._win_handlers.append(win_handler)
         self._opened_now = win_handler
         win_handler.incorrect_tokens_update.connect(self._authorize)

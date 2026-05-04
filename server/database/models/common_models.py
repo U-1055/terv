@@ -71,7 +71,7 @@ class Workspace(Base):
     default_role_id: Mapped[int] = mapped_column(nullable=True)
     completed_task_status_id: Mapped[int] = mapped_column(nullable=True)  # ID статуса выполненной задачи
     default_task_status_id: Mapped[int] = mapped_column(nullable=True)  # ID статуса задачи по умолчанию
-    name: Mapped[str] = mapped_column(String[60])
+    name: Mapped[str] = mapped_column(String[200])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
     projects: Mapped[list['Project']] = relationship('Project', back_populates='workspace')
@@ -96,7 +96,7 @@ class Project(Base):
     creator_id: Mapped[int] = mapped_column(ForeignKey(User.id))
     current_stage_id: Mapped[int] = mapped_column(ForeignKey('work_stage.id'), nullable=True)
 
-    name: Mapped[str] = mapped_column(String[60])
+    name: Mapped[str] = mapped_column(String[500])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
 
     goal: Mapped[str] = mapped_column(String[2000], default=DBStruct.default_goal)
@@ -216,7 +216,7 @@ class WSTask(Base):
     status_id: Mapped[int] = mapped_column(ForeignKey('ws_task_status.id'))  # Статус задачи
     executor_id: Mapped[int] = mapped_column(ForeignKey('user.id'))  # Исполнитель
 
-    name: Mapped[str] = mapped_column(String[60])
+    name: Mapped[str] = mapped_column(String[500])
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     plan_deadline: Mapped[datetime.datetime] = mapped_column()
     fact_deadline: Mapped[datetime.datetime] = mapped_column(nullable=True)
@@ -248,7 +248,7 @@ class PersonalTask(Base):
     parent_task_id: Mapped[int] = mapped_column(ForeignKey('personal_task.id'), nullable=True)
     status_id: Mapped[int] = mapped_column(ForeignKey('personal_task_status.id'))
 
-    name: Mapped[str] = mapped_column(String[60], nullable=False)
+    name: Mapped[str] = mapped_column(String[200], nullable=False)
     description: Mapped[str] = mapped_column(String[1000], default=DBStruct.default_description)
     plan_deadline: Mapped[datetime.datetime] = mapped_column(nullable=False)
     fact_deadline: Mapped[datetime.datetime] = mapped_column(nullable=True)

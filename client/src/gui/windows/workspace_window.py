@@ -1,6 +1,6 @@
 """Окно раздела конкретного рабочего пространства."""
 from PySide6.QtWidgets import QVBoxLayout, QComboBox, QPushButton, QHBoxLayout, QLabel, QWidget
-from PySide6.QtCore import Signal, QSize
+from PySide6.QtCore import Signal, QSize, Qt
 
 from client.src.gui.windows.windows import BaseWindow
 from client.src.ui.ui_workspace_window import Ui_WorkspaceWindow
@@ -25,7 +25,8 @@ class WorkspaceWindow(BaseWindow):
     project_clicked = Signal(int)  # Сигнал при клике на проект
     project_open_requested = Signal(int, str)  # Сигнал при запросе открытия проекта (project_id, project_name)
     role_change_requested = Signal(int, int, int)  # Сигнал при запросе смены роли (workspace_id, user_id, role_id)
-    
+    analytics_project_changed = Signal(int)  # Сигнал при смене проекта в аналитике
+
     def __init__(self, workspace_id: int, workspace_name: str):
         super().__init__()
         self._workspace_id = workspace_id
@@ -43,6 +44,11 @@ class WorkspaceWindow(BaseWindow):
         self._project_widgets: list[ProjectWidget] = []
         self._participant_widgets: list[ParticipantWidget] = []
         
+        # Виджеты для этапов (добавляются динамически)
+        self._stage_widgets: dict[str, tuple[QLabel, QComboBox]] = {}
+        self._stage_layout = QVBoxLayout()
+        self._view.analytics_layout.addLayout(self._stage_layout)
+
         # Индексы вкладок
         self._idx_projects = 0
         self._idx_analytics = 1
@@ -60,8 +66,8 @@ class WorkspaceWindow(BaseWindow):
     def _on_analytics_project_changed(self, index: int):
         """Обработка переключения проекта в аналитике."""
         # Индекс 0 - "Общее", остальные - проекты
-        pass
-    
+        self.analytics_project_changed.emit(index)
+
     # Методы для вкладки "Проекты"
     def add_project_widget(self, name: str, mentor: str, students: list[str], 
                            stage: str = "Заглушка", project_id: int = 0) -> ProjectWidget:
@@ -101,12 +107,75 @@ class WorkspaceWindow(BaseWindow):
         self._view.combobox_analytics_project.addItem("Общее")
         for name in project_names:
             self._view.combobox_analytics_project.addItem(name)
-    
+        self._view.combobox_analytics_project.setCurrentIndex(0)
+
     # Методы для вкладки "Аналитика"
     def set_avg_tasks_value(self, value: float):
         """Устанавливает значение среднего числа задач на участника."""
         self._view.avg_tasks_value_lbl.setText(str(round(value, 2)))
     
+    def clear_stage_distribution(self):
+        """Очищает виджеты распределения по этапам."""
+        while self._stage_layout.count():
+            item = self._stage_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                while item.layout().count():
+                    child = item.layout().takeAt(0)
+                    if child.widget():
+                        child.widget().deleteLater()
+        self._stage_widgets.clear()
+
+    def add_stage_row(self, stage_name: str, count: int, project_names: list[str]):
+        """
+        Добавляет строку этапа в аналитику.
+        :param stage_name: Название этапа (жирным).
+        :param count: Число проектов.
+        :param project_names: Список названий проектов для QComboBox.
+        """
+        row = QHBoxLayout()
+
+        lbl_name = QLabel(f"<b>{stage_name}</b>: {count} проектов")
+        lbl_name.setTextFormat(Qt.TextFormat.RichText)
+
+        combo = QComboBox()
+        combo.setEnabled(False)  # нередактируемый
+        combo.addItems(project_names if project_names else ["Нет проектов"])
+
+        row.addWidget(lbl_name)
+        row.addWidget(combo)
+        row.addStretch(1)
+
+        self._stage_layout.addLayout(row)
+        self._stage_widgets[stage_name] = (lbl_name, combo)
+
+    def set_tasks_distribution_chart(self, chart_view):
+        """Устанавливает виджет диаграммы распределения задач."""
+        layout = self._view.tasks_distribution_layout
+
+        # Удаляем предыдущий chart_view, если он есть
+        if hasattr(self, '_chart_view') and self._chart_view:
+            old_chart = self._chart_view
+            layout.removeWidget(old_chart)
+            old_chart.hide()
+            old_chart.setParent(None)
+            old_chart.deleteLater()
+            self._chart_view = None
+
+        # Удаляем QLabel-заглушку при первом вызове
+        old_lbl = getattr(self._view, 'tasks_distribution_chart_lbl', None)
+        if old_lbl:
+            layout.removeWidget(old_lbl)
+            old_lbl.hide()
+            old_lbl.setParent(None)
+            old_lbl.deleteLater()
+            self._view.tasks_distribution_chart_lbl = None
+
+        self._chart_view = chart_view
+        chart_view.setMinimumSize(400, 300)
+        layout.addWidget(chart_view)
+
     # Методы для вкладки "Инфо"
     def set_workspace_info(self, name: str, description: str):
         """

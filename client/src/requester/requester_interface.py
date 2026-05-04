@@ -67,7 +67,7 @@ class IRequests(ABC):
     def get_workspaces(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = 0):
         pass
 
-    def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
+    def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0, stage_name: str = None):
         pass
 
     def get_workspace_users(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
@@ -92,7 +92,11 @@ class IRequests(ABC):
         pass
 
     def set_ws_task_status(self, ws_task_id: int, status: str, access_token: str):
-        """Изменяет статус задачи РП."""
+        """Изменяет статус задачи РП по строковому названию."""
+        pass
+
+    def set_ws_task_status_id(self, ws_task_id: int, status_id: int, access_token: str):
+        """Изменяет статус задачи РП по числовому ID статуса."""
         pass
 
     def set_personal_task_status(self, personal_task_id: int, status: str, access_token: str):

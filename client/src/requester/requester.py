@@ -328,11 +328,14 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
+    async def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0, stage_name: str = None):
         """Получает проекты рабочего пространства."""
         path = f'{self._server}/workspaces/{workspace_id}/projects'
+        query = {CommonStruct.limit: limit, CommonStruct.offset: offset}
+        if stage_name:
+            query['stage_name'] = stage_name
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
-                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+                                  query_params=query)
         response = await self._choose_request_type(request, limit)
         return response
 
@@ -529,9 +532,17 @@ class Requester(IRequests):
 
     @synchronized_request
     async def set_ws_task_status(self, ws_task_id: int, status: str, access_token: str):
-        """Изменяет статус задачи РП."""
+        """Изменяет статус задачи РП по строковому названию."""
         path = f'{self._server}/ws_tasks/{ws_task_id}/status'
         request = InternalRequest(path, InternalRequest.PUT, query_params={CommonStruct.task_status: status}, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def set_ws_task_status_id(self, ws_task_id: int, status_id: int, access_token: str):
+        """Изменяет статус задачи РП по числовому ID статуса."""
+        path = f'{self._server}/ws_tasks/{ws_task_id}/status'
+        request = InternalRequest(path, InternalRequest.PUT, query_params={CommonStruct.status_id: status_id}, headers={'Authorization': access_token})
         response = await self._make_request(request)
         return response
 
@@ -540,8 +551,6 @@ class Requester(IRequests):
                               plan_start: str, plan_deadline: str, access_token: str):
         """Создаёт задачу проекта."""
         path = f'{self._server}/ws_tasks'
-        print('ЗАДАЧА')
-        print(project_id, name, description, executor_email, plan_start, plan_deadline)
         request = InternalRequest(path, InternalRequest.POST, headers={'Authorization': access_token},
                                   json_={'ws_tasks': [{
                                       'project_id': project_id,
@@ -571,15 +580,19 @@ class Requester(IRequests):
     async def update_ws_task(self, task_id: int, name: str, description: str, executor_id: int,
                               plan_start: str, plan_deadline: str, access_token: str):
         """Обновляет задачу проекта."""
-        path = f'{self._server}/ws_tasks/{task_id}'
+        path = f'{self._server}/ws_tasks'
         request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
                                   json_={
-                                      'name': name,
-                                      'description': description,
-                                      'executor_id': executor_id,
-                                      'plan_start': plan_start,
-                                      'plan_deadline': plan_deadline
-                                  })
+                                      'ws_tasks': [
+                                          {
+                                            'id': task_id,
+                                            'name': name,
+                                            'description': description,
+                                            'executor_id': executor_id,
+                                            'plan_start': plan_start,
+                                            'plan_deadline': plan_deadline
+                                      }]}
+                                  )
         response = await self._make_request(request)
         return response
 
