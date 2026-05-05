@@ -50,11 +50,6 @@ class ProjectSchema(BaseSchema):
     creator_id = fields.Int(load_only=True)
     creator = auto_field(dump_only=True)
     description = fields.Str(load_default=DBStruct.default_description)
-    goal = fields.Str(load_default=DBStruct.default_goal)
-    relevance = fields.Str(load_default=DBStruct.default_relevance)
-    tasks_description = fields.Str(load_default=DBStruct.default_tasks_description)
-    problem = fields.Str(load_default=DBStruct.default_problem)
-    thesis = fields.Str(load_default=DBStruct.default_thesis)
 
 
 class WorkStageSchema(BaseSchema):

@@ -54,12 +54,12 @@ class TaskDialogWindow(QDialog):
                         break
 
         # Установка дат
-        if plan_start:
+        if plan_start and plan_start.isValid():
             self._view.date_time_plan_start.setDateTime(plan_start)
         else:
             self._view.date_time_plan_start.setDateTime(QDateTime.currentDateTime())
 
-        if plan_deadline:
+        if plan_deadline and plan_deadline.isValid():
             self._view.date_time_plan_deadline.setDateTime(plan_deadline)
         else:
             self._view.date_time_plan_deadline.setDateTime(QDateTime.currentDateTime().addSecs(24 * 3600))

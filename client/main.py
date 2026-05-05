@@ -23,6 +23,7 @@ locale.setlocale(locale.LC_TIME, 'Russian')
 CHECK_TIME = True
 request_time_handler = RequestsTimeHandler(Path(project_root() / 'log' / 'requests_time.txt'))
 
+# ToDo: НЕ СОХРАНЯЮТСЯ ПОЛЯ ЦЕЛЬ, ЗАДАЧИ И  т.д. в ПРОЕКТЕ
 
 def launch(model_class, model_params: tuple, view_class, view_params: tuple, presenter_class, presenter_params: tuple):
     app = QApplication()

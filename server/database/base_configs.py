@@ -79,7 +79,7 @@ def set_db_config_1(engine: Engine,
 
         # Создание Workspace с пользователями
         all_users = [admin_user] + mentors + teamleads + students
-        workspace = cm.Workspace(creator=admin_user, name=workspace_name, users=all_users)
+        workspace = cm.Workspace(creator=admin_user, name=workspace_name, users=all_users, description='РЦ "Альтаир"')
         session.add(workspace)
         session.flush()  # Получаем ID workspace
 
@@ -256,7 +256,7 @@ def set_db_config_1(engine: Engine,
                 executor = project_students[task_idx % len(project_students)]
 
                 task = cm.WSTask(
-                    name=f'{task_name} (Project {i+1})',
+                    name=f'{task_name}',
                     description=task_description,
                     project=project,
                     workspace=workspace,

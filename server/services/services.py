@@ -339,6 +339,7 @@ class ProjectService(BaseService):
             raise err.IncorrectParamError('project', 'Project must have id field')
 
         project[DBFields.updated_at] = get_datetime_now()
+        print(project)
         repo.update_projects([project])
 
     @staticmethod
@@ -505,11 +506,11 @@ class AnalyticsService(BaseService):
         # Получаем пользователей workspace
         users_response = repo.get_workspace_users(workspace_id)
         users = users_response.content
-
+        print(f'TASKS: {tasks}')
         # Считаем распределение задач по исполнителям
         distribution: dict[int, int] = {}
         for task in tasks:
-            executor_id = task.get(DBFields.executor_id)
+            executor_id = task.get(DBFields.executor)
             if executor_id is not None:
                 distribution[executor_id] = distribution.get(executor_id, 0) + 1
 
@@ -522,7 +523,7 @@ class AnalyticsService(BaseService):
 
         total_tasks = sum(distribution.values())
         avg_tasks = round(total_tasks / len(users), 2) if users else 0.0
-
+        print(f'RESULT: {total_tasks} | {avg_tasks} | {users} \n| {tasks_distribution} | {distribution}')
         return {
             'avg_tasks_per_user': avg_tasks,
             'tasks_distribution': tasks_distribution
@@ -546,7 +547,7 @@ class AnalyticsService(BaseService):
         # Считаем распределение
         distribution: dict[int, int] = {}
         for task in tasks:
-            executor_id = task.get(DBFields.executor_id)
+            executor_id = task.get(DBFields.executor)
             if executor_id is not None:
                 distribution[executor_id] = distribution.get(executor_id, 0) + 1
 

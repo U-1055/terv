@@ -642,12 +642,12 @@ class ProjectController(BaseController):
         ids = IntList(CommonStruct.ids, request.args.getlist(CommonStruct.ids), ErrorCodes.incorrect_id.value)
         workspace_ids = IntList('workspace_ids', request.args.getlist('workspace_ids'), ErrorCodes.incorrect_workspace_id.value)
         creator_ids = IntList(CommonStruct.creator_ids, request.args.getlist(CommonStruct.creator_ids), ErrorCodes.incorrect_creator_ids.value)
-
+        print(f'PROJECTS: {ids.value} | {workspace_ids.value} | {creator_ids.value}: {limit}')
         try:
             response = repo.get_projects(ids.value if ids.value else None,
                                          workspace_ids.value if workspace_ids.value else None,
-                                         creator_ids.value if creator_ids.value else None,
-                                         limit, offset, require_last_num)
+                                         creator_ids.value if creator_ids.value else None)
+            print(response)
             return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
         except BaseRepoException as e:
             raise map_repo_to_controller_exc(e, {})
@@ -665,9 +665,10 @@ class ProjectController(BaseController):
             value = request.json.get(field)
             if value is not None:
                 project[field] = value
-
+        print(f'Проект: {project}')
         try:
             services.ProjectService.update(project, user_id, repo, authorizer)
+            print(repo.get_projects(project_ids=[project.get('id')]).content[0])
             return utl.form_success_response()
         except BaseServiceException as e:
             raise map_service_to_controller_exc(e, {})

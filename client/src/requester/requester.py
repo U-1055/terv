@@ -636,7 +636,7 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_project_by_id(self, project_id: int, access_token: str):
+    async def get_project_by_id(self, project_id: int, access_token: str, limit: int | None = None):
         """Получает проект по ID."""
         path = f'{self._server}/projects'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},

@@ -232,6 +232,7 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     
     def _on_workspace_analytics_received(self, data: dict):
         """Обработка получения аналитики рабочего пространства."""
+
         if not data:
             return
 

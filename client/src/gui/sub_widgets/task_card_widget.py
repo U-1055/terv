@@ -62,15 +62,10 @@ class TaskCardWidget(QWidget):
     def _setup_date(self, widget: QDateTimeEdit, date_str: str):
         """Устанавливает дату в QDateTimeEdit."""
         if date_str and date_str != 'Не указан':
-            # Пробуем ISO-формат (2024-01-15T10:30:00)
-            dt = QDateTime.fromString(date_str, Qt.ISODate)
-            if not dt.isValid():
-                # Fallback на формат без T
-                dt = QDateTime.fromString(date_str, 'yyyy-MM-dd HH:mm:ss')
+            dt = self._parse_date_string(date_str)
             if dt.isValid():
                 widget.setDateTime(dt)
                 widget.setDisplayFormat('dd.MM.yyyy HH:mm')
-
             else:
                 widget.setSpecialValueText('Не указан')
                 widget.setEnabled(False)
@@ -78,6 +73,35 @@ class TaskCardWidget(QWidget):
         else:
             widget.setSpecialValueText('Не указан')
             widget.setEnabled(False)
+
+    def _parse_date_string(self, date_str: str) -> QDateTime:
+        """
+        Парсит строку даты в QDateTime с поддержкой нескольких форматов.
+
+        :param date_str: Строка даты для парсинга.
+        :return: QDateTime объект или невалидный QDateTime если парсинг не удался.
+        """
+        if not date_str:
+            return QDateTime()
+
+        # Список форматов для попытки парсинга
+        date_formats = [
+            Qt.ISODate,                        # 2024-01-15T10:30:00
+            'yyyy-MM-dd HH:mm:ss',             # 2024-01-15 10:30:00
+            'yyyy-MM-dd HH:mm:ss.zzz',         # 2024-01-15 10:30:00.123
+            'yyyy-MM-dd',                       # 2024-01-15
+            'dd.MM.yyyy HH:mm:ss',              # 15.01.2024 10:30:00
+            'dd.MM.yyyy HH:mm',                 # 15.01.2024 10:30
+            'dd.MM.yyyy',                       # 15.01.2024
+        ]
+
+        for date_format in date_formats:
+            dt = QDateTime.fromString(date_str, date_format)
+            if dt.isValid():
+                return dt
+
+        # Если ни один формат не подошел, возвращаем невалидный
+        return QDateTime()
 
     def _setup_fonts(self):
         """Настраивает шрифты элементов карточки."""
