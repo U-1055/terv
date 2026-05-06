@@ -69,6 +69,7 @@ class Project(Base):
     id: int 
     workspace_id: int | None = None
     creator_id: int | None = None
+    current_stage_id: int | None = None
     name: str = Field(max_length=600)
     description: str = Field(max_length=2000)
 

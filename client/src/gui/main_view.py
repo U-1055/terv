@@ -275,6 +275,9 @@ class MainWindow(QMainWindow):
     def open_workspace_settings_window(self, workspace_id: int, name: str, description: str,
                                         loading_time: int | None = None) -> WorkspaceSettingsWindow:
         """Открывает окно настроек рабочего пространства"""
+        name = 'Инженерная смена будущего'
+        description = 'РЦ "Альтаир"'
+
         window = WorkspaceSettingsWindow(workspace_id, name, description)
         self._view.wdg_window.insertWidget(-1, window)
         current_idx = self._view.wdg_window.count()

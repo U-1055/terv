@@ -328,12 +328,14 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
-    async def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0, stage_name: str = None):
+    async def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0, stage_name: str = None, current_stage_id: int = None):
         """Получает проекты рабочего пространства."""
         path = f'{self._server}/workspaces/{workspace_id}/projects'
         query = {CommonStruct.limit: limit, CommonStruct.offset: offset}
         if stage_name:
             query['stage_name'] = stage_name
+        if current_stage_id:
+            query['current_stage_id'] = current_stage_id
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params=query)
         response = await self._choose_request_type(request, limit)
@@ -557,7 +559,7 @@ class Requester(IRequests):
                                       'name': name,
                                       'description': description,
                                       'executor_email': executor_email,
-                                      'plan_start': plan_start,
+                                      'plan_start_work_date': plan_start,
                                       'plan_deadline': plan_deadline
                                   }]})
         response = await self._make_request(request)
@@ -645,6 +647,22 @@ class Requester(IRequests):
         return response
 
     @synchronized_request
+    async def get_project_stage(self, workspace_id: int, project_id: int, access_token: str):
+        """Получает текущий этап проекта."""
+        path = f'{self._server}/workspaces/{workspace_id}/projects/{project_id}/stage'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def get_work_stage_by_id(self, workspace_id: int, project_id: int, stage_id: int, access_token: str):
+        """Получает этап проекта по его ID."""
+        path = f'{self._server}/workspaces/{workspace_id}/projects/{project_id}/stages/{stage_id}'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
     async def get_project_stages(self, project_id: int, access_token: str, limit: int = None, offset: int = 0):
         """Получает все этапы проекта."""
         path = f'{self._server}/projects/{project_id}/stages'
@@ -659,6 +677,20 @@ class Requester(IRequests):
         path = f'{self._server}/projects/{project_id}/stages'
         request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
                                   json_={'stages': stages_data})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def update_project_current_stage(self, project_id: int, current_stage_id: int, access_token: str):
+        """Обновляет текущий этап проекта."""
+        path = f'{self._server}/projects'
+        request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
+                                  json_={
+                                      'project': {
+                                          'id': project_id,
+                                          'current_stage_id': current_stage_id
+                                      }
+                                  })
         response = await self._make_request(request)
         return response
 

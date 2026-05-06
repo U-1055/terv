@@ -1,5 +1,5 @@
 """Окно раздела конкретного рабочего пространства."""
-from PySide6.QtWidgets import QVBoxLayout, QComboBox, QPushButton, QHBoxLayout, QLabel, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QComboBox, QPushButton, QHBoxLayout, QLabel, QWidget, QSizePolicy
 from PySide6.QtCore import Signal, QSize, Qt
 
 from client.src.gui.windows.windows import BaseWindow
@@ -40,6 +40,18 @@ class WorkspaceWindow(BaseWindow):
         self._view.btn_settings_info.clicked.connect(self._on_btn_settings_pressed)
         self._view.combobox_analytics_project.currentIndexChanged.connect(self._on_analytics_project_changed)
         self._view.btn_settings_info.setDisabled(True)  # Отключаем кнопку настроек для демки
+
+        # Применение стилей к элементам аналитики
+        from PySide6.QtGui import QFont
+
+        # Увеличиваем шрифт label "Задач на участника в среднем:" и делаем его жирным
+        avg_tasks_lbl_font = QFont("Calibri", 14, 75, False)  # 14pt, Bold (75)
+        self._view.avg_tasks_lbl.setFont(avg_tasks_lbl_font)
+
+        # Устанавливаем шрифт для значения (уже установлен как 24pt в UI)
+        avg_tasks_value_lbl_font = QFont("Calibri", 28, 75, False)  # 28pt, Bold
+        self._view.avg_tasks_value_lbl.setFont(avg_tasks_value_lbl_font)
+
         # Хранение созданных виджетов
         self._project_widgets: list[ProjectWidget] = []
         self._participant_widgets: list[ParticipantWidget] = []
@@ -113,7 +125,9 @@ class WorkspaceWindow(BaseWindow):
     def set_avg_tasks_value(self, value: float):
         """Устанавливает значение среднего числа задач на участника."""
         self._view.avg_tasks_value_lbl.setText(str(round(value, 2)))
-    
+        # Делаем значение жирным
+        self._view.avg_tasks_value_lbl.setStyleSheet("font-weight: bold;")
+
     def clear_stage_distribution(self):
         """Очищает виджеты распределения по этапам."""
         while self._stage_layout.count():
@@ -126,6 +140,15 @@ class WorkspaceWindow(BaseWindow):
                     if child.widget():
                         child.widget().deleteLater()
         self._stage_widgets.clear()
+        # Удаляем отступ снизу, если он был добавлен
+        spacer_items = [i for i in range(self._stage_layout.count())
+                        if self._stage_layout.itemAt(i).spacerItem()]
+        for i in reversed(spacer_items):
+            self._stage_layout.removeItem(self._stage_layout.itemAt(i))
+
+    def add_stage_distribution_spacer(self):
+        """Добавляет отступ снизу после строк этапов."""
+        self._stage_layout.addSpacing(30)  # Отступ 30 пикселей снизу
 
     def add_stage_row(self, stage_name: str, count: int, project_names: list[str]):
         """
@@ -134,21 +157,51 @@ class WorkspaceWindow(BaseWindow):
         :param count: Число проектов.
         :param project_names: Список названий проектов для QComboBox.
         """
+        from PySide6.QtWidgets import QSizePolicy
+
         row = QHBoxLayout()
 
         lbl_name = QLabel(f"<b>{stage_name}</b>: {count} проектов")
         lbl_name.setTextFormat(Qt.TextFormat.RichText)
+        lbl_name.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
 
         combo = QComboBox()
         combo.setEnabled(False)  # нередактируемый
         combo.addItems(project_names if project_names else ["Нет проектов"])
 
-        row.addWidget(lbl_name)
-        row.addWidget(combo)
+        # Настраиваем комбобокс для растягивания
+        combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        combo.setMinimumWidth(200)  # Минимальная ширина для отображения текста
+
+        row.addWidget(lbl_name, 0)  # Label не растягивается
+        row.addWidget(combo, 1)     # Комбобокс растягивается
         row.addStretch(1)
 
         self._stage_layout.addLayout(row)
         self._stage_widgets[stage_name] = (lbl_name, combo)
+
+    def update_stage_row_project_names(self, stage_name: str, project_names: list[str]):
+        """
+        Обновляет список проектов для строки этапа.
+        :param stage_name: Название этапа.
+        :param project_names: Новый список названий проектов.
+        """
+        from PySide6.QtWidgets import QSizePolicy
+
+        if stage_name in self._stage_widgets:
+            lbl_name, combo = self._stage_widgets[stage_name]
+            # Обновляем комбобокс
+            combo.clear()
+            combo.addItems(project_names if project_names else ["Нет проектов"])
+            # Обновляем label с количеством
+            count = len(project_names) if project_names else 0
+            lbl_name.setText(f"<b>{stage_name}</b>: {count} проектов")
+
+            # Убедимся, что настройки размера сохранены
+            combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            combo.setMinimumWidth(200)
+            combo.setEnabled(True)
+            combo.setEditable(False)
 
     def set_tasks_distribution_chart(self, chart_view):
         """Устанавливает виджет диаграммы распределения задач."""
@@ -184,8 +237,8 @@ class WorkspaceWindow(BaseWindow):
         :param name: Название.
         :param description: Описание.
         """
-        self._view.lbl_workspace_name_info.setText(name)
-        self._view.lbl_workspace_description_info.setText(description if description else "Описание отсутствует")
+        self._view.lbl_workspace_name_info.setText('Инженерная смена будущего')
+        self._view.lbl_workspace_description_info.setText('РЦ "Альтаир"')
     
     # Методы для вкладки "Участники"
     def add_participant_widget(self, username: str, email: str, role_name: str,
@@ -292,7 +345,7 @@ class ParticipantWidget(QWidget):
         
         # Строка с проектами
         self.projects_layout = QHBoxLayout()
-        self.lbl_projects = QLabel(f"Проекты: {', '.join(project_names) if project_names else 'Нет'}")
+        self.lbl_projects = QLabel(f"")
         self.projects_layout.addWidget(self.lbl_projects)
         self.projects_layout.addStretch(1)
         self._main_layout.addLayout(self.projects_layout)

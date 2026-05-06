@@ -67,10 +67,8 @@ class IRequests(ABC):
     def get_workspaces(self, ids: tp.Iterable[int], access_token: str, limit: int = None, offset: int = 0):
         pass
 
-    def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0, stage_name: str = None):
-        pass
-
-    def get_workspace_users(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0):
+    def get_workspace_projects(self, workspace_id: int, access_token: str, limit: int = None, offset: int = 0, stage_name: str = None, current_stage_id: int = None):
+        """Получает проекты рабочего пространства."""
         pass
 
     def get_user_role_in_workspace(self, workspace_id: int, user_id: int, access_token: str):
@@ -111,11 +109,23 @@ class IRequests(ABC):
         """
         pass
 
+    def get_project_stage(self, workspace_id: int, project_id: int, access_token: str):
+        """Получает текущий этап проекта."""
+        pass
+
+    def get_work_stage_by_id(self, workspace_id: int, project_id: int, stage_id: int, access_token: str):
+        """Получает этап проекта по его ID."""
+        pass
+
     def get_project_stages(self, project_id: int, access_token: str, limit: int = None, offset: int = 0):
         """Получает все этапы проекта."""
         pass
 
     def update_project_stages(self, project_id: int, stages_data: list[dict], access_token: str):
         """Обновляет этапы проекта."""
+        pass
+
+    def update_project_current_stage(self, project_id: int, current_stage_id: int, access_token: str):
+        """Обновляет текущий этап проекта."""
         pass
 

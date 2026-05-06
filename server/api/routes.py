@@ -700,6 +700,20 @@ def project_stages(project_id: int):
 
 
 @exceptions_handler
+@app.route('/workspaces/<int:workspace_id>/projects/<int:project_id>/stages/<int:stage_id>', methods=['GET'])
+def project_stage_by_id(workspace_id: int, project_id: int, stage_id: int):
+    """Получение этапа проекта по его ID."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.get_work_stage_by_id(request, repo, user_id, project_id, stage_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
 @app.route('/projects/<int:project_id>/stages', methods=['PUT'])
 def update_project_stages(project_id: int):
     """Обновление этапов проекта."""

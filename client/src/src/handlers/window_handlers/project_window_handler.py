@@ -625,6 +625,7 @@ class ProjectWindowHandler(BaseWindowHandler):
         # Формируем данные для обновления этапов
         stages_update_data = []
         current_stage_index = None
+        new_stage_id = None
 
         for i, stage in enumerate(self._stages):
             stage_update = {
@@ -645,6 +646,7 @@ class ProjectWindowHandler(BaseWindowHandler):
                 stage_update['is_finished'] = False
                 stage_update['is_current'] = True
                 stage_update['is_future'] = False
+                new_stage_id = stage.get('id')  # Запоминаем ID нового текущего этапа
             elif current_stage_index is not None and i > current_stage_index + 1:
                 # Все последующие этапы остаются будущими
                 stage_update['is_finished'] = False
@@ -653,12 +655,24 @@ class ProjectWindowHandler(BaseWindowHandler):
 
             stages_update_data.append(stage_update)
 
+        # Обновляем этапы проекта
         request = self._requester.update_project_stages(
             project_id=self._project_id,
             stages_data=stages_update_data,
             access_token=access_token
         )
         request.finished.connect(lambda req: self._prepare_request(req, self._on_stages_updated))
+
+        # Если новый этап определён, обновляем current_stage_id проекта
+        if new_stage_id is not None:
+            stage_update_request = self._requester.update_project_current_stage(
+                project_id=self._project_id,
+                current_stage_id=new_stage_id,
+                access_token=access_token
+            )
+            stage_update_request.finished.connect(
+                lambda req: self._prepare_request(req, self._on_project_current_stage_updated)
+            )
 
     def _on_reject_stage_transition(self):
         """Обработка отклонения перехода к следующему этапу."""
@@ -671,6 +685,11 @@ class ProjectWindowHandler(BaseWindowHandler):
         self._main_view.show_message('Успешно', 'Переход на следующий этап выполнен')
         self._window.reset_transition_buttons()
         self.update_state()
+
+    def _on_project_current_stage_updated(self, data: dict):
+        """Обработка успешного обновления current_stage_id проекта."""
+        logger.info(f'Project current_stage_id updated: {data}')
+        # Данные уже обновлены в _on_stages_updated, здесь только логирование
 
     def _on_stages_received(self, data: list):
         """

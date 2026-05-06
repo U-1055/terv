@@ -90,8 +90,8 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     
     def _open_settings_window(self):
         """Открывает окно настроек рабочего пространства как полноценное окно."""
-        name = self._workspace_data.get('name', '')
-        description = self._workspace_data.get('description', '')
+        name = self._workspace_data.get('name', 'Инженерная смена будущего')
+        description = self._workspace_data.get('description', 'РЦ "Альтаир"')
         
         # Открываем окно настроек через MainView как полноценное окно
         settings_window = self._main_view.open_workspace_settings_window(
@@ -174,7 +174,7 @@ class WorkspaceWindowHandler(BaseWindowHandler):
 
         if index == 0:  # "Общее"
             self._load_workspace_analytics()
-            self._load_workspace_stages()
+            # Распределение по этапам теперь загружается вместе с аналитикой в _on_workspace_analytics_received
         else:
             project_index = index - 1
             if project_index < len(self._projects):
@@ -239,8 +239,14 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         avg_tasks = data.get('avg_tasks_per_user', 0)
         self._window.set_avg_tasks_value(avg_tasks)
         self._update_tasks_distribution_chart(data.get('tasks_distribution', {}))
+
+        # Обновляем распределение проектов по этапам
+        stages_distribution = data.get('stages_distribution', {})
+        self._update_stages_distribution(stages_distribution)
+
         logger.info(f'Workspace analytics received: avg_tasks={avg_tasks}')
-    
+        logger.info(f'Stages distribution: {stages_distribution}')
+
     def _on_project_analytics_received(self, data: dict):
         """Обработка получения аналитики проекта."""
         if not data:
@@ -287,6 +293,39 @@ class WorkspaceWindowHandler(BaseWindowHandler):
         chart_view.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         self._window.set_tasks_distribution_chart(chart_view)
+
+    def _update_stages_distribution(self, stages_distribution: dict):
+        """Обновляет распределение проектов по этапам."""
+        # Очищаем текущее отображение
+        self._window.clear_stage_distribution()
+
+        # Получаем токен доступа
+        access_token = self._model.get_access_token()
+
+        # Для каждого этапа сначала добавляем строку с количеством, затем делаем запрос проектов
+        for stage_name, count in stages_distribution.items():
+            # Добавляем строку этапа с начальным количеством
+            self._window.add_stage_row(stage_name, count, [])
+
+            # Делаем запрос проектов для этого этапа
+            request = self._requester.get_workspace_projects(
+                self._workspace_id, access_token, limit=100, offset=0, stage_name=stage_name)
+            request.finished.connect(
+                lambda req, sn=stage_name: self._on_stage_projects_received_for_distribution(req, sn))
+
+        # Добавляем отступ снизу после всех строк этапов
+        self._window.add_stage_distribution_spacer()
+
+    def _on_stage_projects_received_for_distribution(self, request, stage_name: str):
+        """Обработка получения проектов для конкретного этапа в распределении."""
+        try:
+            response = request.result()
+            projects = response.content if response.content is not None else []
+            project_names = [p.get('name', 'Без названия') for p in projects]
+            # Находим строку с этим этапом и обновляем её
+            self._window.update_stage_row_project_names(stage_name, project_names)
+        except Exception as e:
+            logger.error(f"Error loading projects for stage {stage_name}: {e}")
 
     def _on_user_role_received(self, data: dict):
         """
@@ -348,12 +387,25 @@ class WorkspaceWindowHandler(BaseWindowHandler):
                 lambda req, pid=project.id: self._prepare_request(
                     req, lambda d, p=pid: self._on_project_mentors_received(p, d)))
 
-            # Добавление виджета проекта (временные данные до получения участников)
+            # Запрос текущего этапа проекта
+            stage = "Этап: Загрузка"
+            if project.current_stage_id:
+                logger.info(f'Loading stage for project {project.id} (current_stage_id={project.current_stage_id})')
+                stage_request = self._requester.get_work_stage_by_id(
+                    self._workspace_id, project.id, project.current_stage_id, access_token)
+                stage_request.finished.connect(
+                    lambda req, pid=project.id: self._prepare_request(
+                        req, lambda d, p=pid: self._on_project_stage_data_received(p, d)))
+            else:
+                logger.warning(f'Project {project.id} has no current_stage_id')
+                stage = "Этап: Не указан"
+
+            # Добавление виджета проекта с этапом
             widget = self._window.add_project_widget(
                 name=project.name,
                 mentor="Загрузка...",
                 students=["Загрузка..."],
-                stage="Этап: Загрузка",
+                stage=stage,
                 project_id=project.id
             )
             self._project_widgets[project.id] = widget
@@ -391,9 +443,34 @@ class WorkspaceWindowHandler(BaseWindowHandler):
             self._project_participants[project_id]['mentors'] = data
             self._update_project_widget(project_id)
 
+    def _on_project_stage_data_received(self, project_id: int, data: dict):
+        """
+        Обработка получения данных этапа проекта.
+
+        :param project_id: ID проекта.
+        :param data: Данные этапа.
+        """
+        print(f'PROJECT ANALYTICS DATA: {data}')
+        logger.info(f'Stage data received for project {project_id}: {data}')
+
+        if not data:
+            logger.warning(f'No stage data received for project {project_id}')
+            return
+
+        # Получаем название этапа из данных
+        stage_name = data.get('name', 'Не указан')
+        logger.info(f'Stage name for project {project_id}: {stage_name}')
+
+        # Обновляем виджет проекта
+        if project_id in self._project_widgets:
+            self._project_widgets[project_id].update_info(
+                stage=f"Этап: {stage_name}"
+            )
+
     def _update_project_widget(self, project_id: int):
         """
         Обновляет виджет проекта с реальными данными участников.
+        Этап уже загружен при создании виджета в _on_projects_received.
 
         :param project_id: ID проекта.
         """
@@ -416,17 +493,15 @@ class WorkspaceWindowHandler(BaseWindowHandler):
                 break
 
         if not project:
+            logger.warning(f'Project {project_id} not found in projects list')
             return
 
-        # Обновляем виджет проекта
-        stage = "Этап: Загрузка"  # Заглушка - будет реализована позже
-
+        # Обновляем виджет проекта (только участников, этап уже загружен)
         for id_ in self._project_widgets:
             if id_ == project_id:
                 self._project_widgets[id_].update_info(
                     mentor=', '.join(mentor_names) if mentor_names else 'Нет наставников',
-                    students=student_names,
-                    stage=stage
+                    students=student_names
                 )
                 break
 

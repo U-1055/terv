@@ -152,6 +152,7 @@ class DBFields:
     tasks_description = 'tasks_description'
     problem = 'problem'
     thesis = 'thesis'
+    current_stage_id = 'current_stage_id'
     # WSTask's fields
     project_id = 'project_id'
     executor_id = 'executor_id'

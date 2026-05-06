@@ -783,6 +783,18 @@ class ProjectController(BaseController):
             raise map_repo_to_controller_exc(e, {})
 
     @staticmethod
+    def get_work_stage_by_id(request: flask.Request, repo: DataRepository, user_id: int, project_id: int, stage_id: int):
+        """Получает этап проекта по его ID."""
+        try:
+            stage = services.ProjectService.get_work_stage_by_id(project_id, stage_id, repo, request.headers.get('Authorization'), user_id)
+            if stage:
+                return utl.form_success_response(stage)
+            else:
+                return utl.form_response(404, 'Stage not found', error_id=ErrorCodes.incorrect_id.value)
+        except BaseServiceException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
     def update_project_stages(request: flask.Request, repo: DataRepository, project_id: int, user_id: int):
         """
         Обновляет этапы проекта: текущий получает is_finished=True, следующий is_current=True.

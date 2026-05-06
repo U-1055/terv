@@ -488,6 +488,23 @@ class ProjectService(BaseService):
 
         return target_stage_id
 
+    @staticmethod
+    def get_work_stage_by_id(project_id: int, stage_id: int, repo: DataRepository, authorizer, user_id: int) -> dict | None:
+        """Получает этап проекта по его ID."""
+
+        # Получаем все этапы проекта
+        stages = repo.get_work_stages_by_project_id(project_id)
+        print(f'stage_id=({stage_id}) | STAGES: {stages}')
+        if not stages.content:
+            return None
+
+        # Ищем этап с нужным ID
+        for stage in stages.content:
+            if stage.get(DBFields.id) == stage_id:
+                return stage
+
+        return None
+
 
 class AnalyticsService(BaseService):
     """Сервис аналитики."""
@@ -498,6 +515,7 @@ class AnalyticsService(BaseService):
         Возвращает аналитику рабочего пространства.
         - avg_tasks_per_user: среднее число задач на участника
         - tasks_distribution: {email: количество задач}
+        - stages_distribution: {название этапа: количество проектов}
         """
         # Получаем задачи workspace (сериализованные словари)
         tasks_response = repo.get_ws_tasks(ids=[], workspace_id=workspace_id)
@@ -506,7 +524,6 @@ class AnalyticsService(BaseService):
         # Получаем пользователей workspace
         users_response = repo.get_workspace_users(workspace_id)
         users = users_response.content
-        print(f'TASKS: {tasks}')
         # Считаем распределение задач по исполнителям
         distribution: dict[int, int] = {}
         for task in tasks:
@@ -523,10 +540,37 @@ class AnalyticsService(BaseService):
 
         total_tasks = sum(distribution.values())
         avg_tasks = round(total_tasks / len(users), 2) if users else 0.0
+
+        # Получаем все проекты workspace
+        projects_response = repo.get_projects_by_workspace_id(workspace_id)
+        projects = projects_response.content
+        print(f'CSI: {projects}')
+        # Считаем распределение проектов по этапам
+        stages_distribution: dict[str, int] = {}
+
+        # Получаем все этапы для всех проектов этого workspace
+        # Сначала получаем все project_id из workspace
+
+        # Инициализируем счётчик для каждого проекта
+        for project in projects:
+            project_id = project.get(DBFields.id)
+            current_stage_id = project.get(DBFields.current_stage_id)
+
+            if current_stage_id:
+                # Получаем все этапы проекта и ищем текущий
+                stages = repo.get_work_stages_by_project_id(project_id)
+                for stage in stages.content:
+                    if stage.get(DBFields.id) == current_stage_id:
+                        stage_name = stage.get(DBFields.name, 'Не указан')
+                        stages_distribution[stage_name] = stages_distribution.get(stage_name, 0) + 1
+                        break
+
         print(f'RESULT: {total_tasks} | {avg_tasks} | {users} \n| {tasks_distribution} | {distribution}')
+        print(f'Stages distribution: {stages_distribution}')
         return {
             'avg_tasks_per_user': avg_tasks,
-            'tasks_distribution': tasks_distribution
+            'tasks_distribution': tasks_distribution,
+            'stages_distribution': stages_distribution
         }
 
     @staticmethod

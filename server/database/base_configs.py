@@ -249,8 +249,7 @@ def set_db_config_1(engine: Engine,
                 session.add(stage)
                 stages.append(stage)
 
-            # Установка текущего этапа проекта (3-й этап - Проектирование решения)
-            project.current_stage = stages[i % 3]
+            project.current_stage_id = i % 3 + 1 + 6 * i
             session.add(project)
 
             # Создание задач для проекта (3-5 задач с разными статусами)
@@ -289,16 +288,19 @@ def set_db_config_1(engine: Engine,
 
 if __name__ == '__main__':
     from server.database.models.db_utils import init_db
+    from server.database.repository import DataRepository
 
     init_db('sqlite:///database')
     engine = create_engine('sqlite:///database')
     set_db_config_1(engine=engine)
+    repo = DataRepository(sessionmaker(bind=engine))
 
     print('Test configuration applied successfully')
     print('Users: 51 (1 Admin, 10 Mentors, 10 Team Leads, 30 Students)')
     print('Projects: 7')
     print('Tasks per project: 3-5')
     print('Work stages per project: 6')
+    print(f'Projects: {repo.get_projects()}')
 
 
 
