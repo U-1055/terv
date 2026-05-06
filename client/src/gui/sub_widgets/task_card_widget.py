@@ -61,6 +61,7 @@ class TaskCardWidget(QWidget):
 
     def _setup_date(self, widget: QDateTimeEdit, date_str: str):
         """Устанавливает дату в QDateTimeEdit."""
+        print(f'DATE: {date_str}')
         if date_str and date_str != 'Не указан':
             dt = self._parse_date_string(date_str)
             if dt.isValid():

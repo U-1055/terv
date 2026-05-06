@@ -110,7 +110,7 @@ def register():
         return form_response(200, 'OK', {})
     except ValueError:
         by_login = repo.get_users_by_username((login, ))
-        if by_login.content:  # Если есть пользователь с таким же логинов
+        if by_login.content:  # Если есть пользователь с таким же логином
             return form_response(400, 
                                  APIAn.invalid_data_error(
                                      common_struct.login,
@@ -679,6 +679,34 @@ def project_change_stage(workspace_id: int, project_id: int):
         access_token = request.headers.get('Authorization')
         user_id = authenticator.get_user_id(access_token)
         response = handlers.ProjectController.change_stage(request, repo, user_id, project_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/projects/<int:project_id>/stages', methods=['GET'])
+def project_stages(project_id: int):
+    """Получение всех этапов проекта."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.get_project_stages(request, repo, project_id)
+    except ValueError:
+        return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
+
+    return response
+
+
+@exceptions_handler
+@app.route('/projects/<int:project_id>/stages', methods=['PUT'])
+def update_project_stages(project_id: int):
+    """Обновление этапов проекта."""
+    try:
+        access_token = request.headers.get('Authorization')
+        user_id = authenticator.get_user_id(access_token)
+        response = handlers.ProjectController.update_project_stages(request, repo, project_id, user_id)
     except ValueError:
         return form_response(401, 'Expired access token', error_id=ErCodes.invalid_access.value)
 

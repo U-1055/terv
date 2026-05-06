@@ -18,6 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QDateTimeEdit, QFrame, QHBoxLayout, QLabel,
     QPushButton, QSizePolicy, QVBoxLayout, QWidget)
 
+
 class Ui_TaskCardWidget(object):
     def setupUi(self, TaskCardWidget):
         if not TaskCardWidget.objectName():

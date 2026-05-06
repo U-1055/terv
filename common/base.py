@@ -175,6 +175,14 @@ class DBFields:
     project = 'project'
     status = 'status'
     task_events = 'task_events'
+    # WorkStage's fields
+    name = 'name'
+    result = 'result'
+    date_start = 'date_start'
+    date_end = 'date_end'
+    is_finished = 'is_finished'
+    is_current = 'is_current'
+    is_future = 'is_future'
     # PersonalTask's fields
     owner_id = 'owner_id'
     owner = 'owner'

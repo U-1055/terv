@@ -72,8 +72,6 @@ class WSTaskController(BaseController):
                            ErrorCodes.incorrect_workspace_id.value)
         project_id = Int('project_id', request.args.get('project_id'), ErrorCodes.incorrect_workspace_id.value)
 
-        print(request.query_string)
-
         tasks = repo.get_ws_tasks(ids.value, workspace_id.value, executor_id.value, project_id.value, date.value, plan_deadline.value,
                                   status_ids.value, not_completed.value, limit, offset)
 
@@ -119,6 +117,7 @@ class WSTaskController(BaseController):
         только с id моделей.
         """
         tasks = request.json.get(CommonStruct.ws_tasks)
+        print(f'UPDATING TASKS: {tasks}')
         if not tasks:
             raise IncorrectParamException({CommonStruct.ws_tasks: {VALUE: None, MESSAGE: 'No tasks in request'}})
 
@@ -220,6 +219,7 @@ class UserController(BaseController):
 
         try:
             result = repo.get_users_by_id(ids.value, limit=limit, offset=offset)
+            print(f'USERS: {result.content}')
             return utl.form_success_response(result.content)
         except BaseRepoException as e:
             raise map_repo_to_controller_exc(e, {})
@@ -772,6 +772,48 @@ class ProjectController(BaseController):
             return utl.form_success_response({'stage_id': stage_id})
         except BaseServiceException as e:
             raise map_service_to_controller_exc(e, {})
+
+    @staticmethod
+    def get_project_stages(request: flask.Request, repo: DataRepository, project_id: int):
+        """Получает все этапы проекта."""
+        try:
+            response = repo.get_work_stages_by_project_id(project_id, serialize=True)
+            return utl.form_get_success_response(response.content, response.last_record_num, response.records_left)
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
+
+    @staticmethod
+    def update_project_stages(request: flask.Request, repo: DataRepository, project_id: int, user_id: int):
+        """
+        Обновляет этапы проекта: текущий получает is_finished=True, следующий is_current=True.
+        Данные передаются в JSON: {'stages': [{'id': <stage_id>, 'is_finished': <bool>, 'is_current': <bool>, 'is_future': <bool>}, ...]}
+        """
+        try:
+            stages_data = request.json.get('stages')
+            if not stages_data:
+                return utl.form_response(400, 'No stages data', error_id=ErrorCodes.incorrect_id.value)
+
+            for stage_data in stages_data:
+                stage_id = stage_data.get('id')
+                is_finished = stage_data.get('is_finished')
+                is_current = stage_data.get('is_current')
+                is_future = stage_data.get('is_future')
+
+                if stage_id is not None:
+                    update_data = {}
+                    if is_finished is not None:
+                        update_data[DBFields.is_finished] = is_finished
+                    if is_current is not None:
+                        update_data[DBFields.is_current] = is_current
+                    if is_future is not None:
+                        update_data[DBFields.is_future] = is_future
+
+                    if update_data:
+                        repo.update_work_stages([{DBFields.id: stage_id, **update_data}])
+
+            return utl.form_success_response({'message': 'Stages updated successfully'})
+        except BaseRepoException as e:
+            raise map_repo_to_controller_exc(e, {})
 
 
 class AnalyticsController(BaseController):

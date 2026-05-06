@@ -573,6 +573,11 @@ class DataRepository:
         return self._execute_select(query, limit, offset, require_last_num, serialize)
 
     @exc_mapped
+    def update_work_stages(self, models: tp.Iterable[dict]):
+        """Обновляет этапы работы."""
+        self._execute_update(models, cm.WorkStage)
+
+    @exc_mapped
     def add_ws_task_statuses(self, models: tp.Iterable[dict]) -> 'RepoInsertResponse':
         return self._execute_insert(models, cm.WSTaskStatus)
 

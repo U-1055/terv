@@ -1,3 +1,5 @@
+import random
+
 from sqlalchemy.engine import Engine, create_engine
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.sql import select
@@ -8,9 +10,11 @@ from faker import Faker
 from server.auth.auth_module import hash_password
 from common.base import WorkStages, TasksStatuses
 import server.database.models.common_models as cm
+from server.data_const import Roles
 
 
 fake = Faker()
+
 
 def set_db_config_1(engine: Engine,
                     workspace_name: str = 'Инженерная смена будущего',
@@ -83,6 +87,14 @@ def set_db_config_1(engine: Engine,
         session.add(workspace)
         session.flush()  # Получаем ID workspace
 
+        # Создание ролей пользователей
+        mentor_role = cm.WSRole(name=Roles.mentor.value, workspace=workspace, users=mentors)
+        student_role = cm.WSRole(name=Roles.student.value, workspace=workspace, users=students)
+        teamlead_role = cm.WSRole(name=Roles.team_lead.value, workspace=workspace, users=teamleads)
+        admin_role = cm.WSRole(name=Roles.admin.value, workspace=workspace, users=[admin_user])
+
+        session.add_all([mentor_role, student_role, teamlead_role, admin_role])
+
         # Создание статусов задач
         default_task_status = cm.WSTaskStatus(name=TasksStatuses.planned_name.value, workspace=workspace)
         session.add(default_task_status)
@@ -149,28 +161,28 @@ def set_db_config_1(engine: Engine,
         # Этапы работы (одинаковые для всех проектов)
         work_stages_data = [
             (WorkStages.idea_generating_name.value, 'На этом этапе вам следует найти проблему, определить целевую аудиторию,'
-                                                    ' решить в общем виде'
+                                                    ' решить в общем виде '
                                                     'вопросы об анализе проблемной области (какие исследования вам потребуются,'
                                                     'кого вы будете опрашивать, требуется ли экспертиза и какая), '
-                                                    'выдвинуть ряд гипотез, которые вы будете проверять при анализе'
+                                                    'выдвинуть ряд гипотез, которые вы будете проверять при анализе '
                                                     'проблемной области.'),
             (WorkStages.thesis_proofing_name.value, 'На этом этапе вам нужно проанализировать проблемную область: '
-                                                    'найти литературу, провести глубинные интервью и опросы. На их'
+                                                    'найти литературу, провести глубинные интервью и опросы. На их '
                                                     'основе нужно сделать вывод по каждой из гипотез, выдвинутых на '
-                                                    'предыдущем этапе - верна она, или нет. Результатом этого этапа'
-                                                    'должна стать точно определённая проблема проекта, его актуальность,'
+                                                    'предыдущем этапе - верна она, или нет. Результатом этого этапа '
+                                                    'должна стать точно определённая проблема проекта, его актуальность, '
                                                     'цель и задачи.'),
-            (WorkStages.solution_projecting_name.value, 'На этом этапе вам нужно спланировать разработку решения:'
-                                                        'определите функциональную архитектуру и концепцию (как именно'
-                                                        'разработка будет решать проблему, как она будет выглядеть),'
-                                                        'спроектировать архитектуру, составить технические требования к'
+            (WorkStages.solution_projecting_name.value, 'На этом этапе вам нужно спланировать разработку решения: '
+                                                        'определите функциональную архитектуру и концепцию (как именно '
+                                                        'разработка будет решать проблему, как она будет выглядеть), '
+                                                        'спроектировать архитектуру, составить технические требования к '
                                                         'разрабатываемому решению.'),
-            (WorkStages.development_name.value, 'На этом этапе вам предстоит разработать ваше решение и проверить его'
+            (WorkStages.development_name.value, 'На этом этапе вам предстоит разработать ваше решение и проверить его '
                                                 'соответствие техническим требованиям.'),
-            (WorkStages.testing_name.value, 'На этом этапе вам нужно представить своё решение целевой аудитории и получить'
+            (WorkStages.testing_name.value, 'На этом этапе вам нужно представить своё решение целевой аудитории и получить '
                                             'обратную связь (возможно, путём опросов и глубинных интервью). Если '
-                                            'обратная связь положительная - постарайтесь внедрить ваше решение'
-                                            'для использования целевой аудиторией. Соберите обратную связь по внедрению'
+                                            'обратная связь положительная - постарайтесь внедрить ваше решение '
+                                            'для использования целевой аудиторией. Соберите обратную связь по внедрению '
                                             'и сделайте выводы.'),
             (WorkStages.results_preparation_name.value, 'На этом этапе нужно оформить результаты: описать, что и как вы делали,'
                                                         'почему именно так, а не иначе, что в итоге получилось и что '
@@ -264,6 +276,7 @@ def set_db_config_1(engine: Engine,
                     entrusted=admin_user,
                     executor=executor,
                     plan_deadline=datetime.date.today() + datetime.timedelta(days=7 * (task_idx + 1)),
+                    plan_start_work_date=datetime.date.today() + datetime.timedelta(days=random.randint(1, 4)),
                     status_id=status_id
                 )
                 session.add(task)

@@ -110,3 +110,12 @@ class IRequests(ABC):
         :param request: запрос.
         """
         pass
+
+    def get_project_stages(self, project_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает все этапы проекта."""
+        pass
+
+    def update_project_stages(self, project_id: int, stages_data: list[dict], access_token: str):
+        """Обновляет этапы проекта."""
+        pass
+

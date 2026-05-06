@@ -36,10 +36,10 @@ class WorkspaceWindowHandler(BaseWindowHandler):
     tried_to_open_project = Signal(int, str, int)  # project_id, project_name, workspace_id
 
     # Роли и их ID
-    ROLE_ADMINISTRATOR = 3
+    ROLE_ADMINISTRATOR = 4
     ROLE_MENTOR = 1
     ROLE_STUDENT = 2
-    ROLE_TEAM_LEAD = 4
+    ROLE_TEAM_LEAD = 3
     
     def __init__(self, window: WorkspaceWindow, main_view: MainWindow, requester: Requester, model: Model,
                  workspace_id: int, workspace_name: str, user_id: int = 0):
@@ -443,13 +443,13 @@ class WorkspaceWindowHandler(BaseWindowHandler):
             user_id = participant_data.get('user_id', 0)
             username = participant_data.get('username', 'Unknown')
             email = participant_data.get('email', 'unknown@example.com')
-            role_id = participant_data.get('role_id', 0)
+            role_id = participant_data.get('roles', [0])[0]
             role_name = self._roles.get(role_id, 'Неизвестная роль')
             project_names = participant_data.get('project_names', [])
-            
+
             # Проверка прав на изменение роли
-            can_change_role = (self._user_role_id == self.ROLE_ADMINISTRATOR)
-            
+            can_change_role = False
+
             widget = self._window.add_participant_widget(
                 username=username,
                 email=email,

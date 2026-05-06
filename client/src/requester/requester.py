@@ -589,7 +589,7 @@ class Requester(IRequests):
                                             'name': name,
                                             'description': description,
                                             'executor_id': executor_id,
-                                            'plan_start': plan_start,
+                                            'plan_start_work_date': plan_start,
                                             'plan_deadline': plan_deadline
                                       }]}
                                   )
@@ -641,6 +641,24 @@ class Requester(IRequests):
         path = f'{self._server}/projects'
         request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
                                   query_params={CommonStruct.ids: [project_id]})
+        response = await self._make_request(request)
+        return response
+
+    @synchronized_request
+    async def get_project_stages(self, project_id: int, access_token: str, limit: int = None, offset: int = 0):
+        """Получает все этапы проекта."""
+        path = f'{self._server}/projects/{project_id}/stages'
+        request = InternalRequest(path, InternalRequest.GET, headers={'Authorization': access_token},
+                                  query_params={CommonStruct.limit: limit, CommonStruct.offset: offset})
+        response = await self._choose_request_type(request, limit)
+        return response
+
+    @synchronized_request
+    async def update_project_stages(self, project_id: int, stages_data: list[dict], access_token: str):
+        """Обновляет этапы проекта."""
+        path = f'{self._server}/projects/{project_id}/stages'
+        request = InternalRequest(path, InternalRequest.PUT, headers={'Authorization': access_token},
+                                  json_={'stages': stages_data})
         response = await self._make_request(request)
         return response
 
