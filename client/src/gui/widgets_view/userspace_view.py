@@ -58,9 +58,11 @@ class TaskWidgetView(BaseUserSpaceWidget):
         self._view.setupUi(self)
         self._view.label.setText(GuiLabels.tasks_widget)
         self._tasks_layout = QVBoxLayout()
+        self._tasks_layout.setSpacing(10)  # Отступ 10 пикселей между задачами
         self._view.scrollArea.setWidget(self._view.scrollAreaWidgetContents)
         self._view.scrollAreaWidgetContents.setLayout(self._tasks_layout)
         self._tasks_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self._tasks_layout.setContentsMargins(0, 0, 0, 10)  # Отступы: верх, лево, низ, право
 
         self.setSizePolicy(QSizePolicy.Policy.MinimumExpanding, QSizePolicy.Policy.Ignored)
         self._tasks_struct: dict[str, dict] = dict()

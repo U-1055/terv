@@ -157,6 +157,7 @@ class Ui_WorkspaceWindow(object):
         self.info_layout.addWidget(self.btn_settings_info, 0, Qt.AlignmentFlag.AlignHCenter)
 
         self.tab_widget.addTab(self.tab_info, u"Инфо")
+        self.tab_widget.setTabEnabled(2, False)
 
         # Вкладка "Участники"
         self.tab_participants = QWidget()

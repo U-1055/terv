@@ -190,6 +190,7 @@ class UserSpaceTask(QWidget):
 
     def __init__(self, name: str, type_: str, id_: int, wdg_description: dict = None):
         super().__init__()
+        self.setObjectName(ObjectNames.wdg_border)
         self._structured_text: QStructuredText | None
         if wdg_description:
             self._structured_text = QStructuredText(wdg_description)
@@ -201,6 +202,7 @@ class UserSpaceTask(QWidget):
 
         main_layout = QHBoxLayout()
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        main_layout.setContentsMargins(10, 5, 10, 5)  # Отступы вокруг задачи
 
         self._lbl_name = QClickableLabel(name)
         self._lbl_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
